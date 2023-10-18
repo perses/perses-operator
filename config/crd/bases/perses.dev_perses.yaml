@@ -5,9 +5,9 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.11.1
   creationTimestamp: null
-  name: perses.observability.perses.dev
+  name: perses.perses.dev
 spec:
-  group: observability.perses.dev
+  group: perses.dev
   names:
     kind: Perses
     listKind: PersesList
@@ -43,6 +43,9 @@ spec:
                       file:
                         properties:
                           extension:
+                            enum:
+                            - json
+                            - yaml
                             type: string
                           folder:
                             type: string

@@ -11,21 +11,21 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: perses-editor-role
 rules:
-- apiGroups:
-  - observability.perses.dev
-  resources:
-  - perses
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - observability.perses.dev
-  resources:
-  - perses/status
-  verbs:
-  - get
+  - apiGroups:
+      - perses.dev
+    resources:
+      - perses
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - perses.dev
+    resources:
+      - perses/status
+    verbs:
+      - get

@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	observabilityv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	"github.com/perses/perses-operator/api/v1alpha1"
 	common "github.com/perses/perses-operator/internal/perses/common"
 	subreconciler "github.com/perses/perses-operator/internal/subreconciler"
 	logger "github.com/sirupsen/logrus"
@@ -36,19 +36,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 )
 
+type Config struct {
+	ConfigMapName string
+}
+
 // PersesReconciler reconciles a Perses object
 type PersesReconciler struct {
 	client.Client
 	Scheme   *runtime.Scheme
 	Recorder record.EventRecorder
+	Config   Config
 }
 
 var log = logger.WithField("module", "perses_controller")
 
-// +kubebuilder:rbac:groups=observability.perses.dev,resources=perses,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=observability.perses.dev,resources=perses,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=observability.perses.dev,resources=perses/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=observability.perses.dev,resources=perses/finalizers,verbs=update
+// +kubebuilder:rbac:groups=perses.dev,resources=perses,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=perses.dev,resources=perses,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=perses.dev,resources=perses/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=perses.dev,resources=perses/finalizers,verbs=update
 // +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
@@ -73,7 +78,7 @@ func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	return subreconciler.Evaluate(subreconciler.DoNotRequeue())
 }
 
-func (r *PersesReconciler) getLatestPerses(ctx context.Context, req ctrl.Request, perses *observabilityv1alpha1.Perses) (*ctrl.Result, error) {
+func (r *PersesReconciler) getLatestPerses(ctx context.Context, req ctrl.Request, perses *v1alpha1.Perses) (*ctrl.Result, error) {
 	// Fetch the latest version of the perses resource
 	if err := r.Get(ctx, req.NamespacedName, perses); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -91,7 +96,7 @@ func (r *PersesReconciler) getLatestPerses(ctx context.Context, req ctrl.Request
 }
 
 func (r *PersesReconciler) setStatusToUnknown(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	perses := &observabilityv1alpha1.Perses{}
+	perses := &v1alpha1.Perses{}
 
 	// Fetch the latest Perses
 	// If this fails, bubble up the reconcile results to the main reconciler
@@ -112,7 +117,7 @@ func (r *PersesReconciler) setStatusToUnknown(ctx context.Context, req ctrl.Requ
 }
 
 func (r *PersesReconciler) addFinalizer(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	perses := &observabilityv1alpha1.Perses{}
+	perses := &v1alpha1.Perses{}
 
 	// Fetch the latest Perses
 	// If this fails, bubble up the reconcile results to the main reconciler
@@ -140,7 +145,7 @@ func (r *PersesReconciler) addFinalizer(ctx context.Context, req ctrl.Request) (
 }
 
 func (r *PersesReconciler) handleDelete(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	perses := &observabilityv1alpha1.Perses{}
+	perses := &v1alpha1.Perses{}
 
 	// Fetch the latest Perses
 	// If this fails, bubble up the reconcile results to the main reconciler
@@ -209,7 +214,7 @@ func (r *PersesReconciler) handleDelete(ctx context.Context, req ctrl.Request) (
 	return subreconciler.ContinueReconciling()
 }
 
-func (r *PersesReconciler) doFinalizerOperationsForPerses(perses *observabilityv1alpha1.Perses) {
+func (r *PersesReconciler) doFinalizerOperationsForPerses(perses *v1alpha1.Perses) {
 	// TODO(user): Add the cleanup steps that the operator
 	// needs to do before the CR can be deleted. Examples
 	// of finalizers include performing backups and deleting
@@ -233,7 +238,7 @@ func (r *PersesReconciler) doFinalizerOperationsForPerses(perses *observabilityv
 // SetupWithManager sets up the controller with the Manager.
 func (r *PersesReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&observabilityv1alpha1.Perses{}).
+		For(&v1alpha1.Perses{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Service{}).

@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	observabilityv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	"github.com/perses/perses-operator/api/v1alpha1"
 	common "github.com/perses/perses-operator/internal/perses/common"
 	subreconciler "github.com/perses/perses-operator/internal/subreconciler"
 	logger "github.com/sirupsen/logrus"
@@ -37,7 +37,7 @@ import (
 var cmlog = logger.WithField("module", "configmap_controller")
 
 func (r *PersesReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	perses := &observabilityv1alpha1.Perses{}
+	perses := &v1alpha1.Perses{}
 
 	if r, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(r, err) {
 		return r, err
@@ -48,8 +48,7 @@ func (r *PersesReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Requ
 	found := &corev1.ConfigMap{}
 	err := r.Get(ctx, types.NamespacedName{Name: configName, Namespace: perses.Namespace}, found)
 	if err != nil && apierrors.IsNotFound(err) {
-
-		cm, err := configMapForPerses(r, perses)
+		cm, err := createPersesConfigMap(r, perses)
 		if err != nil {
 			cmlog.Error(err, "Failed to define new ConfigMap resource for perses")
 
@@ -74,7 +73,9 @@ func (r *PersesReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Requ
 		}
 
 		return subreconciler.RequeueWithDelay(time.Minute)
-	} else if err != nil {
+	}
+
+	if err != nil {
 		cmlog.Error(err, "Failed to get Deployment")
 		return subreconciler.RequeueWithError(err)
 	}
@@ -82,7 +83,7 @@ func (r *PersesReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Requ
 	return subreconciler.ContinueReconciling()
 }
 
-func configMapForPerses(r *PersesReconciler, perses *observabilityv1alpha1.Perses) (*corev1.ConfigMap, error) {
+func createPersesConfigMap(r *PersesReconciler, perses *v1alpha1.Perses) (*corev1.ConfigMap, error) {
 	configName := common.GetConfigName(perses.Name)
 	ls := common.LabelsForPerses(configName, perses.Name)
 

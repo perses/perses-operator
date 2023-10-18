@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	observabilityv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	"github.com/perses/perses-operator/api/v1alpha1"
 	common "github.com/perses/perses-operator/internal/perses/common"
 	subreconciler "github.com/perses/perses-operator/internal/subreconciler"
 	logger "github.com/sirupsen/logrus"
@@ -38,7 +38,7 @@ import (
 var dlog = logger.WithField("module", "deployment_controller")
 
 func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	perses := &observabilityv1alpha1.Perses{}
+	perses := &v1alpha1.Perses{}
 
 	if r, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(r, err) {
 		return r, err
@@ -48,7 +48,7 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 	err := r.Get(ctx, types.NamespacedName{Name: perses.Name, Namespace: perses.Namespace}, found)
 	if err != nil && apierrors.IsNotFound(err) {
 
-		dep, err := r.deploymentForPerses(perses)
+		dep, err := r.createPersesDeployment(perses)
 		if err != nil {
 			dlog.WithError(err).Error("Failed to define new Deployment resource for perses")
 
@@ -80,8 +80,8 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 	return subreconciler.ContinueReconciling()
 }
 
-func (r *PersesReconciler) deploymentForPerses(
-	perses *observabilityv1alpha1.Perses) (*appsv1.Deployment, error) {
+func (r *PersesReconciler) createPersesDeployment(
+	perses *v1alpha1.Perses) (*appsv1.Deployment, error) {
 	configName := common.GetConfigName(perses.Name)
 
 	ls := common.LabelsForPerses(perses.Name, perses.Name)

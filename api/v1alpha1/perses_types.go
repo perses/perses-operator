@@ -22,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// +kubebuilder:validation:Enum=json,yaml
+// +kubebuilder:validation:Enum=json;yaml
 type FileExtension string
 
 type File struct {
@@ -35,21 +35,22 @@ type Database struct {
 }
 
 type Schemas struct {
-	// +kubebuilder:default:="/etc/perses/schemas/panels"
+	// +kubebuilder:validation:optional
 	PanelsPath string `json:"panels_path,omitempty" yaml:"panels_path,omitempty"`
-	// +kubebuilder:default:="/etc/perses/schemas/queries"
+	// +kubebuilder:validation:optional
 	QueriesPath string `json:"queries_path,omitempty" yaml:"queries_path,omitempty"`
-	// +kubebuilder:default:="/etc/perses/schemas/datasources"
+	// +kubebuilder:validation:optional
 	DatasourcesPath string `json:"datasources_path,omitempty" yaml:"datasources_path,omitempty"`
-	// +kubebuilder:default:="/etc/perses/schemas/variables"
+	// +kubebuilder:validation:optional
 	VariablesPath string `json:"variables_path,omitempty" yaml:"variables_path,omitempty"`
-	// +kubebuilder:default:="5m"
+	// +kubebuilder:validation:optional
 	Interval time.Duration `json:"interval,omitempty" yaml:"interval,omitempty"`
 }
 
 // TODO: import this from https://github.com/perses/perses/blob/main/internal/api/config/config.go#L51
 type PersesConfig struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +kubebuilder:validation:optional
 	Readonly bool     `json:"readonly" yaml:"readonly"`
 	Database Database `json:"database" yaml:"database"`
 	Schemas  Schemas  `json:"schemas" yaml:"schemas"`

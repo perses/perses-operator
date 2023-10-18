@@ -30,13 +30,13 @@ make deploy IMG=<some-registry>/perses-operator:tag
 4. Install a CRD instance
 
 ```sh
-kubectl apply -f config/samples/observability_v1alpha1_perses.yaml --namespace default
+kubectl apply -f config/samples/v1alpha1_perses.yaml --namespace default
 ```
 
 5. Install a CRD instance
 
 ```sh
-kubectl delete -f config/samples/observability_v1alpha1_perses.yaml --namespace default
+kubectl delete -f config/samples/v1alpha1_perses.yaml --namespace default
 ```
 
 ### Uninstall CRDs
@@ -83,13 +83,13 @@ PERSES_IMAGE=docker.io/persesdev/perses:latest make install run
 2. Install a CRD instance
 
 ```sh
-kubectl apply -f config/samples/observability_v1alpha1_perses.yaml --namespace default
+kubectl apply -f config/samples/v1alpha1_perses.yaml --namespace default
 ```
 
 3. Uninstall the CRD instance
 
 ```sh
-kubectl delete -f config/samples/observability_v1alpha1_perses.yaml --namespace default
+kubectl delete -f config/samples/v1alpha1_perses.yaml --namespace default
 ```
 
 ### Modifying the API definitions

@@ -31,7 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	observabilityv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
 	"github.com/perses/perses-operator/controllers"
 	//+kubebuilder:scaffold:imports
 )
@@ -44,7 +44,7 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(observabilityv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(persesv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 

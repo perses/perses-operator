@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"time"
 
-	observabilityv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	"github.com/perses/perses-operator/api/v1alpha1"
 	common "github.com/perses/perses-operator/internal/perses/common"
 	subreconciler "github.com/perses/perses-operator/internal/subreconciler"
 	logger "github.com/sirupsen/logrus"
@@ -37,7 +37,7 @@ import (
 var slog = logger.WithField("module", "service_controller")
 
 func (r *PersesReconciler) reconcileService(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	perses := &observabilityv1alpha1.Perses{}
+	perses := &v1alpha1.Perses{}
 
 	if r, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(r, err) {
 		return r, err
@@ -47,7 +47,7 @@ func (r *PersesReconciler) reconcileService(ctx context.Context, req ctrl.Reques
 	err := r.Get(ctx, types.NamespacedName{Name: perses.Name, Namespace: perses.Namespace}, found)
 	if err != nil && apierrors.IsNotFound(err) {
 
-		ser, err := r.serviceForPerses(perses)
+		ser, err := r.createPersesService(perses)
 		if err != nil {
 			slog.WithError(err).Error("Failed to define new Service resource for perses")
 
@@ -79,8 +79,8 @@ func (r *PersesReconciler) reconcileService(ctx context.Context, req ctrl.Reques
 	return subreconciler.ContinueReconciling()
 }
 
-func (r *PersesReconciler) serviceForPerses(
-	perses *observabilityv1alpha1.Perses) (*corev1.Service, error) {
+func (r *PersesReconciler) createPersesService(
+	perses *v1alpha1.Perses) (*corev1.Service, error) {
 	ls := common.LabelsForPerses(perses.Name, perses.Name)
 
 	ser := &corev1.Service{
