@@ -35,11 +35,16 @@ type Database struct {
 }
 
 type Schemas struct {
-	PanelsPath      string        `json:"panels_path,omitempty" yaml:"panels_path,omitempty"`
-	QueriesPath     string        `json:"queries_path,omitempty" yaml:"queries_path,omitempty"`
-	DatasourcesPath string        `json:"datasources_path,omitempty" yaml:"datasources_path,omitempty"`
-	VariablesPath   string        `json:"variables_path,omitempty" yaml:"variables_path,omitempty"`
-	Interval        time.Duration `json:"interval,omitempty" yaml:"interval,omitempty"`
+	// +kubebuilder:default:="/etc/perses/schemas/panels"
+	PanelsPath string `json:"panels_path,omitempty" yaml:"panels_path,omitempty"`
+	// +kubebuilder:default:="/etc/perses/schemas/queries"
+	QueriesPath string `json:"queries_path,omitempty" yaml:"queries_path,omitempty"`
+	// +kubebuilder:default:="/etc/perses/schemas/datasources"
+	DatasourcesPath string `json:"datasources_path,omitempty" yaml:"datasources_path,omitempty"`
+	// +kubebuilder:default:="/etc/perses/schemas/variables"
+	VariablesPath string `json:"variables_path,omitempty" yaml:"variables_path,omitempty"`
+	// +kubebuilder:default:="5m"
+	Interval time.Duration `json:"interval,omitempty" yaml:"interval,omitempty"`
 }
 
 // TODO: import this from https://github.com/perses/perses/blob/main/internal/api/config/config.go#L51
