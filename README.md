@@ -18,7 +18,7 @@ kubectl apply -f config/samples/
 2. Build and push your image to the location specified by `IMG`:
 
 ```sh
-PERSES_IMAGE=docker.io/persesdev/perses:latest make docker-build docker-push IMG=<some-registry>/perses-operator:tag
+make docker-build docker-push IMG=<some-registry>/perses-operator:tag
 ```
 
 3. Deploy the controller to the cluster with the image specified by `IMG`:

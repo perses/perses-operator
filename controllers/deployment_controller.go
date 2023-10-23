@@ -84,10 +84,10 @@ func (r *PersesReconciler) createPersesDeployment(
 	perses *v1alpha1.Perses) (*appsv1.Deployment, error) {
 	configName := common.GetConfigName(perses.Name)
 
-	ls := common.LabelsForPerses(perses.Name, perses.Name)
+	ls := common.LabelsForPerses(r.Config.PersesImage, perses.Name, perses.Name)
 
 	// Get the Operand image
-	image, err := common.ImageForPerses()
+	image, err := common.ImageForPerses(r.Config.PersesImage)
 	if err != nil {
 		return nil, err
 	}

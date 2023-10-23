@@ -37,7 +37,7 @@ import (
 )
 
 type Config struct {
-	ConfigMapName string
+	PersesImage string
 }
 
 // PersesReconciler reconciles a Perses object

@@ -81,7 +81,7 @@ func (r *PersesReconciler) reconcileService(ctx context.Context, req ctrl.Reques
 
 func (r *PersesReconciler) createPersesService(
 	perses *v1alpha1.Perses) (*corev1.Service, error) {
-	ls := common.LabelsForPerses(perses.Name, perses.Name)
+	ls := common.LabelsForPerses(r.Config.PersesImage, perses.Name, perses.Name)
 
 	ser := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{

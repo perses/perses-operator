@@ -22,11 +22,15 @@ import (
 	"strings"
 )
 
-func LabelsForPerses(name string, instanceName string) map[string]string {
+func LabelsForPerses(persesImageFromFlags string, name string, instanceName string) map[string]string {
 	var imageTag string
-	image, err := ImageForPerses()
+	image, err := ImageForPerses(persesImageFromFlags)
 	if err == nil {
-		imageTag = strings.Split(image, ":")[1]
+		if strings.Contains(image, ":") {
+			imageTag = strings.Split(image, ":")[1]
+		} else {
+			imageTag = "latest"
+		}
 	}
 	return map[string]string{"app.kubernetes.io/name": name,
 		"app.kubernetes.io/instance":   instanceName,
@@ -39,16 +43,22 @@ func LabelsForPerses(name string, instanceName string) map[string]string {
 
 // imageForPerses gets the Operand image which is managed by this controller
 // from the Perses_IMAGE environment variable defined in the config/manager/manager.yaml
-func ImageForPerses() (string, error) {
-	var imageEnvVar = "PERSES_IMAGE"
-	image, found := os.LookupEnv(imageEnvVar)
-	if !found {
-		return "", fmt.Errorf("unable to find %s environment variable with the image", imageEnvVar)
+func ImageForPerses(persesImageFromFlags string) (string, error) {
+	image := persesImageFromFlags
+
+	if persesImageFromFlags == "" {
+		var imageEnvVar = "PERSES_IMAGE"
+		imageFromEnv, found := os.LookupEnv(imageEnvVar)
+		if !found {
+			return "", fmt.Errorf("unable to find %s environment variable with the image", imageEnvVar)
+		}
+
+		image = imageFromEnv
 	}
 
 	imageParts := strings.Split(image, ":")
 	if len(imageParts) < 2 {
-		return "", fmt.Errorf("image provided for perses %s does not have a tag version", imageEnvVar)
+		return "", fmt.Errorf("image provided for perses %s does not have a tag version", image)
 	}
 	return image, nil
 }

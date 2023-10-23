@@ -85,7 +85,7 @@ func (r *PersesReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Requ
 
 func createPersesConfigMap(r *PersesReconciler, perses *v1alpha1.Perses) (*corev1.ConfigMap, error) {
 	configName := common.GetConfigName(perses.Name)
-	ls := common.LabelsForPerses(configName, perses.Name)
+	ls := common.LabelsForPerses(r.Config.PersesImage, configName, perses.Name)
 
 	persesConfig, err := yaml.Marshal(perses.Spec.Config)
 
