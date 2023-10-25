@@ -1,0 +1,23 @@
+apiVersion: perses.dev/v1alpha1
+kind: Perses
+metadata:
+  labels:
+    app.kubernetes.io/name: perses
+    app.kubernetes.io/instance: perses-sample
+    app.kubernetes.io/part-of: perses-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: perses-operator
+  name: perses-sample
+spec:
+  config:
+    readonly: false
+    database:
+      file:
+        folder: "/etc/perses/storage"
+        extension: "yaml"
+    schemas:
+      panels_path: "/etc/perses/schemas/panels"
+      queries_path: "/etc/perses/schemas/queries"
+      datasources_path: "/etc/perses/schemas/datasources"
+      variables_path: "/etc/perses/schemas/variables"
+  containerPort: 8080
