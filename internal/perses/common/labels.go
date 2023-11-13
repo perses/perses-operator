@@ -22,27 +22,31 @@ import (
 	"strings"
 )
 
-func LabelsForPerses(persesImageFromFlags string, name string, instanceName string) map[string]string {
+func LabelsForPerses(persesImageFromFlags string, name string, instanceName string) (map[string]string, error) {
 	var imageTag string
 	image, err := ImageForPerses(persesImageFromFlags)
-	if err == nil {
-		if strings.Contains(image, ":") {
-			imageTag = strings.Split(image, ":")[1]
-		} else {
-			imageTag = "latest"
-		}
+
+	if err != nil {
+		return nil, fmt.Errorf("unable to get the image for perses: %s", err)
 	}
+
+	if strings.Contains(image, ":") {
+		imageTag = strings.Split(image, ":")[1]
+	} else {
+		imageTag = "latest"
+	}
+
 	return map[string]string{"app.kubernetes.io/name": name,
 		"app.kubernetes.io/instance":   instanceName,
 		"app.kubernetes.io/version":    imageTag,
 		"app.kubernetes.io/part-of":    "perses-operator",
 		"app.kubernetes.io/created-by": "controller-manager",
 		"app.kubernetes.io/managed-by": "perses-operator",
-	}
+	}, nil
 }
 
 // imageForPerses gets the Operand image which is managed by this controller
-// from the Perses_IMAGE environment variable defined in the config/manager/manager.yaml
+// from the PERSES_IMAGE environment variable defined in the config/manager/manager.yaml
 func ImageForPerses(persesImageFromFlags string) (string, error) {
 	image := persesImageFromFlags
 
