@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/perses/perses-operator/api/v1alpha1"
 	common "github.com/perses/perses-operator/internal/perses/common"
@@ -109,7 +110,7 @@ func (r *PersesReconciler) setStatusToUnknown(ctx context.Context, req ctrl.Requ
 		meta.SetStatusCondition(&perses.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses, Status: metav1.ConditionUnknown, Reason: "Reconciling", Message: "Starting reconciliation"})
 		if err := r.Status().Update(ctx, perses); err != nil {
 			log.WithError(err).Error("Failed to update Perses status")
-			return subreconciler.RequeueWithError(err)
+			return subreconciler.RequeueWithDelayAndError(time.Second*10, err)
 		}
 	}
 
@@ -132,12 +133,12 @@ func (r *PersesReconciler) addFinalizer(ctx context.Context, req ctrl.Request) (
 		log.Info("Adding Finalizer for Perses")
 		if ok := controllerutil.AddFinalizer(perses, common.PersesFinalizer); !ok {
 			log.Error("Failed to add finalizer into the custom resource")
-			return subreconciler.Requeue()
+			return subreconciler.RequeueWithDelay(time.Second * 10)
 		}
 
 		if err := r.Update(ctx, perses); err != nil {
 			log.WithError(err).Error("Failed to update custom resource to add finalizer")
-			return subreconciler.RequeueWithError(err)
+			return subreconciler.RequeueWithDelayAndError(time.Second*10, err)
 		}
 	}
 
@@ -167,7 +168,7 @@ func (r *PersesReconciler) handleDelete(ctx context.Context, req ctrl.Request) (
 
 			if err := r.Status().Update(ctx, perses); err != nil {
 				log.WithError(err).Error("Failed to update Perses status")
-				return subreconciler.RequeueWithError(err)
+				return subreconciler.RequeueWithDelayAndError(time.Second*10, err)
 			}
 
 			// Perform all operations required before remove the finalizer and allow
@@ -193,7 +194,7 @@ func (r *PersesReconciler) handleDelete(ctx context.Context, req ctrl.Request) (
 
 			if err := r.Status().Update(ctx, perses); err != nil {
 				log.WithError(err).Error("Failed to update Perses status")
-				return subreconciler.RequeueWithError(err)
+				return subreconciler.RequeueWithDelayAndError(time.Second*10, err)
 			}
 
 			log.Info("Removing Finalizer for Perses after successfully perform the operations")

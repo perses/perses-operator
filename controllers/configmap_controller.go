@@ -50,25 +50,23 @@ func (r *PersesReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Requ
 	if err != nil && apierrors.IsNotFound(err) {
 		cm, err := createPersesConfigMap(r, perses)
 		if err != nil {
-			cmlog.Error(err, "Failed to define new ConfigMap resource for perses")
+			cmlog.WithError(err).Error("Failed to define new ConfigMap resource for perses")
 
 			meta.SetStatusCondition(&perses.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses,
 				Status: metav1.ConditionFalse, Reason: "Reconciling",
 				Message: fmt.Sprintf("Failed to create ConfigMap for the custom resource (%s): (%s)", perses.Name, err)})
 
 			if err := r.Status().Update(ctx, perses); err != nil {
-				cmlog.Error(err, "Failed to update perses status")
+				cmlog.WithError(err).Error("Failed to update perses status")
 				return subreconciler.RequeueWithError(err)
 			}
 
 			return subreconciler.RequeueWithError(err)
 		}
 
-		cmlog.Info("Creating a new ConfigMap",
-			"ConfigMap.Namespace", cm.Namespace, "ConfigMap.Name", cm.Name)
+		cmlog.Infof("Creating a new ConfigMap: ConfigMap.Namespace %s ConfigMap.Name %s", cm.Namespace, cm.Name)
 		if err = r.Create(ctx, cm); err != nil {
-			cmlog.Error(err, "Failed to create new ConfigMap",
-				"ConfigMap.Namespace", cm.Namespace, "ConfigMap.Name", cm.Name)
+			cmlog.WithError(err).Errorf("Failed to create new ConfigMap: ConfigMap.Namespace %s ConfigMap.Name %s", cm.Namespace, cm.Name)
 			return subreconciler.RequeueWithError(err)
 		}
 
@@ -76,7 +74,7 @@ func (r *PersesReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Requ
 	}
 
 	if err != nil {
-		cmlog.Error(err, "Failed to get Deployment")
+		cmlog.WithError(err).Error("Failed to get ConfigMap")
 		return subreconciler.RequeueWithError(err)
 	}
 
@@ -85,13 +83,16 @@ func (r *PersesReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Requ
 
 func createPersesConfigMap(r *PersesReconciler, perses *v1alpha1.Perses) (*corev1.ConfigMap, error) {
 	configName := common.GetConfigName(perses.Name)
-	ls := common.LabelsForPerses(r.Config.PersesImage, configName, perses.Name)
+	ls, err := common.LabelsForPerses(r.Config.PersesImage, configName, perses.Name)
+
+	if err != nil {
+		return nil, err
+	}
 
 	persesConfig, err := yaml.Marshal(perses.Spec.Config)
 
 	if err != nil {
-		cmlog.Error(err, "Failed to marshal configmap data",
-			"ConfigMap.Namespace", perses.Namespace, "ConfigMap.Name", configName)
+		cmlog.WithError(err).Errorf("Failed to marshal configmap data: ConfigMap.Namespace %s ConfigMap.Name %s", perses.Namespace, configName)
 		return nil, err
 	}
 
