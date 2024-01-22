@@ -36,16 +36,14 @@ spec:
             description: PersesSpec defines the desired state of Perses
             properties:
               config:
-                description: 'TODO: import this from https://github.com/perses/perses/blob/main/internal/api/config/config.go#L51'
                 properties:
                   database:
+                    description: Database contains the different configuration depending
+                      on the database you want to use
                     properties:
                       file:
                         properties:
                           extension:
-                            enum:
-                            - json
-                            - yaml
                             type: string
                           folder:
                             type: string
@@ -53,18 +51,191 @@ spec:
                         - extension
                         - folder
                         type: object
+                      sql:
+                        properties:
+                          addr:
+                            description: Network address (requires Net)
+                            type: string
+                          allow_all_files:
+                            description: Allow all files to be used with LOAD DATA
+                              LOCAL INFILE
+                            type: boolean
+                          allow_cleartext_passwords:
+                            description: Allows the cleartext client side plugin
+                            type: boolean
+                          allow_fallback_to_plaintext:
+                            description: Allows fallback to unencrypted connection
+                              if server does not support TLS
+                            type: boolean
+                          allow_native_passwords:
+                            description: Allows the native password authentication
+                              method
+                            type: boolean
+                          allow_old_passwords:
+                            description: Allows the old insecure password method
+                            type: boolean
+                          check_conn_liveness:
+                            description: Check connections for liveness before using
+                              them
+                            type: boolean
+                          client_found_rows:
+                            description: Return number of matching rows instead of
+                              rows changed
+                            type: boolean
+                          collation:
+                            description: Connection collation
+                            type: string
+                          columns_with_alias:
+                            description: Prepend table alias to column names
+                            type: boolean
+                          db_name:
+                            description: Database name
+                            type: string
+                          interpolate_params:
+                            description: Interpolate placeholders into query string
+                            type: boolean
+                          loc:
+                            description: Location for time.Time values
+                            type: object
+                          max_allowed_packet:
+                            description: Max packet size allowed
+                            type: integer
+                          multi_statements:
+                            description: Allow multiple statements in one query
+                            type: boolean
+                          net:
+                            description: Network type
+                            type: string
+                          parse_time:
+                            description: Parse time values to time.Time
+                            type: boolean
+                          password:
+                            description: Password (requires User)
+                            type: string
+                          password_file:
+                            description: PasswordFile is a path to a file that contains
+                              a password
+                            type: string
+                          read_timeout:
+                            description: I/O read timeout
+                            format: int64
+                            type: integer
+                          reject_read_only:
+                            description: Reject read-only connections
+                            type: boolean
+                          server_pub_key:
+                            description: Server public key name
+                            type: string
+                          timeout:
+                            description: Dial timeout
+                            format: int64
+                            type: integer
+                          tls_config:
+                            description: TLS configuration
+                            properties:
+                              ca:
+                                description: Text of the CA cert to use for the targets.
+                                type: string
+                              ca_file:
+                                description: The CA cert to use for the targets.
+                                type: string
+                              cert:
+                                description: Text of the client cert file for the
+                                  targets.
+                                type: string
+                              cert_file:
+                                description: The client cert file for the targets.
+                                type: string
+                              insecure_skip_verify:
+                                description: Disable target certificate validation.
+                                type: boolean
+                              key:
+                                description: Text of the client key file for the targets.
+                                type: string
+                              key_file:
+                                description: The client key file for the targets.
+                                type: string
+                              max_version:
+                                description: Maximum TLS version.
+                                type: integer
+                              min_version:
+                                description: Minimum TLS version.
+                                type: integer
+                              server_name:
+                                description: Used to verify the hostname for the targets.
+                                type: string
+                            required:
+                            - insecure_skip_verify
+                            type: object
+                          user:
+                            description: Username
+                            type: string
+                          write_timeout:
+                            description: I/O write timeout
+                            format: int64
+                            type: integer
+                        required:
+                        - allow_all_files
+                        - allow_cleartext_passwords
+                        - allow_fallback_to_plaintext
+                        - allow_native_passwords
+                        - allow_old_passwords
+                        - check_conn_liveness
+                        - client_found_rows
+                        - columns_with_alias
+                        - db_name
+                        - interpolate_params
+                        - max_allowed_packet
+                        - multi_statements
+                        - parse_time
+                        - read_timeout
+                        - reject_read_only
+                        - server_pub_key
+                        - timeout
+                        - write_timeout
+                        type: object
                     type: object
-                  readonly:
-                    type: boolean
+                  important_dashboards:
+                    description: ImportantDashboards contains important dashboard
+                      selectors
+                    items:
+                      properties:
+                        dashboard:
+                          description: Dashboard is the name of the dashboard (dashboard.metadata.name)
+                          type: string
+                        project:
+                          description: Project is the name of the project (dashboard.metadata.project)
+                          type: string
+                      required:
+                      - dashboard
+                      - project
+                      type: object
+                    type: array
+                  information:
+                    description: Information contains markdown content to be display
+                      on the home page
+                    type: string
+                  provisioning:
+                    properties:
+                      folders:
+                        items:
+                          type: string
+                        type: array
+                      interval:
+                        description: Interval is the refresh frequency
+                        format: int64
+                        type: integer
+                    type: object
                   schemas:
+                    description: Schemas contain the configuration to get access to
+                      the CUE schemas
                     properties:
                       datasources_path:
                         type: string
                       interval:
-                        description: A Duration represents the elapsed time between
-                          two instants as an int64 nanosecond count. The representation
-                          limits the largest representable duration to approximately
-                          290 years.
+                        description: Duration wraps time.Duration. It is used to parse
+                          the custom duration format from YAML. This type should not
+                          propagate beyond the scope of input/output processing.
                         format: int64
                         type: integer
                       panels_path:
@@ -74,10 +245,196 @@ spec:
                       variables_path:
                         type: string
                     type: object
-                required:
-                - database
-                - readonly
-                - schemas
+                  security:
+                    description: Security contains any configuration that changes
+                      the API behavior like the endpoints exposed or if the permissions
+                      are activated.
+                    properties:
+                      authentication:
+                        description: Authentication contains configuration regarding
+                          management of access/refresh token
+                        properties:
+                          access_token_ttl:
+                            description: AccessTokenTTL is the time to live of the
+                              access token. By default, it is 15 minutes.
+                            format: int64
+                            type: integer
+                          disable_sign_up:
+                            description: DisableSignUp deactivates the Sign-up page
+                              in the UI. It also disables the endpoint that gives
+                              the possibility to create a user.
+                            type: boolean
+                          providers:
+                            description: Providers configure the different authentication
+                              providers
+                            properties:
+                              enable_native:
+                                type: boolean
+                              oauth:
+                                items:
+                                  properties:
+                                    auth_url:
+                                      type: object
+                                    client_id:
+                                      description: Hidden special type for storing
+                                        secrets.
+                                      type: string
+                                    client_secret:
+                                      description: Hidden special type for storing
+                                        secrets.
+                                      type: string
+                                    custom_login_property:
+                                      type: string
+                                    disable_pkce:
+                                      type: boolean
+                                    name:
+                                      type: string
+                                    redirect_uri:
+                                      type: object
+                                    scopes:
+                                      items:
+                                        type: string
+                                      type: array
+                                    slug_id:
+                                      type: string
+                                    token_url:
+                                      type: object
+                                    user_infos_url:
+                                      type: object
+                                  required:
+                                  - auth_url
+                                  - client_id
+                                  - client_secret
+                                  - custom_login_property
+                                  - disable_pkce
+                                  - name
+                                  - redirect_uri
+                                  - scopes
+                                  - slug_id
+                                  - token_url
+                                  - user_infos_url
+                                  type: object
+                                type: array
+                              oidc:
+                                items:
+                                  properties:
+                                    client_id:
+                                      description: Hidden special type for storing
+                                        secrets.
+                                      type: string
+                                    client_secret:
+                                      description: Hidden special type for storing
+                                        secrets.
+                                      type: string
+                                    disable_pkce:
+                                      type: boolean
+                                    discovery_url:
+                                      type: object
+                                    issuer:
+                                      type: object
+                                    name:
+                                      type: string
+                                    redirect_uri:
+                                      type: object
+                                    scopes:
+                                      items:
+                                        type: string
+                                      type: array
+                                    slug_id:
+                                      type: string
+                                    url_params:
+                                      additionalProperties:
+                                        type: string
+                                      type: object
+                                  required:
+                                  - client_id
+                                  - client_secret
+                                  - disable_pkce
+                                  - discovery_url
+                                  - issuer
+                                  - name
+                                  - redirect_uri
+                                  - scopes
+                                  - slug_id
+                                  - url_params
+                                  type: object
+                                type: array
+                            required:
+                            - enable_native
+                            type: object
+                          refresh_token_ttl:
+                            description: RefreshTokenTTL is the time to live of the
+                              refresh token. The refresh token is used to get a new
+                              access token when it is expired. By default, it is 24
+                              hours.
+                            format: int64
+                            type: integer
+                        required:
+                        - disable_sign_up
+                        - providers
+                        type: object
+                      authorization:
+                        description: Authorization contains all configs around rbac
+                          (permissions and roles)
+                        properties:
+                          check_latest_update_interval:
+                            description: CheckLatestUpdateInterval that checks if
+                              the RBAC cache needs to be refreshed with db content.
+                              Only for SQL database setup.
+                            format: int64
+                            type: integer
+                          guest_permissions:
+                            description: Default permissions for guest users (logged-in
+                              users)
+                            items:
+                              properties:
+                                actions:
+                                  description: Actions of the permission (read, create,
+                                    update, delete, ...)
+                                  items:
+                                    type: string
+                                  type: array
+                                scopes:
+                                  description: 'The list of kind targeted by the permission.
+                                    For example: `Datasource`, `Dashboard`, ... With
+                                    Role, you can''t target global kinds'
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                              - actions
+                              - scopes
+                              type: object
+                            type: array
+                        type: object
+                      enable_auth:
+                        description: When it is true, the authentication and authorization
+                          config are considered. And you will need a valid JWT token
+                          to contact most of the endpoints exposed by the API
+                        type: boolean
+                      encryption_key:
+                        description: EncryptionKey is the secret key used to encrypt
+                          and decrypt sensitive data stored in the database such as
+                          the password of the basic auth for a datasource. Note that
+                          if it is not provided, it will use a default value. When
+                          Perses is used in a multi instance mode, you should provide
+                          the key. Otherwise, each instance will have a different
+                          key and therefore won't be able to decrypt what the other
+                          is encrypting. Also note the key must be at least 32 bytes
+                          long.
+                        type: string
+                      encryption_key_file:
+                        description: EncryptionKeyFile is the path to file containing
+                          the secret key
+                        type: string
+                      readonly:
+                        description: Readonly will deactivate any HTTP POST, PUT,
+                          DELETE endpoint
+                        type: boolean
+                    required:
+                    - enable_auth
+                    - readonly
+                    type: object
                 type: object
               containerPort:
                 format: int32

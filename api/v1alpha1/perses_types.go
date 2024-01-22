@@ -17,44 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// +kubebuilder:validation:Enum=json;yaml
-type FileExtension string
-
-type File struct {
-	Folder    string        `json:"folder" yaml:"folder"`
-	Extension FileExtension `json:"extension" yaml:"extension"`
-}
-
-type Database struct {
-	File *File `json:"file,omitempty" yaml:"file,omitempty"`
-}
-
-type Schemas struct {
-	// +kubebuilder:validation:optional
-	PanelsPath string `json:"panels_path,omitempty" yaml:"panels_path,omitempty"`
-	// +kubebuilder:validation:optional
-	QueriesPath string `json:"queries_path,omitempty" yaml:"queries_path,omitempty"`
-	// +kubebuilder:validation:optional
-	DatasourcesPath string `json:"datasources_path,omitempty" yaml:"datasources_path,omitempty"`
-	// +kubebuilder:validation:optional
-	VariablesPath string `json:"variables_path,omitempty" yaml:"variables_path,omitempty"`
-	// +kubebuilder:validation:optional
-	Interval time.Duration `json:"interval,omitempty" yaml:"interval,omitempty"`
-}
-
-// TODO: import this from https://github.com/perses/perses/blob/main/internal/api/config/config.go#L51
-type PersesConfig struct {
-	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	// +kubebuilder:validation:optional
-	Readonly bool     `json:"readonly" yaml:"readonly"`
-	Database Database `json:"database" yaml:"database"`
-	Schemas  Schemas  `json:"schemas" yaml:"schemas"`
-}
 
 // PersesSpec defines the desired state of Perses
 type PersesSpec struct {
