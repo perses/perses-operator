@@ -64,9 +64,6 @@ var _ = Describe("Perses controller", func() {
 						Namespace: namespace.Name,
 					},
 					Spec: persesv1alpha1.PersesSpec{
-						Config: persesv1alpha1.PersesConfig{
-							Readonly: false,
-						},
 						ContainerPort: 8080,
 					},
 				}

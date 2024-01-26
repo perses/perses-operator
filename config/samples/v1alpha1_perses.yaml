@@ -10,7 +10,6 @@ metadata:
   name: perses-sample
 spec:
   config:
-    readonly: false
     database:
       file:
         folder: "/etc/perses/storage"

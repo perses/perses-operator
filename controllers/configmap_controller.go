@@ -89,7 +89,7 @@ func createPersesConfigMap(r *PersesReconciler, perses *v1alpha1.Perses) (*corev
 		return nil, err
 	}
 
-	persesConfig, err := yaml.Marshal(perses.Spec.Config)
+	persesConfig, err := yaml.Marshal(perses.Spec.Config.Config)
 
 	if err != nil {
 		cmlog.WithError(err).Errorf("Failed to marshal configmap data: ConfigMap.Namespace %s ConfigMap.Name %s", perses.Namespace, configName)
