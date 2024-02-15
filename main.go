@@ -35,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
-	"github.com/perses/perses-operator/controllers"
+	controllers "github.com/perses/perses-operator/controllers/perses"
 	//+kubebuilder:scaffold:imports
 )
 

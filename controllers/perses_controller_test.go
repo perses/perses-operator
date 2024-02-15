@@ -9,6 +9,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	persescontroller "github.com/perses/perses-operator/controllers/perses"
 	common "github.com/perses/perses-operator/internal/perses/common"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -79,7 +80,7 @@ var _ = Describe("Perses controller", func() {
 			}, time.Minute, time.Second).Should(Succeed())
 
 			By("Reconciling the custom resource created")
-			persesReconciler := &PersesReconciler{
+			persesReconciler := &persescontroller.PersesReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}
