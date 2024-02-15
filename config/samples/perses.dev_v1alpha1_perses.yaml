@@ -14,6 +14,7 @@ spec:
       file:
         folder: "/etc/perses/storage"
         extension: "yaml"
+        case_sensitive: false
     schemas:
       panels_path: "/etc/perses/schemas/panels"
       queries_path: "/etc/perses/schemas/queries"

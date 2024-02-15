@@ -43,11 +43,14 @@ spec:
                     properties:
                       file:
                         properties:
+                          case_sensitive:
+                            type: boolean
                           extension:
                             type: string
                           folder:
                             type: string
                         required:
+                        - case_sensitive
                         - extension
                         - folder
                         type: object
@@ -73,6 +76,8 @@ spec:
                             type: boolean
                           allow_old_passwords:
                             description: Allows the old insecure password method
+                            type: boolean
+                          case_sensitive:
                             type: boolean
                           check_conn_liveness:
                             description: Check connections for liveness before using
@@ -180,6 +185,7 @@ spec:
                         - allow_fallback_to_plaintext
                         - allow_native_passwords
                         - allow_old_passwords
+                        - case_sensitive
                         - check_conn_liveness
                         - client_found_rows
                         - columns_with_alias
