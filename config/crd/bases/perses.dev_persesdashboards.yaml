@@ -15,268 +15,392 @@ spec:
     singular: persesdashboard
   scope: Namespaced
   versions:
-  - name: v1alpha1
-    schema:
-      openAPIV3Schema:
-        description: PersesDashboard is the Schema for the persesdashboards API
-        properties:
-          apiVersion:
-            description: 'APIVersion defines the versioned schema of this representation
-              of an object. Servers should convert recognized schemas to the latest
-              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
-            type: string
-          kind:
-            description: 'Kind is a string value representing the REST resource this
-              object represents. Servers may infer this from the endpoint the client
-              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
-            type: string
-          metadata:
-            type: object
-          spec:
-            properties:
-              kind:
-                type: string
-              metadata:
-                description: ProjectMetadata is the metadata struct for resources
-                  that belongs to a project.
-                properties:
-                  createdAt:
-                    format: date-time
-                    type: string
-                  name:
-                    type: string
-                  project:
-                    type: string
-                  updatedAt:
-                    format: date-time
-                    type: string
-                  version:
-                    format: int64
-                    type: integer
-                required:
-                - name
-                - project
-                - version
-                type: object
-              spec:
-                properties:
-                  datasources:
-                    additionalProperties:
-                      properties:
-                        default:
-                          type: boolean
-                        display:
-                          properties:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: PersesDashboard is the Schema for the persesdashboards API
+          properties:
+            apiVersion:
+              description:
+                "APIVersion defines the versioned schema of this representation
+                of an object. Servers should convert recognized schemas to the latest
+                internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources"
+              type: string
+            kind:
+              description:
+                "Kind is a string value representing the REST resource this
+                object represents. Servers may infer this from the endpoint the client
+                submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds"
+              type: string
+            metadata:
+              type: object
+            spec:
+              properties:
+                kind:
+                  type: string
+                metadata:
+                  description:
+                    ProjectMetadata is the metadata struct for resources
+                    that belongs to a project.
+                  properties:
+                    createdAt:
+                      format: date-time
+                      type: string
+                    name:
+                      type: string
+                    project:
+                      type: string
+                    updatedAt:
+                      format: date-time
+                      type: string
+                    version:
+                      format: int64
+                      type: integer
+                  required:
+                    - name
+                    - project
+                    - version
+                  type: object
+                spec:
+                  properties:
+                    datasources:
+                      additionalProperties:
+                        properties:
+                          default:
+                            type: boolean
+                          display:
+                            properties:
+                              description:
+                                type: string
+                              name:
+                                type: string
+                            type: object
+                          plugin:
                             description:
-                              type: string
-                            name:
-                              type: string
-                          type: object
-                        plugin:
-                          description: Plugin will contain the datasource configuration.
-                            The data typed is available in Cue.
-                          properties:
-                            kind:
-                              type: string
-                            spec:
-                              x-kubernetes-preserve-unknown-fields: true
-                          required:
+                              Plugin will contain the datasource configuration.
+                              The data typed is available in Cue.
+                            properties:
+                              kind:
+                                type: string
+                              spec:
+                                x-kubernetes-preserve-unknown-fields: true
+                            required:
+                              - kind
+                              - spec
+                            type: object
+                        required:
+                          - default
+                          - plugin
+                        type: object
+                      description: Datasources is an optional list of datasource definition.
+                      type: object
+                    display:
+                      properties:
+                        description:
+                          type: string
+                        name:
+                          type: string
+                      type: object
+                    duration:
+                      description:
+                        Duration is the default time range to use when getting
+                        data to fill the dashboard
+                      type: string
+                    layouts:
+                      items:
+                        properties:
+                          kind:
+                            type: string
+                          spec:
+                            x-kubernetes-preserve-unknown-fields: true
+                        required:
                           - kind
                           - spec
-                          type: object
-                      required:
-                      - default
-                      - plugin
-                      type: object
-                    description: Datasources is an optional list of datasource definition.
-                    type: object
-                  display:
-                    properties:
-                      description:
-                        type: string
+                        type: object
                       name:
                         type: string
+                      project:
+                        type: string
+                      updatedAt:
+                        description:
+                          "A Time represents an instant in time with nanosecond
+                          precision. \n Programs using times should typically store and
+                          pass them as values, not pointers. That is, time variables and
+                          struct fields should be of type time.Time, not *time.Time. \n
+                          A Time value can be used by multiple goroutines simultaneously
+                          except that the methods GobDecode, UnmarshalBinary, UnmarshalJSON
+                          and UnmarshalText are not concurrency-safe. \n Time instants
+                          can be compared using the Before, After, and Equal methods.
+                          The Sub method subtracts two instants, producing a Duration.
+                          The Add method adds a Time and a Duration, producing a Time.
+                          \n The zero value of type Time is January 1, year 1, 00:00:00.000000000
+                          UTC. As this time is unlikely to come up in practice, the IsZero
+                          method gives a simple way of detecting a time that has not been
+                          initialized explicitly. \n Each Time has associated with it
+                          a Location, consulted when computing the presentation form of
+                          the time, such as in the Format, Hour, and Year methods. The
+                          methods Local, UTC, and In return a Time with a specific location.
+                          Changing the location in this way changes only the presentation;
+                          it does not change the instant in time being denoted and therefore
+                          does not affect the computations described in earlier paragraphs.
+                          \n Representations of a Time value saved by the GobEncode, MarshalBinary,
+                          MarshalJSON, and MarshalText methods store the Time.Location's
+                          offset, but not the location name. They therefore lose information
+                          about Daylight Saving Time. \n In addition to the required “wall
+                          clock” reading, a Time may contain an optional reading of the
+                          current process's monotonic clock, to provide additional precision
+                          for comparison or subtraction. See the “Monotonic Clocks” section
+                          in the package documentation for details. \n Note that the Go
+                          == operator compares not just the time instant but also the
+                          Location and the monotonic clock reading. Therefore, Time values
+                          should not be used as map or database keys without first guaranteeing
+                          that the identical Location has been set for all values, which
+                          can be achieved through use of the UTC or Local method, and
+                          that the monotonic clock reading has been stripped by setting
+                          t = t.Round(0). In general, prefer t.Equal(u) to t == u, since
+                          t.Equal uses the most accurate comparison available and correctly
+                          handles the case when only one of its arguments has a monotonic
+                          clock reading."
+                        type: object
+                      version:
+                        format: int64
+                        type: integer
+                    required:
+                      - createdAt
+                      - name
+                      - project
+                      - updatedAt
+                      - version
                     type: object
-                  duration:
-                    description: Duration is the default time range to use when getting
-                      data to fill the dashboard
-                    format: duration
-                    type: string
-                  layouts:
-                    items:
-                      properties:
-                        kind:
-                          type: string
-                        spec:
-                          x-kubernetes-preserve-unknown-fields: true
-                      required:
-                      - kind
-                      - spec
-                      type: object
-                    type: array
-                  panels:
-                    additionalProperties:
-                      properties:
-                        kind:
-                          type: string
-                        spec:
+                  spec:
+                    properties:
+                      datasources:
+                        additionalProperties:
                           properties:
+                            default:
+                              type: boolean
                             display:
                               properties:
                                 description:
                                   type: string
                                 name:
                                   type: string
-                              required:
-                              - name
                               type: object
                             plugin:
+                              description:
+                                Plugin will contain the datasource configuration.
+                                The data typed is available in Cue.
                               properties:
                                 kind:
                                   type: string
                                 spec:
                                   x-kubernetes-preserve-unknown-fields: true
                               required:
-                              - kind
-                              - spec
-                              type: object
-                            queries:
-                              items:
-                                properties:
-                                  kind:
-                                    type: string
-                                  spec:
-                                    properties:
-                                      plugin:
-                                        properties:
-                                          kind:
-                                            type: string
-                                          spec:
-                                            x-kubernetes-preserve-unknown-fields: true
-                                        required:
-                                        - kind
-                                        - spec
-                                        type: object
-                                    required:
-                                    - plugin
-                                    type: object
-                                required:
                                 - kind
                                 - spec
-                                type: object
-                              type: array
+                              type: object
                           required:
-                          - display
-                          - plugin
+                            - default
+                            - plugin
                           type: object
-                      required:
-                      - kind
-                      - spec
-                      type: object
+                        description: Datasources is an optional list of datasource definition.
+                        type: object
+                      display:
+                        properties:
+                          description:
+                            type: string
+                          name:
+                            type: string
+                        type: object
+                      duration:
+                        description:
+                          Duration is the default time range to use when getting
+                          data to fill the dashboard
+                        format: duration
+                        type: string
+                      layouts:
+                        items:
+                          properties:
+                            kind:
+                              type: string
+                            spec:
+                              x-kubernetes-preserve-unknown-fields: true
+                          required:
+                            - kind
+                            - spec
+                          type: object
+                        type: array
+                      panels:
+                        additionalProperties:
+                          properties:
+                            kind:
+                              type: string
+                            spec:
+                              properties:
+                                display:
+                                  properties:
+                                    description:
+                                      type: string
+                                    name:
+                                      type: string
+                                  required:
+                                    - name
+                                  type: object
+                                plugin:
+                                  properties:
+                                    kind:
+                                      type: string
+                                    spec:
+                                      x-kubernetes-preserve-unknown-fields: true
+                                  required:
+                                    - kind
+                                    - spec
+                                  type: object
+                                queries:
+                                  items:
+                                    properties:
+                                      kind:
+                                        type: string
+                                      spec:
+                                        properties:
+                                          plugin:
+                                            properties:
+                                              kind:
+                                                type: string
+                                              spec:
+                                                x-kubernetes-preserve-unknown-fields: true
+                                            required:
+                                              - kind
+                                              - spec
+                                            type: object
+                                        required:
+                                          - plugin
+                                        type: object
+                                    required:
+                                      - kind
+                                      - spec
+                                    type: object
+                                  type: array
+                              required:
+                                - display
+                                - plugin
+                              type: object
+                          required:
+                            - kind
+                            - spec
+                          type: object
+                        type: object
+                      refreshInterval:
+                        description:
+                          RefreshInterval is the default refresh interval to
+                          use when landing on the dashboard
+                        format: duration
+                        type: string
+                      variables:
+                        items:
+                          properties:
+                            kind:
+                              description:
+                                Kind is the type of the variable. Depending
+                                on the value of Kind, it will change the content of Spec.
+                              type: string
+                            spec:
+                              x-kubernetes-preserve-unknown-fields: true
+                          required:
+                            - kind
+                            - spec
+                          type: object
+                        type: array
+                    required:
+                      - duration
+                      - layouts
+                      - panels
                     type: object
-                  refreshInterval:
-                    description: RefreshInterval is the default refresh interval to
-                      use when landing on the dashboard
-                    format: duration
-                    type: string
-                  variables:
+                required:
+                  - kind
+                  - metadata
+                  - spec
+                type: object
+              status:
+                description: PersesDashboardStatus defines the observed state of PersesDashboard
+                properties:
+                  conditions:
                     items:
+                      description:
+                        "Condition contains details for one aspect of the current
+                        state of this API Resource. --- This struct is intended for direct
+                        use as an array at the field path .status.conditions.  For example,
+                        \n type FooStatus struct{ // Represents the observations of a
+                        foo's current state. // Known .status.conditions.type are: \"Available\",
+                        \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
+                        // +listType=map // +listMapKey=type Conditions []metav1.Condition
+                        `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
+                        protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
                       properties:
-                        kind:
-                          description: Kind is the type of the variable. Depending
-                            on the value of Kind, it will change the content of Spec.
+                        lastTransitionTime:
+                          description:
+                            lastTransitionTime is the last time the condition
+                            transitioned from one status to another. This should be when
+                            the underlying condition changed.  If that is not known, then
+                            using the time when the API field changed is acceptable.
+                          format: date-time
                           type: string
-                        spec:
-                          x-kubernetes-preserve-unknown-fields: true
+                        message:
+                          description:
+                            message is a human readable message indicating
+                            details about the transition. This may be an empty string.
+                          maxLength: 32768
+                          type: string
+                        observedGeneration:
+                          description:
+                            observedGeneration represents the .metadata.generation
+                            that the condition was set based upon. For instance, if .metadata.generation
+                            is currently 12, but the .status.conditions[x].observedGeneration
+                            is 9, the condition is out of date with respect to the current
+                            state of the instance.
+                          format: int64
+                          minimum: 0
+                          type: integer
+                        reason:
+                          description:
+                            reason contains a programmatic identifier indicating
+                            the reason for the condition's last transition. Producers
+                            of specific condition types may define expected values and
+                            meanings for this field, and whether the values are considered
+                            a guaranteed API. The value should be a CamelCase string.
+                            This field may not be empty.
+                          maxLength: 1024
+                          minLength: 1
+                          pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                          type: string
+                        status:
+                          description: status of the condition, one of True, False, Unknown.
+                          enum:
+                            - "True"
+                            - "False"
+                            - Unknown
+                          type: string
+                        type:
+                          description:
+                            type of condition in CamelCase or in foo.example.com/CamelCase.
+                            --- Many .condition.type values are consistent across resources
+                            like Available, but because arbitrary conditions can be useful
+                            (see .node.status.conditions), the ability to deconflict is
+                            important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                          maxLength: 316
+                          pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                          type: string
                       required:
-                      - kind
-                      - spec
+                        - lastTransitionTime
+                        - message
+                        - reason
+                        - status
+                        - type
                       type: object
                     type: array
-                required:
-                - duration
-                - layouts
-                - panels
                 type: object
-            required:
-            - kind
-            - metadata
-            - spec
             type: object
-          status:
-            description: PersesDashboardStatus defines the observed state of PersesDashboard
-            properties:
-              conditions:
-                items:
-                  description: "Condition contains details for one aspect of the current
-                    state of this API Resource. --- This struct is intended for direct
-                    use as an array at the field path .status.conditions.  For example,
-                    \n type FooStatus struct{ // Represents the observations of a
-                    foo's current state. // Known .status.conditions.type are: \"Available\",
-                    \"Progressing\", and \"Degraded\" // +patchMergeKey=type // +patchStrategy=merge
-                    // +listType=map // +listMapKey=type Conditions []metav1.Condition
-                    `json:\"conditions,omitempty\" patchStrategy:\"merge\" patchMergeKey:\"type\"
-                    protobuf:\"bytes,1,rep,name=conditions\"` \n // other fields }"
-                  properties:
-                    lastTransitionTime:
-                      description: lastTransitionTime is the last time the condition
-                        transitioned from one status to another. This should be when
-                        the underlying condition changed.  If that is not known, then
-                        using the time when the API field changed is acceptable.
-                      format: date-time
-                      type: string
-                    message:
-                      description: message is a human readable message indicating
-                        details about the transition. This may be an empty string.
-                      maxLength: 32768
-                      type: string
-                    observedGeneration:
-                      description: observedGeneration represents the .metadata.generation
-                        that the condition was set based upon. For instance, if .metadata.generation
-                        is currently 12, but the .status.conditions[x].observedGeneration
-                        is 9, the condition is out of date with respect to the current
-                        state of the instance.
-                      format: int64
-                      minimum: 0
-                      type: integer
-                    reason:
-                      description: reason contains a programmatic identifier indicating
-                        the reason for the condition's last transition. Producers
-                        of specific condition types may define expected values and
-                        meanings for this field, and whether the values are considered
-                        a guaranteed API. The value should be a CamelCase string.
-                        This field may not be empty.
-                      maxLength: 1024
-                      minLength: 1
-                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
-                      type: string
-                    status:
-                      description: status of the condition, one of True, False, Unknown.
-                      enum:
-                      - "True"
-                      - "False"
-                      - Unknown
-                      type: string
-                    type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
-                        --- Many .condition.type values are consistent across resources
-                        like Available, but because arbitrary conditions can be useful
-                        (see .node.status.conditions), the ability to deconflict is
-                        important. The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
-                      maxLength: 316
-                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
-                      type: string
-                  required:
-                  - lastTransitionTime
-                  - message
-                  - reason
-                  - status
-                  - type
-                  type: object
-                type: array
-            type: object
-        type: object
-    served: true
-    storage: true
-    subresources:
-      status: {}
+        served: true
+        storage: true
+        subresources:
+          status: {}
