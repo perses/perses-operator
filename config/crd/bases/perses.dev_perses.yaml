@@ -50,7 +50,6 @@ spec:
                           folder:
                             type: string
                         required:
-                        - case_sensitive
                         - extension
                         - folder
                         type: object
