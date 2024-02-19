@@ -90,3 +90,29 @@ rules:
       - get
       - patch
       - update
+  - apiGroups:
+      - perses.dev
+    resources:
+      - persesdatasources
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - perses.dev
+    resources:
+      - persesdatasources/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - perses.dev
+    resources:
+      - persesdatasources/status
+    verbs:
+      - get
+      - patch
+      - update
