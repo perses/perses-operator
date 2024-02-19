@@ -4,6 +4,7 @@
 resources:
   - bases/perses.dev_perses.yaml
   - bases/perses.dev_persesdashboards.yaml
+  - bases/perses.dev_persesdatasources.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:

@@ -52,3 +52,33 @@ func (d *MockDashboard) Create(dashboard *modelv1.Dashboard) (*modelv1.Dashboard
 	args := d.Called(dashboard)
 	return args.Get(0).(*modelv1.Dashboard), args.Error(1)
 }
+
+type MockDatasource struct {
+	v1.DatasourceInterface
+	mock.Mock
+}
+
+func (c *MockClient) Datasource(project string) v1.DatasourceInterface {
+	args := c.Called(project)
+	return args.Get(0).(v1.DatasourceInterface)
+}
+
+func (d *MockDatasource) Get(name string) (*modelv1.Datasource, error) {
+	args := d.Called(name)
+	return args.Get(0).(*modelv1.Datasource), args.Error(1)
+}
+
+func (d *MockDatasource) Update(dashboard *modelv1.Datasource) (*modelv1.Datasource, error) {
+	args := d.Called(dashboard)
+	return args.Get(0).(*modelv1.Datasource), args.Error(1)
+}
+
+func (d *MockDatasource) Delete(name string) error {
+	args := d.Called(name)
+	return args.Error(0)
+}
+
+func (d *MockDatasource) Create(dashboard *modelv1.Datasource) (*modelv1.Datasource, error) {
+	args := d.Called(dashboard)
+	return args.Get(0).(*modelv1.Datasource), args.Error(1)
+}
