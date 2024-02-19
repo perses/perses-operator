@@ -53,3 +53,15 @@ func (f *PersesClientFactoryWithURL) CreateClient(config persesv1alpha1.Perses) 
 
 	return persesClient, nil
 }
+
+type PersesClientFactoryWithClient struct {
+	client v1.ClientInterface
+}
+
+func NewWithClient(client v1.ClientInterface) PersesClientFactory {
+	return &PersesClientFactoryWithClient{client: client}
+}
+
+func (f *PersesClientFactoryWithClient) CreateClient(config persesv1alpha1.Perses) (v1.ClientInterface, error) {
+	return f.client, nil
+}
