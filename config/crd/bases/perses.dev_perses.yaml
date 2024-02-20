@@ -50,7 +50,6 @@ spec:
                           folder:
                             type: string
                         required:
-                        - extension
                         - folder
                         type: object
                       sql:

@@ -6,7 +6,7 @@ require (
 	github.com/barkimedes/go-deepcopy v0.0.0-20220514131651-17c30cfc62df
 	github.com/onsi/ginkgo/v2 v2.11.0
 	github.com/onsi/gomega v1.27.10
-	github.com/perses/perses v0.43.1-0.20240212140825-8efdfab0f93d
+	github.com/perses/perses v0.43.1-0.20240219142255-6799f0a7cffc
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.8.4
 	gopkg.in/yaml.v2 v2.4.0

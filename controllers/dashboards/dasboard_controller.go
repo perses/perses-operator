@@ -94,12 +94,12 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 
 	_, err = persesClient.Dashboard(dashboard.Namespace).Get(dashboard.Name)
 
-	dashboardWithName := &dashboard.Spec.Dashboard
-	dashboardWithName.Metadata.Name = dashboard.Name
+	persesDashboard := &dashboard.Spec.Dashboard
+	persesDashboard.Metadata.Name = dashboard.Name
 
 	if err != nil {
 		if errors.Is(err, perseshttp.RequestNotFoundError) {
-			_, err = persesClient.Dashboard(dashboard.Namespace).Create(dashboardWithName)
+			_, err = persesClient.Dashboard(dashboard.Namespace).Create(persesDashboard)
 
 			if err != nil {
 				dlog.WithError(err).Errorf("Failed to create dashboard: %s", dashboard.Name)
@@ -113,7 +113,7 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 
 		return subreconciler.RequeueWithError(err)
 	} else {
-		_, err = persesClient.Dashboard(dashboard.Namespace).Update(dashboardWithName)
+		_, err = persesClient.Dashboard(dashboard.Namespace).Update(persesDashboard)
 
 		if err != nil {
 			dlog.WithError(err).Errorf("Failed to update dashboard: %s", dashboard.Name)
