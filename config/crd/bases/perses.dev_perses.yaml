@@ -199,6 +199,15 @@ spec:
                         - write_timeout
                         type: object
                     type: object
+                  deactivate_front:
+                    description: When it is true, Perses won't serve the frontend
+                      anymore.
+                    type: boolean
+                  ephemeral_dashboards_cleanup_interval:
+                    description: EphemeralDashboardsCleanupInterval is the interval
+                      at which the ephemeral dashboards are cleaned up
+                    format: int64
+                    type: integer
                   important_dashboards:
                     description: ImportantDashboards contains important dashboard
                       selectors
@@ -220,6 +229,8 @@ spec:
                       on the home page
                     type: string
                   provisioning:
+                    description: Provisioning contains the provisioning config that
+                      can be used if you want to provide default resources.
                     properties:
                       folders:
                         items:
@@ -279,6 +290,25 @@ spec:
                                   properties:
                                     auth_url:
                                       type: object
+                                    client_credentials:
+                                      properties:
+                                        client_id:
+                                          description: Hidden special type for storing
+                                            secrets.
+                                          type: string
+                                        client_secret:
+                                          description: Hidden special type for storing
+                                            secrets.
+                                          type: string
+                                        scopes:
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                      - client_id
+                                      - client_secret
+                                      - scopes
+                                      type: object
                                     client_id:
                                       description: Hidden special type for storing
                                         secrets.
@@ -289,6 +319,27 @@ spec:
                                       type: string
                                     custom_login_property:
                                       type: string
+                                    device_auth_url:
+                                      type: object
+                                    device_code:
+                                      properties:
+                                        client_id:
+                                          description: Hidden special type for storing
+                                            secrets.
+                                          type: string
+                                        client_secret:
+                                          description: Hidden special type for storing
+                                            secrets.
+                                          type: string
+                                        scopes:
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                      - client_id
+                                      - client_secret
+                                      - scopes
+                                      type: object
                                     disable_pkce:
                                       type: boolean
                                     name:
@@ -309,11 +360,9 @@ spec:
                                   - auth_url
                                   - client_id
                                   - client_secret
-                                  - custom_login_property
+                                  - device_auth_url
                                   - disable_pkce
                                   - name
-                                  - redirect_uri
-                                  - scopes
                                   - slug_id
                                   - token_url
                                   - user_infos_url
@@ -322,6 +371,25 @@ spec:
                               oidc:
                                 items:
                                   properties:
+                                    client_credentials:
+                                      properties:
+                                        client_id:
+                                          description: Hidden special type for storing
+                                            secrets.
+                                          type: string
+                                        client_secret:
+                                          description: Hidden special type for storing
+                                            secrets.
+                                          type: string
+                                        scopes:
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                      - client_id
+                                      - client_secret
+                                      - scopes
+                                      type: object
                                     client_id:
                                       description: Hidden special type for storing
                                         secrets.
@@ -330,6 +398,25 @@ spec:
                                       description: Hidden special type for storing
                                         secrets.
                                       type: string
+                                    device_code:
+                                      properties:
+                                        client_id:
+                                          description: Hidden special type for storing
+                                            secrets.
+                                          type: string
+                                        client_secret:
+                                          description: Hidden special type for storing
+                                            secrets.
+                                          type: string
+                                        scopes:
+                                          items:
+                                            type: string
+                                          type: array
+                                      required:
+                                      - client_id
+                                      - client_secret
+                                      - scopes
+                                      type: object
                                     disable_pkce:
                                       type: boolean
                                     discovery_url:
@@ -354,13 +441,9 @@ spec:
                                   - client_id
                                   - client_secret
                                   - disable_pkce
-                                  - discovery_url
                                   - issuer
                                   - name
-                                  - redirect_uri
-                                  - scopes
                                   - slug_id
-                                  - url_params
                                   type: object
                                 type: array
                             required:
@@ -420,12 +503,9 @@ spec:
                         description: EncryptionKey is the secret key used to encrypt
                           and decrypt sensitive data stored in the database such as
                           the password of the basic auth for a datasource. Note that
-                          if it is not provided, it will use a default value. When
-                          Perses is used in a multi instance mode, you should provide
-                          the key. Otherwise, each instance will have a different
-                          key and therefore won't be able to decrypt what the other
-                          is encrypting. Also note the key must be at least 32 bytes
-                          long.
+                          if it is not provided, it will use a default value. On a
+                          production instance, you should set this key. Also note
+                          the key must be at least 32 bytes long.
                         type: string
                       encryption_key_file:
                         description: EncryptionKeyFile is the path to file containing
@@ -439,6 +519,8 @@ spec:
                     - enable_auth
                     - readonly
                     type: object
+                required:
+                - deactivate_front
                 type: object
               containerPort:
                 format: int32
