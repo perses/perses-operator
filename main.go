@@ -35,7 +35,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
-	"github.com/perses/perses-operator/controllers"
+	dashboardcontroller "github.com/perses/perses-operator/controllers/dashboards"
+	persescontroller "github.com/perses/perses-operator/controllers/perses"
+	"github.com/perses/perses-operator/internal/perses/common"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -110,14 +112,23 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controllers.PersesReconciler{
+	if err = (&persescontroller.PersesReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
-		Config: controllers.Config{
+		Config: persescontroller.Config{
 			PersesImage: persesImage,
 		},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Perses")
+		os.Exit(1)
+	}
+
+	if err = (&dashboardcontroller.PersesDashboardReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		ClientFactory: common.NewWithConfig(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "PersesDashboard")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

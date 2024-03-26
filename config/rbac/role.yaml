@@ -27,9 +27,15 @@ rules:
   - apiGroups:
       - ""
     resources:
-      - pods
+      - deployments
+      - services
+      - configmaps
     verbs:
       - get
+      - patch
+      - update
+      - create
+      - delete
       - list
       - watch
   - apiGroups:
@@ -54,6 +60,32 @@ rules:
       - perses.dev
     resources:
       - perses/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - perses.dev
+    resources:
+      - persesdashboards
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - perses.dev
+    resources:
+      - persesdashboards/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - perses.dev
+    resources:
+      - persesdashboards/status
     verbs:
       - get
       - patch

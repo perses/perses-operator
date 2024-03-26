@@ -32,6 +32,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	persesController "github.com/perses/perses-operator/controllers/perses"
+
 	"github.com/perses/perses-operator/api/v1alpha1"
 	//+kubebuilder:scaffold:imports
 )
@@ -82,7 +84,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&PersesReconciler{
+	err = (&persesController.PersesReconciler{
 		Client: k8sManager.GetClient(),
 		Scheme: k8sManager.GetScheme(),
 	}).SetupWithManager(k8sManager)
