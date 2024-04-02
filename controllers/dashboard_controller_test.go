@@ -119,7 +119,7 @@ var _ = Describe("Dashboard controller", func() {
 						Namespace: PersesNamespace,
 					},
 					Spec: persesv1alpha1.Dashboard{
-						Dashboard: *newDashboard,
+						DashboardSpec: newDashboard.Spec,
 					},
 				}
 
