@@ -94,8 +94,15 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 
 	_, err = persesClient.Dashboard(dashboard.Namespace).Get(dashboard.Name)
 
-	persesDashboard := &dashboard.Spec.Dashboard
-	persesDashboard.Metadata.Name = dashboard.Name
+	persesDashboard := &persesv1.Dashboard{
+		Kind: persesv1.KindDashboard,
+		Metadata: persesv1.ProjectMetadata{
+			Metadata: persesv1.Metadata{
+				Name: dashboard.Name,
+			},
+		},
+		Spec: dashboard.Spec.DashboardSpec,
+	}
 
 	if err != nil {
 		if errors.Is(err, perseshttp.RequestNotFoundError) {

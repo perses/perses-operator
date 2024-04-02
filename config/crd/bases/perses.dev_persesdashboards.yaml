@@ -34,47 +34,77 @@ spec:
             type: object
           spec:
             properties:
-              kind:
-                type: string
-              metadata:
-                description: ProjectMetadata is the metadata struct for resources
-                  that belongs to a project.
+              datasources:
+                additionalProperties:
+                  properties:
+                    default:
+                      type: boolean
+                    display:
+                      properties:
+                        description:
+                          type: string
+                        name:
+                          type: string
+                      type: object
+                    plugin:
+                      description: Plugin will contain the datasource configuration.
+                        The data typed is available in Cue.
+                      properties:
+                        kind:
+                          type: string
+                        spec:
+                          x-kubernetes-preserve-unknown-fields: true
+                      required:
+                      - kind
+                      - spec
+                      type: object
+                  required:
+                  - default
+                  - plugin
+                  type: object
+                description: Datasources is an optional list of datasource definition.
+                type: object
+              display:
                 properties:
-                  createdAt:
-                    format: date-time
+                  description:
                     type: string
                   name:
                     type: string
-                  project:
-                    type: string
-                  updatedAt:
-                    format: date-time
-                    type: string
-                  version:
-                    format: int64
-                    type: integer
-                required:
-                - name
-                - project
-                - version
                 type: object
-              spec:
-                properties:
-                  datasources:
-                    additionalProperties:
+              duration:
+                description: Duration is the default time range to use when getting
+                  data to fill the dashboard
+                format: duration
+                type: string
+              layouts:
+                items:
+                  properties:
+                    kind:
+                      type: string
+                    spec:
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                  - kind
+                  - spec
+                  type: object
+                type: array
+              panels:
+                additionalProperties:
+                  properties:
+                    kind:
+                      type: string
+                    spec:
                       properties:
-                        default:
-                          type: boolean
                         display:
                           properties:
                             description:
                               type: string
                             name:
                               type: string
+                          required:
+                          - name
                           type: object
                         plugin:
-                          description: Plugin will contain the datasource configuration.
-                            The data typed is available in Cue.
                           properties:
                             kind:
                               type: string
@@ -84,124 +114,63 @@ spec:
                           - kind
                           - spec
                           type: object
-                      required:
-                      - default
-                      - plugin
-                      type: object
-                    description: Datasources is an optional list of datasource definition.
-                    type: object
-                  display:
-                    properties:
-                      description:
-                        type: string
-                      name:
-                        type: string
-                    type: object
-                  duration:
-                    description: Duration is the default time range to use when getting
-                      data to fill the dashboard
-                    format: duration
-                    type: string
-                  layouts:
-                    items:
-                      properties:
-                        kind:
-                          type: string
-                        spec:
-                          x-kubernetes-preserve-unknown-fields: true
-                      required:
-                      - kind
-                      - spec
-                      type: object
-                    type: array
-                  panels:
-                    additionalProperties:
-                      properties:
-                        kind:
-                          type: string
-                        spec:
-                          properties:
-                            display:
-                              properties:
-                                description:
-                                  type: string
-                                name:
-                                  type: string
-                              required:
-                              - name
-                              type: object
-                            plugin:
-                              properties:
-                                kind:
-                                  type: string
-                                spec:
-                                  x-kubernetes-preserve-unknown-fields: true
-                              required:
-                              - kind
-                              - spec
-                              type: object
-                            queries:
-                              items:
+                        queries:
+                          items:
+                            properties:
+                              kind:
+                                type: string
+                              spec:
                                 properties:
-                                  kind:
-                                    type: string
-                                  spec:
+                                  plugin:
                                     properties:
-                                      plugin:
-                                        properties:
-                                          kind:
-                                            type: string
-                                          spec:
-                                            x-kubernetes-preserve-unknown-fields: true
-                                        required:
-                                        - kind
-                                        - spec
-                                        type: object
+                                      kind:
+                                        type: string
+                                      spec:
+                                        x-kubernetes-preserve-unknown-fields: true
                                     required:
-                                    - plugin
+                                    - kind
+                                    - spec
                                     type: object
                                 required:
-                                - kind
-                                - spec
+                                - plugin
                                 type: object
-                              type: array
-                          required:
-                          - display
-                          - plugin
-                          type: object
+                            required:
+                            - kind
+                            - spec
+                            type: object
+                          type: array
                       required:
-                      - kind
-                      - spec
+                      - display
+                      - plugin
                       type: object
-                    type: object
-                  refreshInterval:
-                    description: RefreshInterval is the default refresh interval to
-                      use when landing on the dashboard
-                    format: duration
-                    type: string
-                  variables:
-                    items:
-                      properties:
-                        kind:
-                          description: Kind is the type of the variable. Depending
-                            on the value of Kind, it will change the content of Spec.
-                          type: string
-                        spec:
-                          x-kubernetes-preserve-unknown-fields: true
-                      required:
-                      - kind
-                      - spec
-                      type: object
-                    type: array
-                required:
-                - duration
-                - layouts
-                - panels
+                  required:
+                  - kind
+                  - spec
+                  type: object
                 type: object
+              refreshInterval:
+                description: RefreshInterval is the default refresh interval to use
+                  when landing on the dashboard
+                format: duration
+                type: string
+              variables:
+                items:
+                  properties:
+                    kind:
+                      description: Kind is the type of the variable. Depending on
+                        the value of Kind, it will change the content of Spec.
+                      type: string
+                    spec:
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                  - kind
+                  - spec
+                  type: object
+                type: array
             required:
-            - kind
-            - metadata
-            - spec
+            - duration
+            - layouts
+            - panels
             type: object
           status:
             description: PersesDashboardStatus defines the observed state of PersesDashboard

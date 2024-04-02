@@ -6,7 +6,7 @@ import (
 )
 
 type Dashboard struct {
-	persesv1.Dashboard `json:",inline"`
+	persesv1.DashboardSpec `json:",inline"`
 }
 
 func (in *Dashboard) DeepCopyInto(out *Dashboard) {
