@@ -1,4 +1,6 @@
 ## Append samples you want in your CSV to this file as resources ##
 resources:
-  - v1alpha1_perses.yaml
+  - perses.dev_v1alpha1_perses.yaml
+  - perses.dev_v1alpha1_persesdashboard.yaml
+  - perses.dev_v1alpha1_persesdatasource.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples
