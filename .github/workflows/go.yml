@@ -46,16 +46,17 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v4
-      - uses: perses/github-actions@v0.1.0
+      - uses: perses/github-actions@v0.6.0
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
-          go_version: 1.22
+          enable_go_cache: false
+          enable_npm: false
       - name: generate files
         run: make generate
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3.7.0
+        uses: golangci/golangci-lint-action@v6.1.0
         with:
           # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-          version: v1.54.2
+          version: v1.61.0
           args: --timeout 5m
