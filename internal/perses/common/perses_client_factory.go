@@ -5,7 +5,7 @@ import (
 
 	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
 	v1 "github.com/perses/perses/pkg/client/api/v1"
-	perseshttp "github.com/perses/perses/pkg/client/perseshttp"
+	"github.com/perses/perses/pkg/client/perseshttp"
 )
 
 type PersesClientFactory interface {

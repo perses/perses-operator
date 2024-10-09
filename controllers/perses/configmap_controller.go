@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/perses/perses-operator/api/v1alpha1"
-	common "github.com/perses/perses-operator/internal/perses/common"
-	subreconciler "github.com/perses/perses-operator/internal/subreconciler"
+	"github.com/perses/perses-operator/internal/perses/common"
+	"github.com/perses/perses-operator/internal/subreconciler"
 	logger "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"

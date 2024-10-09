@@ -30,8 +30,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
-	common "github.com/perses/perses-operator/internal/perses/common"
-	subreconciler "github.com/perses/perses-operator/internal/subreconciler"
+	"github.com/perses/perses-operator/internal/perses/common"
+	"github.com/perses/perses-operator/internal/subreconciler"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -103,7 +103,7 @@ func (r *PersesDashboardReconciler) setStatusToUnknown(ctx context.Context, req 
 		return r, err
 	}
 
-	if dashboard.Status.Conditions == nil || len(dashboard.Status.Conditions) == 0 {
+	if len(dashboard.Status.Conditions) == 0 {
 		meta.SetStatusCondition(&dashboard.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses, Status: metav1.ConditionUnknown, Reason: "Reconciling", Message: "Starting reconciliation"})
 		if err := r.Status().Update(ctx, dashboard); err != nil {
 			log.WithError(err).Error("Failed to update Perses dashboard status")

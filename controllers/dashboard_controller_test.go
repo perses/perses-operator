@@ -11,7 +11,7 @@ import (
 	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
 	dashboardcontroller "github.com/perses/perses-operator/controllers/dashboards"
 	internal "github.com/perses/perses-operator/internal/perses"
-	common "github.com/perses/perses-operator/internal/perses/common"
+	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	persescommon "github.com/perses/perses/pkg/model/api/v1/common"
@@ -171,7 +171,7 @@ var _ = Describe("Dashboard controller", func() {
 				dashboardWithStatus := &persesv1alpha1.PersesDashboard{}
 				err = k8sClient.Get(ctx, dashboardNamespaceName, dashboardWithStatus)
 
-				if dashboardWithStatus.Status.Conditions == nil || len(dashboardWithStatus.Status.Conditions) == 0 {
+				if len(dashboardWithStatus.Status.Conditions) == 0 {
 					return fmt.Errorf("No status condition was added to the perses dashboard instance")
 				} else {
 					latestStatusCondition := dashboardWithStatus.Status.Conditions[len(dashboardWithStatus.Status.Conditions)-1]

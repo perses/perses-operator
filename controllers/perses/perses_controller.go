@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/perses/perses-operator/api/v1alpha1"
-	common "github.com/perses/perses-operator/internal/perses/common"
-	subreconciler "github.com/perses/perses-operator/internal/subreconciler"
+	"github.com/perses/perses-operator/internal/perses/common"
+	"github.com/perses/perses-operator/internal/subreconciler"
 	logger "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -106,7 +106,7 @@ func (r *PersesReconciler) setStatusToUnknown(ctx context.Context, req ctrl.Requ
 	}
 
 	// Let's just set the status as Unknown when no status are available
-	if perses.Status.Conditions == nil || len(perses.Status.Conditions) == 0 {
+	if len(perses.Status.Conditions) == 0 {
 		meta.SetStatusCondition(&perses.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses, Status: metav1.ConditionUnknown, Reason: "Reconciling", Message: "Starting reconciliation"})
 		if err := r.Status().Update(ctx, perses); err != nil {
 			log.WithError(err).Error("Failed to update Perses status")
