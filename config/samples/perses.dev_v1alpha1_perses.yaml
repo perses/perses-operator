@@ -19,4 +19,5 @@ spec:
       queries_path: "/etc/perses/schemas/queries"
       datasources_path: "/etc/perses/schemas/datasources"
       variables_path: "/etc/perses/schemas/variables"
+    deactivate_front: false
   containerPort: 8080

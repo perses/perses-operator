@@ -9,34 +9,27 @@ You’ll need a Kubernetes cluster to run against. You can use [KIND](https://si
 
 ### Running on the cluster
 
-1. Install Instances of Custom Resources:
-
+1. Install custom resource definitions:
 ```sh
-kubectl apply -f config/samples/
+make install
 ```
 
-2. Build and push your image to the location specified by `IMG`:
+2. Install custom resources:
+
+```sh
+bin/kustomize build config/samples | kubectl apply -f -
+```
+
+3. Build and push your image to the location specified by `IMG`:
 
 ```sh
 make docker-build docker-push IMG=<some-registry>/perses-operator:tag
 ```
 
-3. Deploy the controller to the cluster with the image specified by `IMG`:
+4. Deploy the controller to the cluster with the image specified by `IMG`:
 
 ```sh
 make deploy IMG=<some-registry>/perses-operator:tag
-```
-
-4. Install a CRD instance
-
-```sh
-kubectl apply -f config/samples/v1alpha1_perses.yaml --namespace default
-```
-
-5. Install a CRD instance
-
-```sh
-kubectl delete -f config/samples/v1alpha1_perses.yaml --namespace default
 ```
 
 ### Uninstall CRDs

@@ -9,18 +9,10 @@ metadata:
     app.kubernetes.io/created-by: perses-operator
   name: perses-datasource-sample
 spec:
-  kind: Datasource
-  metadata:
-    name: perses-prometheus-datasource
-    project: default
-    createdAt: "2021-11-09T00:00:00Z"
-    updatedAt: "2021-11-09T00:00:00Z"
-    version: 0
-  spec:
-    display:
-      name: "Default Datasource"
-    default: true
-    plugin:
-      kind: "PrometheusDatasource"
-      spec:
-        directUrl: "https://prometheus.demo.do.prometheus.io"
+  display:
+    name: "Default Datasource"
+  default: true
+  plugin:
+    kind: "PrometheusDatasource"
+    spec:
+      directUrl: "https://prometheus.demo.do.prometheus.io"
