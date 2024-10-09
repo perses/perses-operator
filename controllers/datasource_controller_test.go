@@ -11,7 +11,7 @@ import (
 	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
 	datasourcecontroller "github.com/perses/perses-operator/controllers/datasources"
 	internal "github.com/perses/perses-operator/internal/perses"
-	common "github.com/perses/perses-operator/internal/perses/common"
+	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	persescommon "github.com/perses/perses/pkg/model/api/v1/common"
@@ -160,7 +160,7 @@ var _ = Describe("Datasource controller", func() {
 				datasourceWithStatus := &persesv1alpha1.PersesDatasource{}
 				err = k8sClient.Get(ctx, datasourceNamespaceName, datasourceWithStatus)
 
-				if datasourceWithStatus.Status.Conditions == nil || len(datasourceWithStatus.Status.Conditions) == 0 {
+				if len(datasourceWithStatus.Status.Conditions) == 0 {
 					return fmt.Errorf("No status condition was added to the perses datasource instance")
 				} else {
 					latestStatusCondition := datasourceWithStatus.Status.Conditions[len(datasourceWithStatus.Status.Conditions)-1]

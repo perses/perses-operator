@@ -10,7 +10,7 @@ import (
 	. "github.com/onsi/gomega"
 	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
 	persescontroller "github.com/perses/perses-operator/controllers/perses"
-	common "github.com/perses/perses-operator/internal/perses/common"
+	"github.com/perses/perses-operator/internal/perses/common"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -144,7 +144,7 @@ var _ = Describe("Perses controller", func() {
 
 			By("Checking the latest Status Condition added to the Perses instance")
 			Eventually(func() error {
-				if perses.Status.Conditions != nil && len(perses.Status.Conditions) != 0 {
+				if len(perses.Status.Conditions) != 0 {
 					latestStatusCondition := perses.Status.Conditions[len(perses.Status.Conditions)-1]
 					expectedLatestStatusCondition := metav1.Condition{Type: common.TypeAvailablePerses,
 						Status: metav1.ConditionTrue, Reason: "Reconciling",
@@ -184,7 +184,7 @@ var _ = Describe("Perses controller", func() {
 
 			By("Checking the latest Status Condition added to the Perses instance")
 			Eventually(func() error {
-				if perses.Status.Conditions != nil && len(perses.Status.Conditions) != 0 {
+				if len(perses.Status.Conditions) != 0 {
 					latestStatusCondition := perses.Status.Conditions[len(perses.Status.Conditions)-1]
 					expectedLatestStatusCondition := metav1.Condition{Type: common.TypeAvailablePerses,
 						Status: metav1.ConditionTrue, Reason: "Finalizing",

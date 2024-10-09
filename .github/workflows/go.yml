@@ -50,6 +50,7 @@ jobs:
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
+          go_version: 1.22
       - name: generate files
         run: make generate
       - name: golangci-lint

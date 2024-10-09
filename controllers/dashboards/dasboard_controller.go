@@ -22,8 +22,8 @@ import (
 	"time"
 
 	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
-	subreconciler "github.com/perses/perses-operator/internal/subreconciler"
-	perseshttp "github.com/perses/perses/pkg/client/perseshttp"
+	"github.com/perses/perses-operator/internal/subreconciler"
+	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	logger "github.com/sirupsen/logrus"
 	ctrl "sigs.k8s.io/controller-runtime"
