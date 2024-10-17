@@ -90,7 +90,8 @@ kubectl delete -f config/samples/v1alpha1_perses.yaml --namespace default
 If you are editing the API definitions, generate the manifests such as CRs or CRDs using:
 
 ```sh
-make manifests
+make manifests # Generate YAML manifests like CRDs, RBAC etc.
+make generate # Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 ```
 
 **NOTE:** Run `make --help` for more information on all potential `make` targets
