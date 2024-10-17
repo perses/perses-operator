@@ -15,9 +15,8 @@ spec:
         folder: "/etc/perses/storage"
         extension: "yaml"
     schemas:
-      panels_path: "/etc/perses/schemas/panels"
-      queries_path: "/etc/perses/schemas/queries"
-      datasources_path: "/etc/perses/schemas/datasources"
-      variables_path: "/etc/perses/schemas/variables"
-    deactivate_front: false
+      panels_path: "/etc/perses/cue/schemas/panels"
+      queries_path: "/etc/perses/cue/schemas/queries"
+      datasources_path: "/etc/perses/cue/schemas/datasources"
+      variables_path: "/etc/perses/cue/schemas/variables"
   containerPort: 8080
