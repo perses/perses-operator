@@ -128,8 +128,8 @@ spec:
                             type: string
                           read_timeout:
                             description: I/O read timeout
-                            format: int64
-                            type: integer
+                            format: duration
+                            type: string
                           reject_read_only:
                             description: Reject read-only connections
                             type: boolean
@@ -138,8 +138,8 @@ spec:
                             type: string
                           timeout:
                             description: Dial timeout
-                            format: int64
-                            type: integer
+                            format: duration
+                            type: string
                           tls_config:
                             description: TLS configuration
                             properties:
@@ -197,8 +197,8 @@ spec:
                             type: string
                           write_timeout:
                             description: I/O write timeout
-                            format: int64
-                            type: integer
+                            format: duration
+                            type: string
                         required:
                         - allow_all_files
                         - allow_cleartext_passwords
@@ -292,12 +292,8 @@ spec:
                             type: boolean
                           options:
                             items:
-                              description: |-
-                                Duration wraps time.Duration. It is used to parse the custom duration format
-                                from YAML.
-                                This type should not propagate beyond the scope of input/output processing.
-                              format: int64
-                              type: integer
+                              format: duration
+                              type: string
                             type: array
                         required:
                         - disable_custom
@@ -631,12 +627,8 @@ spec:
                                     http:
                                       properties:
                                         timeout:
-                                          description: |-
-                                            Duration wraps time.Duration. It is used to parse the custom duration format
-                                            from YAML.
-                                            This type should not propagate beyond the scope of input/output processing.
-                                          format: int64
-                                          type: integer
+                                          format: duration
+                                          type: string
                                         tls_config:
                                           properties:
                                             ca:
@@ -759,12 +751,8 @@ spec:
                                     http:
                                       properties:
                                         timeout:
-                                          description: |-
-                                            Duration wraps time.Duration. It is used to parse the custom duration format
-                                            from YAML.
-                                            This type should not propagate beyond the scope of input/output processing.
-                                          format: int64
-                                          type: integer
+                                          format: duration
+                                          type: string
                                         tls_config:
                                           properties:
                                             ca:
