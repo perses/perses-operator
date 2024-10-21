@@ -19,4 +19,7 @@ spec:
       queries_path: "/etc/perses/cue/schemas/queries"
       datasources_path: "/etc/perses/cue/schemas/datasources"
       variables_path: "/etc/perses/cue/schemas/variables"
+    ephemeral_dashboard:
+      enable: false
+      cleanup_interval: "1s"
   containerPort: 8080

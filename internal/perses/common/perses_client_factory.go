@@ -1,11 +1,13 @@
 package common
 
 import (
+	"flag"
 	"fmt"
 
 	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
 	v1 "github.com/perses/perses/pkg/client/api/v1"
-	"github.com/perses/perses/pkg/client/perseshttp"
+	clientConfig "github.com/perses/perses/pkg/client/config"
+	"github.com/perses/perses/pkg/model/api/v1/common"
 )
 
 type PersesClientFactory interface {
@@ -19,10 +21,21 @@ func NewWithConfig() PersesClientFactory {
 }
 
 func (f *PersesClientFactoryWithConfig) CreateClient(perses persesv1alpha1.Perses) (v1.ClientInterface, error) {
-	restClient, err := perseshttp.NewFromConfig(perseshttp.RestConfigClient{
-		URL: fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", perses.Name, perses.Namespace, perses.Spec.ContainerPort),
-	})
+	var urlStr string
 
+	if flag.Lookup("perses-server-url").Value.String() != "" {
+		urlStr = flag.Lookup("perses-server-url").Value.String()
+	} else {
+		urlStr = fmt.Sprintf("http://%s.%s.svc.cluster.local:%d", perses.Name, perses.Namespace, perses.Spec.ContainerPort)
+	}
+	parsedURL, err := common.ParseURL(urlStr)
+	if err != nil {
+		return nil, err
+	}
+
+	restClient, err := clientConfig.NewRESTClient(clientConfig.RestConfigClient{
+		URL: &common.URL{URL: parsedURL.URL},
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -41,8 +54,13 @@ func NewWithURL(url string) PersesClientFactory {
 }
 
 func (f *PersesClientFactoryWithURL) CreateClient(config persesv1alpha1.Perses) (v1.ClientInterface, error) {
-	restClient, err := perseshttp.NewFromConfig(perseshttp.RestConfigClient{
-		URL: f.url,
+	urStr := f.url
+	parsedURL, err := common.ParseURL(urStr)
+	if err != nil {
+		return nil, err
+	}
+	restClient, err := clientConfig.NewRESTClient(clientConfig.RestConfigClient{
+		URL: &common.URL{URL: parsedURL.URL},
 	})
 
 	if err != nil {

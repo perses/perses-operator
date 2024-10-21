@@ -228,8 +228,8 @@ spec:
                       cleanup_interval:
                         description: The interval at which to trigger the cleanup
                           of ephemeral dashboards, based on their TTLs.
-                        format: int64
-                        type: integer
+                        format: duration
+                        type: string
                       enable:
                         description: When true user will be able to use the ephemeral
                           dashboard at project level.
@@ -243,8 +243,8 @@ spec:
                       EphemeralDashboardsCleanupInterval is the interval at which the ephemeral dashboards are cleaned up
                       DEPRECATED.
                       Please use the config EphemeralDashboard instead.
-                    format: int64
-                    type: integer
+                    format: duration
+                    type: string
                   frontend:
                     description: Frontend contains any config that will be used by
                       the frontend itself.
@@ -513,8 +513,8 @@ spec:
                           type: object
                         refresh_interval:
                           description: Refresh interval to re-query the endpoint.
-                          format: int64
-                          type: integer
+                          format: duration
+                          type: string
                       required:
                       - discovery_name
                       type: object
@@ -529,8 +529,8 @@ spec:
                         type: array
                       interval:
                         description: Interval is the refresh frequency
-                        format: int64
-                        type: integer
+                        format: duration
+                        type: string
                     type: object
                   schemas:
                     description: Schemas contain the configuration to get access to
@@ -539,12 +539,8 @@ spec:
                       datasources_path:
                         type: string
                       interval:
-                        description: |-
-                          Duration wraps time.Duration. It is used to parse the custom duration format
-                          from YAML.
-                          This type should not propagate beyond the scope of input/output processing.
-                        format: int64
-                        type: integer
+                        format: duration
+                        type: string
                       panels_path:
                         type: string
                       queries_path:
@@ -564,8 +560,8 @@ spec:
                           access_token_ttl:
                             description: AccessTokenTTL is the time to live of the
                               access token. By default, it is 15 minutes.
-                            format: int64
-                            type: integer
+                            format: duration
+                            type: string
                           disable_sign_up:
                             description: |-
                               DisableSignUp deactivates the Sign-up page in the UI.
@@ -843,8 +839,8 @@ spec:
                               RefreshTokenTTL is the time to live of the refresh token.
                               The refresh token is used to get a new access token when it is expired.
                               By default, it is 24 hours.
-                            format: int64
-                            type: integer
+                            format: duration
+                            type: string
                         required:
                         - disable_sign_up
                         - providers
@@ -857,8 +853,8 @@ spec:
                             description: CheckLatestUpdateInterval that checks if
                               the RBAC cache needs to be refreshed with db content.
                               Only for SQL database setup.
-                            format: int64
-                            type: integer
+                            format: duration
+                            type: string
                           guest_permissions:
                             description: Default permissions for guest users (logged-in
                               users)

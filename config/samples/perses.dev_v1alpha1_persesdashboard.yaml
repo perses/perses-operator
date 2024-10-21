@@ -9,6 +9,9 @@ metadata:
     app.kubernetes.io/created-by: perses-operator
   name: perses-dashboard-sample
 spec:
+  display:
+    name: Perses Dashboard Sample
+    description: This is a sample dashboard
   duration: 5m
   datasources:
     PrometheusLocal:
