@@ -17,7 +17,7 @@ make install
 2. Install custom resources:
 
 ```sh
-bin/kustomize build config/samples | kubectl apply -f -
+kubectl apply -k config/samples
 ```
 
 3. Build and push your image to the location specified by `IMG`:
