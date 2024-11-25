@@ -291,9 +291,6 @@ spec:
                           disable_custom:
                             type: boolean
                           options:
-                            items:
-                              format: duration
-                              type: string
                             type: array
                         required:
                         - disable_custom
@@ -320,74 +317,6 @@ spec:
                             The target must reply with an HTTP 200 response.
                             The HTTP header Content-Type must be application/json, and the body must be valid array of JSON.
                           properties:
-                            auth:
-                              properties:
-                                basic_auth:
-                                  properties:
-                                    password:
-                                      type: string
-                                    passwordFile:
-                                      description: PasswordFile is a path to a file
-                                        that contains a password
-                                      type: string
-                                    username:
-                                      type: string
-                                  required:
-                                  - username
-                                  type: object
-                                native_auth:
-                                  properties:
-                                    login:
-                                      type: string
-                                    password:
-                                      type: string
-                                  required:
-                                  - login
-                                  - password
-                                  type: object
-                                oauth:
-                                  properties:
-                                    auth_style:
-                                      description: |-
-                                        AuthStyle optionally specifies how the endpoint wants the
-                                        client ID & client secret sent. The zero value means to
-                                        auto-detect.
-                                      type: integer
-                                    client_id:
-                                      description: ClientID is the application's ID.
-                                      type: string
-                                    client_secret:
-                                      description: ClientSecret is the application's
-                                        secret.
-                                      type: string
-                                    endpoint_params:
-                                      additionalProperties:
-                                        items:
-                                          type: string
-                                        type: array
-                                      description: EndpointParams specifies additional
-                                        parameters for requests to the token endpoint.
-                                      type: object
-                                    scopes:
-                                      description: Scope specifies optional requested
-                                        permissions.
-                                      items:
-                                        type: string
-                                      type: array
-                                    token_url:
-                                      description: |-
-                                        TokenURL is the resource server's token endpoint
-                                        URL. This is a constant specific to each server.
-                                      type: string
-                                  required:
-                                  - auth_style
-                                  - client_id
-                                  - client_secret
-                                  - endpoint_params
-                                  - scopes
-                                  - token_url
-                                  type: object
-                              type: object
                             authorization:
                               description: The HTTP authorization credentials for
                                 the targets.
@@ -399,9 +328,73 @@ spec:
                                 type:
                                   type: string
                               type: object
+                            basic_auth:
+                              properties:
+                                password:
+                                  type: string
+                                passwordFile:
+                                  description: PasswordFile is a path to a file that
+                                    contains a password
+                                  type: string
+                                username:
+                                  type: string
+                              required:
+                              - username
+                              type: object
                             headers:
                               additionalProperties:
                                 type: string
+                              type: object
+                            native_auth:
+                              properties:
+                                login:
+                                  type: string
+                                password:
+                                  type: string
+                              required:
+                              - login
+                              - password
+                              type: object
+                            oauth:
+                              properties:
+                                auth_style:
+                                  description: |-
+                                    AuthStyle optionally specifies how the endpoint wants the
+                                    client ID & client secret sent. The zero value means to
+                                    auto-detect.
+                                  type: integer
+                                client_id:
+                                  description: ClientID is the application's ID.
+                                  type: string
+                                client_secret:
+                                  description: ClientSecret is the application's secret.
+                                  type: string
+                                endpoint_params:
+                                  additionalProperties:
+                                    items:
+                                      type: string
+                                    type: array
+                                  description: EndpointParams specifies additional
+                                    parameters for requests to the token endpoint.
+                                  type: object
+                                scopes:
+                                  description: Scope specifies optional requested
+                                    permissions.
+                                  items:
+                                    type: string
+                                  type: array
+                                token_url:
+                                  description: |-
+                                    TokenURL is the resource server's token endpoint
+                                    URL. This is a constant specific to each server.
+                                  type: string
+                              required:
+                              - auth_style
+                              - client_id
+                              - client_secret
+                              - endpoint_params
+                              - scopes
+                              - token_url
                               type: object
                             tls_config:
                               description: TLSConfig to use to connect to the targets.
