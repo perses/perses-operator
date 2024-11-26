@@ -129,6 +129,7 @@ spec:
                           read_timeout:
                             description: I/O read timeout
                             format: duration
+                            pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
                             type: string
                           reject_read_only:
                             description: Reject read-only connections
@@ -139,6 +140,7 @@ spec:
                           timeout:
                             description: Dial timeout
                             format: duration
+                            pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
                             type: string
                           tls_config:
                             description: TLS configuration
@@ -198,6 +200,7 @@ spec:
                           write_timeout:
                             description: I/O write timeout
                             format: duration
+                            pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
                             type: string
                         required:
                         - allow_all_files
@@ -229,6 +232,7 @@ spec:
                         description: The interval at which to trigger the cleanup
                           of ephemeral dashboards, based on their TTLs.
                         format: duration
+                        pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
                         type: string
                       enable:
                         description: When true user will be able to use the ephemeral
@@ -244,6 +248,7 @@ spec:
                       DEPRECATED.
                       Please use the config EphemeralDashboard instead.
                     format: duration
+                    pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
                     type: string
                   frontend:
                     description: Frontend contains any config that will be used by
@@ -291,6 +296,10 @@ spec:
                           disable_custom:
                             type: boolean
                           options:
+                            items:
+                              format: duration
+                              pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                              type: string
                             type: array
                         required:
                         - disable_custom
@@ -503,6 +512,7 @@ spec:
                         refresh_interval:
                           description: Refresh interval to re-query the endpoint.
                           format: duration
+                          pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
                           type: string
                       required:
                       - discovery_name
@@ -519,6 +529,7 @@ spec:
                       interval:
                         description: Interval is the refresh frequency
                         format: duration
+                        pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
                         type: string
                     type: object
                   schemas:
@@ -529,6 +540,7 @@ spec:
                         type: string
                       interval:
                         format: duration
+                        pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
                         type: string
                       panels_path:
                         type: string
@@ -550,6 +562,7 @@ spec:
                             description: AccessTokenTTL is the time to live of the
                               access token. By default, it is 15 minutes.
                             format: duration
+                            pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
                             type: string
                           disable_sign_up:
                             description: |-
@@ -621,6 +634,7 @@ spec:
                                       properties:
                                         timeout:
                                           format: duration
+                                          pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
                                           type: string
                                         tls_config:
                                           properties:
@@ -745,6 +759,7 @@ spec:
                                       properties:
                                         timeout:
                                           format: duration
+                                          pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
                                           type: string
                                         tls_config:
                                           properties:
@@ -821,6 +836,7 @@ spec:
                               The refresh token is used to get a new access token when it is expired.
                               By default, it is 24 hours.
                             format: duration
+                            pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
                             type: string
                         required:
                         - disable_sign_up
@@ -835,6 +851,7 @@ spec:
                               the RBAC cache needs to be refreshed with db content.
                               Only for SQL database setup.
                             format: duration
+                            pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
                             type: string
                           guest_permissions:
                             description: Default permissions for guest users (logged-in
