@@ -8,7 +8,7 @@ require (
 	github.com/barkimedes/go-deepcopy v0.0.0-20220514131651-17c30cfc62df
 	github.com/onsi/ginkgo/v2 v2.19.0
 	github.com/onsi/gomega v1.33.1
-	github.com/perses/perses v0.49.1-0.20241125160011-3d34cf1b8849
+	github.com/perses/perses v0.49.1-0.20241126140800-e31e2915b6f2
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
 	gopkg.in/yaml.v2 v2.4.0

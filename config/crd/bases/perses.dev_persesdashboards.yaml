@@ -80,6 +80,7 @@ spec:
                 description: Duration is the default time range to use when getting
                   data to fill the dashboard
                 format: duration
+                pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
                 type: string
               layouts:
                 items:
@@ -174,6 +175,7 @@ spec:
                 description: RefreshInterval is the default refresh interval to use
                   when landing on the dashboard
                 format: duration
+                pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
                 type: string
               variables:
                 items:
