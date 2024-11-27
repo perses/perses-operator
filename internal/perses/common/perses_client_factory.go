@@ -34,35 +34,8 @@ func (f *PersesClientFactoryWithConfig) CreateClient(perses persesv1alpha1.Perse
 	}
 
 	restClient, err := clientConfig.NewRESTClient(clientConfig.RestConfigClient{
-		URL: parsedURL,
+		URL: &common.URL{URL: parsedURL.URL},
 	})
-	if err != nil {
-		return nil, err
-	}
-
-	persesClient := v1.NewWithClient(restClient)
-
-	return persesClient, nil
-}
-
-type PersesClientFactoryWithURL struct {
-	url string
-}
-
-func NewWithURL(url string) PersesClientFactory {
-	return &PersesClientFactoryWithURL{url: url}
-}
-
-func (f *PersesClientFactoryWithURL) CreateClient(config persesv1alpha1.Perses) (v1.ClientInterface, error) {
-	urStr := f.url
-	parsedURL, err := common.ParseURL(urStr)
-	if err != nil {
-		return nil, err
-	}
-	restClient, err := clientConfig.NewRESTClient(clientConfig.RestConfigClient{
-		URL: parsedURL,
-	})
-
 	if err != nil {
 		return nil, err
 	}
