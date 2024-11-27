@@ -27,9 +27,35 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: perses/github-actions@v0.1.0
+      - uses: perses/github-actions@v0.7.1
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
-      - name: Build operator
-        run: make build
+      - # Add support for more platforms with QEMU (optional)
+        # https://github.com/docker/setup-qemu-action
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        if: ${{ github.event_name == 'push' && (startsWith(github.ref_name, 'v') || github.ref_name == 'main') }}
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: install goreleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          install-only: true
+      - name: Build Go binaries and docker images
+        run: make cross-build
+      - name: Publish Release and binaries
+        ## This step will only run when a new tag is pushed.
+        ## It will build the Go binaries and the docker images and then publish:
+        ## - the GitHub release with the archive built
+        ## - docker images on the different docker registry selected
+        if: ${{ github.event_name == 'push' && startsWith(github.ref_name, 'v') }}
+        run: make cross-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
