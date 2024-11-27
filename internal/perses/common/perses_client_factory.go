@@ -34,7 +34,7 @@ func (f *PersesClientFactoryWithConfig) CreateClient(perses persesv1alpha1.Perse
 	}
 
 	restClient, err := clientConfig.NewRESTClient(clientConfig.RestConfigClient{
-		URL: &common.URL{URL: parsedURL.URL},
+		URL: parsedURL,
 	})
 	if err != nil {
 		return nil, err
