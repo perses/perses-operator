@@ -11,15 +11,14 @@ type PersesConfig struct {
 	config.Config `json:",inline"`
 }
 
-
 func (in *PersesConfig) DeepCopyInto(out *PersesConfig) {
-    if in == nil {
-        return
-    }
-    
-    copied, err := deep.Copy(in)
-    if err != nil {
-        panic(fmt.Errorf("failed to deep copy PersesConfig: %w", err))
-    }   
-    *out = *copied
+	if in == nil {
+		return
+	}
+
+	copied, err := deep.Copy(in)
+	if err != nil {
+		panic(fmt.Errorf("failed to deep copy PersesConfig: %w", err))
+	}
+	*out = *copied
 }

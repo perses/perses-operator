@@ -12,13 +12,13 @@ type Datasource struct {
 }
 
 func (in *Datasource) DeepCopyInto(out *Datasource) {
-    if in == nil {
-        return
-    }
-    
-    copied, err := deep.Copy(in)
-    if err != nil {
-        panic(fmt.Errorf("failed to deep copy Datasource: %w", err))
-    }   
-    *out = *copied
+	if in == nil {
+		return
+	}
+
+	copied, err := deep.Copy(in)
+	if err != nil {
+		panic(fmt.Errorf("failed to deep copy Datasource: %w", err))
+	}
+	*out = *copied
 }
