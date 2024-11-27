@@ -314,3 +314,16 @@ GOBIN=$(LOCALBIN) go install $${package} ;\
 mv "$$(echo "$(1)" | sed "s/-$(3)$$//")" $(1) ;\
 }
 endef
+
+.PHONY: generate-goreleaser
+generate-goreleaser:
+	go run ./scripts/generate-goreleaser/generate-goreleaser.go
+
+## Cross build binaries for all platforms (Use "make build" in development)
+.PHONY: cross-build
+cross-build: generate-goreleaser manifests generate fmt vet ## Cross build binaries for all platforms (Use "make build" in development)
+	goreleaser release --snapshot --clean
+
+.PHONY: cross-release
+cross-release: generate-goreleaser manifests generate fmt vet
+	goreleaser release --clean

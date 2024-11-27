@@ -26,3 +26,8 @@ Dockerfile.cross
 *~
 .vscode
 
+/dist
+
+.goreleaser.yaml
+
+/.github/perses-ci/
