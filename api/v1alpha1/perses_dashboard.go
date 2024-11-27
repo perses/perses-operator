@@ -1,7 +1,9 @@
 package v1alpha1
 
 import (
-	"github.com/barkimedes/go-deepcopy"
+	"fmt"
+
+	"github.com/brunoga/deep"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 )
 
@@ -10,11 +12,13 @@ type Dashboard struct {
 }
 
 func (in *Dashboard) DeepCopyInto(out *Dashboard) {
-	temp, err := deepcopy.Anything(in)
-
-	if err != nil {
-		panic(err)
+	if in == nil {
+		return
 	}
 
-	*out = *(temp.(*Dashboard))
+	copied, err := deep.Copy(in)
+	if err != nil {
+		panic(fmt.Errorf("failed to deep copy Dashboard: %w", err))
+	}
+	*out = *copied
 }

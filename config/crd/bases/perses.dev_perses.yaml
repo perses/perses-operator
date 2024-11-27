@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.14.0
+    controller-gen.kubebuilder.io/version: v0.16.0
   name: perses.perses.dev
 spec:
   group: perses.dev
@@ -41,6 +41,9 @@ spec:
             properties:
               config:
                 properties:
+                  api_prefix:
+                    description: Use it in case you want to prefix the API path.
+                    type: string
                   database:
                     description: Database contains the different configuration depending
                       on the database you want to use
@@ -125,8 +128,9 @@ spec:
                             type: string
                           read_timeout:
                             description: I/O read timeout
-                            format: int64
-                            type: integer
+                            format: duration
+                            pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                            type: string
                           reject_read_only:
                             description: Reject read-only connections
                             type: boolean
@@ -135,8 +139,9 @@ spec:
                             type: string
                           timeout:
                             description: Dial timeout
-                            format: int64
-                            type: integer
+                            format: duration
+                            pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                            type: string
                           tls_config:
                             description: TLS configuration
                             properties:
@@ -146,12 +151,22 @@ spec:
                               ca_file:
                                 description: The CA cert to use for the targets.
                                 type: string
+                              ca_ref:
+                                description: |-
+                                  CARef is the name of the secret within the secret manager to use as the CA cert for the
+                                  targets.
+                                type: string
                               cert:
                                 description: Text of the client cert file for the
                                   targets.
                                 type: string
                               cert_file:
                                 description: The client cert file for the targets.
+                                type: string
+                              cert_ref:
+                                description: |-
+                                  CertRef is the name of the secret within the secret manager to use as the client cert for
+                                  the targets.
                                 type: string
                               insecure_skip_verify:
                                 description: Disable target certificate validation.
@@ -161,6 +176,11 @@ spec:
                                 type: string
                               key_file:
                                 description: The client key file for the targets.
+                                type: string
+                              key_ref:
+                                description: |-
+                                  KeyRef is the name of the secret within the secret manager to use as the client key for
+                                  the targets.
                                 type: string
                               max_version:
                                 description: Maximum TLS version.
@@ -179,8 +199,9 @@ spec:
                             type: string
                           write_timeout:
                             description: I/O write timeout
-                            format: int64
-                            type: integer
+                            format: duration
+                            pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                            type: string
                         required:
                         - allow_all_files
                         - allow_cleartext_passwords
@@ -203,35 +224,300 @@ spec:
                         - write_timeout
                         type: object
                     type: object
-                  deactivate_front:
-                    description: When it is true, Perses won't serve the frontend
-                      anymore.
-                    type: boolean
+                  ephemeral_dashboard:
+                    description: EphemeralDashboard contains the config about the
+                      ephemeral dashboard feature
+                    properties:
+                      cleanup_interval:
+                        description: The interval at which to trigger the cleanup
+                          of ephemeral dashboards, based on their TTLs.
+                        format: duration
+                        pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                        type: string
+                      enable:
+                        description: When true user will be able to use the ephemeral
+                          dashboard at project level.
+                        type: boolean
+                    required:
+                    - cleanup_interval
+                    - enable
+                    type: object
                   ephemeral_dashboards_cleanup_interval:
-                    description: EphemeralDashboardsCleanupInterval is the interval
-                      at which the ephemeral dashboards are cleaned up
-                    format: int64
-                    type: integer
-                  important_dashboards:
-                    description: ImportantDashboards contains important dashboard
-                      selectors
+                    description: |-
+                      EphemeralDashboardsCleanupInterval is the interval at which the ephemeral dashboards are cleaned up
+                      DEPRECATED.
+                      Please use the config EphemeralDashboard instead.
+                    format: duration
+                    pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                    type: string
+                  frontend:
+                    description: Frontend contains any config that will be used by
+                      the frontend itself.
+                    properties:
+                      disable:
+                        description: When it is true, Perses won't serve the frontend
+                          anymore, and any other config set here will be ignored
+                        type: boolean
+                      explorer:
+                        description: |-
+                          Explorer is activating the different kind of explorer supported.
+                          Be sure you have installed an associated plugin for each explorer type.
+                        properties:
+                          enable:
+                            type: boolean
+                        required:
+                        - enable
+                        type: object
+                      important_dashboards:
+                        description: ImportantDashboards contains important dashboard
+                          selectors
+                        items:
+                          properties:
+                            dashboard:
+                              description: Dashboard is the name of the dashboard
+                                (dashboard.metadata.name)
+                              type: string
+                            project:
+                              description: Project is the name of the project (dashboard.metadata.project)
+                              type: string
+                          required:
+                          - dashboard
+                          - project
+                          type: object
+                        type: array
+                      information:
+                        description: Information contains markdown content to be display
+                          on the home page
+                        type: string
+                      time_range:
+                        description: TimeRange contains the time range configuration
+                          for the dropdown
+                        properties:
+                          disable_custom:
+                            type: boolean
+                          options:
+                            items:
+                              format: duration
+                              pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                              type: string
+                            type: array
+                        required:
+                        - disable_custom
+                        type: object
+                    required:
+                    - disable
+                    - explorer
+                    type: object
+                  global_datasource_discovery:
+                    description: |-
+                      GlobalDatasourceDiscovery is the configuration that helps to generate a list of global datasource based on the discovery chosen.
+                      Be careful: the data coming from the discovery will totally override what exists in the database.
+                      Note that this is an experimental feature. Behavior and config may change in the future.
                     items:
                       properties:
-                        dashboard:
-                          description: Dashboard is the name of the dashboard (dashboard.metadata.name)
+                        discovery_name:
+                          description: The name of the discovery config. It is used
+                            for logging purposes only
                           type: string
-                        project:
-                          description: Project is the name of the project (dashboard.metadata.project)
+                        http_sd:
+                          description: |-
+                            HTTP-based service discovery provides a more generic way to generate a set of global datasource and serves as an interface to plug in custom service discovery mechanisms.
+                            It fetches an HTTP endpoint containing a list of zero or more global datasources.
+                            The target must reply with an HTTP 200 response.
+                            The HTTP header Content-Type must be application/json, and the body must be valid array of JSON.
+                          properties:
+                            authorization:
+                              description: The HTTP authorization credentials for
+                                the targets.
+                              properties:
+                                credentials:
+                                  type: string
+                                credentialsFile:
+                                  type: string
+                                type:
+                                  type: string
+                              type: object
+                            basic_auth:
+                              properties:
+                                password:
+                                  type: string
+                                passwordFile:
+                                  description: PasswordFile is a path to a file that
+                                    contains a password
+                                  type: string
+                                username:
+                                  type: string
+                              required:
+                              - username
+                              type: object
+                            headers:
+                              additionalProperties:
+                                type: string
+                              type: object
+                            native_auth:
+                              properties:
+                                login:
+                                  type: string
+                                password:
+                                  type: string
+                              required:
+                              - login
+                              - password
+                              type: object
+                            oauth:
+                              properties:
+                                auth_style:
+                                  description: |-
+                                    AuthStyle optionally specifies how the endpoint wants the
+                                    client ID & client secret sent. The zero value means to
+                                    auto-detect.
+                                  type: integer
+                                client_id:
+                                  description: ClientID is the application's ID.
+                                  type: string
+                                client_secret:
+                                  description: ClientSecret is the application's secret.
+                                  type: string
+                                endpoint_params:
+                                  additionalProperties:
+                                    items:
+                                      type: string
+                                    type: array
+                                  description: EndpointParams specifies additional
+                                    parameters for requests to the token endpoint.
+                                  type: object
+                                scopes:
+                                  description: Scope specifies optional requested
+                                    permissions.
+                                  items:
+                                    type: string
+                                  type: array
+                                token_url:
+                                  description: |-
+                                    TokenURL is the resource server's token endpoint
+                                    URL. This is a constant specific to each server.
+                                  type: string
+                              required:
+                              - auth_style
+                              - client_id
+                              - client_secret
+                              - endpoint_params
+                              - scopes
+                              - token_url
+                              type: object
+                            tls_config:
+                              description: TLSConfig to use to connect to the targets.
+                              properties:
+                                ca:
+                                  description: Text of the CA cert to use for the
+                                    targets.
+                                  type: string
+                                caFile:
+                                  description: The CA cert to use for the targets.
+                                  type: string
+                                cert:
+                                  description: Text of the client cert file for the
+                                    targets.
+                                  type: string
+                                certFile:
+                                  description: The client cert file for the targets.
+                                  type: string
+                                insecureSkipVerify:
+                                  description: Disable target certificate validation.
+                                  type: boolean
+                                key:
+                                  description: Text of the client key file for the
+                                    targets.
+                                  type: string
+                                keyFile:
+                                  description: The client key file for the targets.
+                                  type: string
+                                serverName:
+                                  description: Used to verify the hostname for the
+                                    targets.
+                                  type: string
+                              required:
+                              - insecureSkipVerify
+                              type: object
+                            url:
+                              type: object
+                          required:
+                          - url
+                          type: object
+                        kubernetes_sd:
+                          description: |-
+                            Kubernetes SD configurations allow retrieving global datasource from Kubernetes' REST API
+                            and always staying synchronized with the cluster state.
+                          properties:
+                            datasource_plugin_kind:
+                              description: DatasourcePluginKind is the name of the
+                                datasource plugin that should be filled when creating
+                                datasources found.
+                              type: string
+                            labels:
+                              additionalProperties:
+                                type: string
+                              description: The labels used to filter the list of resource
+                                when contacting the Kubernetes API.
+                              type: object
+                            namespace:
+                              description: |-
+                                Kubernetes namespace to constraint the query to only one namespace.
+                                Leave empty if you are looking for datasource cross-namespace.
+                              type: string
+                            pod_configuration:
+                              description: Configuration when you want to discover
+                                the pods in Kubernetes
+                              properties:
+                                container_name:
+                                  description: Name of the container the target address
+                                    points to.
+                                  type: string
+                                container_port_name:
+                                  description: Name of the container port.
+                                  type: string
+                                container_port_number:
+                                  description: Number of the container port.
+                                  format: int32
+                                  type: integer
+                                enable:
+                                  description: If set to true, Perses server will
+                                    discovery the pod
+                                  type: boolean
+                              type: object
+                            service_configuration:
+                              description: Configuration when you want to discover
+                                the services in Kubernetes
+                              properties:
+                                enable:
+                                  description: If set to true, Perses server will
+                                    discovery the service
+                                  type: boolean
+                                port_name:
+                                  description: Name of the service port for the target.
+                                  type: string
+                                port_number:
+                                  description: Number of the service port for the
+                                    target.
+                                  format: int32
+                                  type: integer
+                                service_type:
+                                  description: The type of the service.
+                                  type: string
+                              type: object
+                          required:
+                          - datasource_plugin_kind
+                          - namespace
+                          type: object
+                        refresh_interval:
+                          description: Refresh interval to re-query the endpoint.
+                          format: duration
+                          pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
                           type: string
                       required:
-                      - dashboard
-                      - project
+                      - discovery_name
                       type: object
                     type: array
-                  information:
-                    description: Information contains markdown content to be display
-                      on the home page
-                    type: string
                   provisioning:
                     description: Provisioning contains the provisioning config that
                       can be used if you want to provide default resources.
@@ -242,8 +528,9 @@ spec:
                         type: array
                       interval:
                         description: Interval is the refresh frequency
-                        format: int64
-                        type: integer
+                        format: duration
+                        pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                        type: string
                     type: object
                   schemas:
                     description: Schemas contain the configuration to get access to
@@ -252,12 +539,9 @@ spec:
                       datasources_path:
                         type: string
                       interval:
-                        description: |-
-                          Duration wraps time.Duration. It is used to parse the custom duration format
-                          from YAML.
-                          This type should not propagate beyond the scope of input/output processing.
-                        format: int64
-                        type: integer
+                        format: duration
+                        pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                        type: string
                       panels_path:
                         type: string
                       queries_path:
@@ -277,8 +561,9 @@ spec:
                           access_token_ttl:
                             description: AccessTokenTTL is the time to live of the
                               access token. By default, it is 15 minutes.
-                            format: int64
-                            type: integer
+                            format: duration
+                            pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                            type: string
                           disable_sign_up:
                             description: |-
                               DisableSignUp deactivates the Sign-up page in the UI.
@@ -345,8 +630,53 @@ spec:
                                       - client_secret
                                       - scopes
                                       type: object
-                                    disable_pkce:
-                                      type: boolean
+                                    http:
+                                      properties:
+                                        timeout:
+                                          format: duration
+                                          pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                                          type: string
+                                        tls_config:
+                                          properties:
+                                            ca:
+                                              description: Text of the CA cert to
+                                                use for the targets.
+                                              type: string
+                                            caFile:
+                                              description: The CA cert to use for
+                                                the targets.
+                                              type: string
+                                            cert:
+                                              description: Text of the client cert
+                                                file for the targets.
+                                              type: string
+                                            certFile:
+                                              description: The client cert file for
+                                                the targets.
+                                              type: string
+                                            insecureSkipVerify:
+                                              description: Disable target certificate
+                                                validation.
+                                              type: boolean
+                                            key:
+                                              description: Text of the client key
+                                                file for the targets.
+                                              type: string
+                                            keyFile:
+                                              description: The client key file for
+                                                the targets.
+                                              type: string
+                                            serverName:
+                                              description: Used to verify the hostname
+                                                for the targets.
+                                              type: string
+                                          required:
+                                          - insecureSkipVerify
+                                          type: object
+                                      required:
+                                      - timeout
+                                      - tls_config
+                                      type: object
                                     name:
                                       type: string
                                     redirect_uri:
@@ -364,9 +694,8 @@ spec:
                                   required:
                                   - auth_url
                                   - client_id
-                                  - client_secret
                                   - device_auth_url
-                                  - disable_pkce
+                                  - http
                                   - name
                                   - slug_id
                                   - token_url
@@ -426,6 +755,53 @@ spec:
                                       type: boolean
                                     discovery_url:
                                       type: object
+                                    http:
+                                      properties:
+                                        timeout:
+                                          format: duration
+                                          pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                                          type: string
+                                        tls_config:
+                                          properties:
+                                            ca:
+                                              description: Text of the CA cert to
+                                                use for the targets.
+                                              type: string
+                                            caFile:
+                                              description: The CA cert to use for
+                                                the targets.
+                                              type: string
+                                            cert:
+                                              description: Text of the client cert
+                                                file for the targets.
+                                              type: string
+                                            certFile:
+                                              description: The client cert file for
+                                                the targets.
+                                              type: string
+                                            insecureSkipVerify:
+                                              description: Disable target certificate
+                                                validation.
+                                              type: boolean
+                                            key:
+                                              description: Text of the client key
+                                                file for the targets.
+                                              type: string
+                                            keyFile:
+                                              description: The client key file for
+                                                the targets.
+                                              type: string
+                                            serverName:
+                                              description: Used to verify the hostname
+                                                for the targets.
+                                              type: string
+                                          required:
+                                          - insecureSkipVerify
+                                          type: object
+                                      required:
+                                      - timeout
+                                      - tls_config
+                                      type: object
                                     issuer:
                                       type: object
                                     name:
@@ -444,8 +820,8 @@ spec:
                                       type: object
                                   required:
                                   - client_id
-                                  - client_secret
                                   - disable_pkce
+                                  - http
                                   - issuer
                                   - name
                                   - slug_id
@@ -459,8 +835,9 @@ spec:
                               RefreshTokenTTL is the time to live of the refresh token.
                               The refresh token is used to get a new access token when it is expired.
                               By default, it is 24 hours.
-                            format: int64
-                            type: integer
+                            format: duration
+                            pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                            type: string
                         required:
                         - disable_sign_up
                         - providers
@@ -473,8 +850,9 @@ spec:
                             description: CheckLatestUpdateInterval that checks if
                               the RBAC cache needs to be refreshed with db content.
                               Only for SQL database setup.
-                            format: int64
-                            type: integer
+                            format: duration
+                            pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                            type: string
                           guest_permissions:
                             description: Default permissions for guest users (logged-in
                               users)
@@ -499,6 +877,22 @@ spec:
                               type: object
                             type: array
                         type: object
+                      cookie:
+                        description: Cookie configuration
+                        properties:
+                          same_site:
+                            description: |-
+                              Set the SameSite cookie attribute and prevents the browser from sending the cookie along with cross-site requests.
+                              The main goal is to mitigate the risk of cross-origin information leakage.
+                              This setting also provides some protection against cross-site request forgery attacks (CSRF)
+                            type: integer
+                          secure:
+                            description: Set to true if you host Perses behind HTTPS.
+                              Default is false
+                            type: boolean
+                        required:
+                        - secure
+                        type: object
                       enable_auth:
                         description: |-
                           When it is true, the authentication and authorization config are considered.
@@ -510,7 +904,7 @@ spec:
                           stored in the database such as the password of the basic auth for a datasource.
                           Note that if it is not provided, it will use a default value.
                           On a production instance, you should set this key.
-                          Also note the key must be at least 32 bytes long.
+                          Also note the key size must be exactly 32 bytes long as we are using AES-256 to encrypt the data.
                         type: string
                       encryption_key_file:
                         description: EncryptionKeyFile is the path to file containing
@@ -521,11 +915,10 @@ spec:
                           DELETE endpoint
                         type: boolean
                     required:
+                    - cookie
                     - enable_auth
                     - readonly
                     type: object
-                required:
-                - deactivate_front
                 type: object
               containerPort:
                 format: int32
@@ -536,16 +929,8 @@ spec:
             properties:
               conditions:
                 items:
-                  description: "Condition contains details for one aspect of the current
-                    state of this API Resource.\n---\nThis struct is intended for
-                    direct use as an array at the field path .status.conditions.  For
-                    example,\n\n\n\ttype FooStatus struct{\n\t    // Represents the
-                    observations of a foo's current state.\n\t    // Known .status.conditions.type
-                    are: \"Available\", \"Progressing\", and \"Degraded\"\n\t    //
-                    +patchMergeKey=type\n\t    // +patchStrategy=merge\n\t    // +listType=map\n\t
-                    \   // +listMapKey=type\n\t    Conditions []metav1.Condition `json:\"conditions,omitempty\"
-                    patchStrategy:\"merge\" patchMergeKey:\"type\" protobuf:\"bytes,1,rep,name=conditions\"`\n\n\n\t
-                    \   // other fields\n\t}"
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
                   properties:
                     lastTransitionTime:
                       description: |-
@@ -586,12 +971,7 @@ spec:
                       - Unknown
                       type: string
                     type:
-                      description: |-
-                        type of condition in CamelCase or in foo.example.com/CamelCase.
-                        ---
-                        Many .condition.type values are consistent across resources like Available, but because arbitrary conditions can be
-                        useful (see .node.status.conditions), the ability to deconflict is important.
-                        The regex it matches is (dns1123SubdomainFmt/)?(qualifiedNameFmt)
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
