@@ -1,7 +1,9 @@
 package v1alpha1
 
 import (
-	"github.com/barkimedes/go-deepcopy"
+	"fmt"
+
+	"github.com/brunoga/deep"
 	"github.com/perses/perses/pkg/model/api/config"
 )
 
@@ -9,12 +11,15 @@ type PersesConfig struct {
 	config.Config `json:",inline"`
 }
 
+
 func (in *PersesConfig) DeepCopyInto(out *PersesConfig) {
-	temp, err := deepcopy.Anything(in)
-
-	if err != nil {
-		panic(err)
-	}
-
-	*out = *(temp.(*PersesConfig))
+    if in == nil {
+        return
+    }
+    
+    copied, err := deep.Copy(in)
+    if err != nil {
+        panic(fmt.Errorf("failed to deep copy PersesConfig: %w", err))
+    }   
+    *out = *copied
 }

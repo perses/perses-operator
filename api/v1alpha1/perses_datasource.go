@@ -1,7 +1,9 @@
 package v1alpha1
 
 import (
-	"github.com/barkimedes/go-deepcopy"
+	"fmt"
+
+	"github.com/brunoga/deep"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 )
 
@@ -10,11 +12,13 @@ type Datasource struct {
 }
 
 func (in *Datasource) DeepCopyInto(out *Datasource) {
-	temp, err := deepcopy.Anything(in)
-
-	if err != nil {
-		panic(err)
-	}
-
-	*out = *(temp.(*Datasource))
+    if in == nil {
+        return
+    }
+    
+    copied, err := deep.Copy(in)
+    if err != nil {
+        panic(fmt.Errorf("failed to deep copy Datasource: %w", err))
+    }   
+    *out = *copied
 }
