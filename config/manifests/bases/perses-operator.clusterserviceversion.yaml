@@ -1,0 +1,63 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: '[]'
+    capabilities: Basic Install
+  name: perses-operator.v0.1.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+    - description: Perses is the Schema for the perses API
+      displayName: Perses
+      kind: Perses
+      name: perses.perses.dev
+      specDescriptors:
+      - displayName: Config
+        path: config
+      - displayName: Container Port
+        path: containerPort
+      statusDescriptors:
+      - displayName: Conditions
+        path: conditions
+      version: v1alpha1
+  description: The Perses Operator deploys and manages Perses instances, dashboards
+    and datasources.
+  displayName: Perses Operator
+  icon:
+  - base64data: ""
+    mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+  - supported: false
+    type: OwnNamespace
+  - supported: false
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
+  keywords:
+  - monitoring
+  - logs
+  - traces
+  - metrics
+  - dashboards
+  links:
+  - name: Perses Operator
+    url: https://perses.dev
+  maintainers:
+  - email: gbernal@redhat.com
+    name: Gabriel Bernal
+  - email: augustin.husson@amadeus.com
+    name: Augustin Husson
+  maturity: alpha
+  provider:
+    name: Perses
+    url: perses.dev
+  version: 0.1.0

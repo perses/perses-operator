@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: quay.io/gbernal/perses-operator
-  newTag: 0.0.1
+  newTag: 0.1.0
