@@ -25,6 +25,7 @@ import (
 	"github.com/perses/perses-operator/internal/subreconciler"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
+	"github.com/perses/perses/pkg/model/api/v1/common"
 	logger "github.com/sirupsen/logrus"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -78,6 +79,11 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 				Kind: "Project",
 				Metadata: persesv1.Metadata{
 					Name: datasource.Namespace,
+				},
+				Spec: persesv1.ProjectSpec{
+					Display: &common.Display{
+						Name: datasource.Namespace,
+					},
 				},
 			})
 

@@ -25,6 +25,7 @@ import (
 	"github.com/perses/perses-operator/internal/subreconciler"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
+	"github.com/perses/perses/pkg/model/api/v1/common"
 	logger "github.com/sirupsen/logrus"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -78,6 +79,11 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 				Kind: "Project",
 				Metadata: persesv1.Metadata{
 					Name: dashboard.Namespace,
+				},
+				Spec: persesv1.ProjectSpec{
+					Display: &common.Display{
+						Name: dashboard.Namespace,
+					},
 				},
 			})
 
