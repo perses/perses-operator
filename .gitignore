@@ -31,3 +31,5 @@ Dockerfile.cross
 .goreleaser.yaml
 
 /.github/perses-ci/
+
+bundle_tmp*
