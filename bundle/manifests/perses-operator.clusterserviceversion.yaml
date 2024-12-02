@@ -973,11 +973,14 @@ metadata:
         }
       ]
     capabilities: Basic Install
-    createdAt: "2024-12-02T08:45:05Z"
+    createdAt: "2024-12-02T10:40:52Z"
     operators.operatorframework.io/builder: operator-sdk-v1.32.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
+  labels:
+    operatorframework.io/arch.amd64: supported
+    operatorframework.io/arch.arm64: supported
   name: perses-operator.v0.1.0
-  namespace: placeholder
+  namespace: perses
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:

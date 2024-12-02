@@ -4,8 +4,11 @@ metadata:
   annotations:
     alm-examples: '[]'
     capabilities: Basic Install
+  labels:
+    operatorframework.io/arch.amd64: supported
+    operatorframework.io/arch.arm64: supported
   name: perses-operator.v0.1.0
-  namespace: placeholder
+  namespace: perses
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
