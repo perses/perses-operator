@@ -33,3 +33,4 @@ Dockerfile.cross
 /.github/perses-ci/
 
 bundle_tmp*
+/bundle/manifests/
