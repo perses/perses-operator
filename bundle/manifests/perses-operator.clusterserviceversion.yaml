@@ -973,7 +973,7 @@ metadata:
         }
       ]
     capabilities: Basic Install
-    createdAt: "2024-12-02T08:31:28Z"
+    createdAt: "2024-12-02T08:45:05Z"
     operators.operatorframework.io/builder: operator-sdk-v1.32.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v3
   name: perses-operator.v0.1.0
@@ -1204,7 +1204,7 @@ spec:
                 - --leader-elect
                 command:
                 - /manager
-                image: docker.io/persesdev/perses-operator:0.1.0
+                image: docker.io/persesdev/perses-operator:v0.1.0
                 livenessProbe:
                   httpGet:
                     path: /healthz
