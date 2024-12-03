@@ -256,7 +256,7 @@ bundle: manifests kustomize operator-sdk ## Generate bundle manifests and metada
 	$(OPERATOR_SDK) bundle validate ./bundle
 
 .PHONY: bundle-build
-bundle-build: ## Build the bundle image.
+bundle-build: generate bundle ## Build the bundle image.
 	$(CONTAINER_RUNTIME) build -f bundle.Dockerfile -t $(BUNDLE_IMG) .
 
 .PHONY: bundle-push
@@ -330,6 +330,3 @@ cross-build: generate-goreleaser manifests generate fmt vet ## Cross build binar
 .PHONY: cross-release
 cross-release: generate-goreleaser manifests generate fmt vet
 	goreleaser release --clean
-
-.PHONY: release
-release: generate bundle bundle-build bundle-push catalog-build catalog-push
