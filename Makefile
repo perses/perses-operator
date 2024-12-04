@@ -5,6 +5,10 @@
 # - use environment variables to overwrite this value (e.g export VERSION=0.0.2)
 VERSION ?= 0.1.0
 
+# DATE defines the building date. It is used mainly for goreleaser when generating the GitHub release.
+DATE := $(shell date +%Y-%m-%d)
+export DATE
+
 # CONTAINER_RUNTIME defines the container runtime to use for building the bundle image.
 CONTAINER_RUNTIME := $(shell command -v podman 2> /dev/null || echo docker)
 
