@@ -43,6 +43,13 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Login with podman
+        uses: redhat-actions/podman-login@v1
+        if: ${{ github.event_name == 'push' && (startsWith(github.ref_name, 'v') || github.ref_name == 'main') }}
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          registry: "docker.io"
       - name: install goreleaser
         uses: goreleaser/goreleaser-action@v6
         with:
