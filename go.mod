@@ -1,6 +1,9 @@
 module github.com/perses/perses-operator
 
-go 1.23
+go 1.23.0
+
+toolchain go1.23.4
+
 require (
 	github.com/brunoga/deep v1.2.4
 	github.com/onsi/ginkgo/v2 v2.22.0
