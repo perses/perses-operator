@@ -151,7 +151,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: image-build
 image-build: test ## Build docker image with the manager.
-	${CONTAINER_RUNTIME} build -t ${IMG} .
+	${CONTAINER_RUNTIME} build -f Dockerfile.dev -t ${IMG} .
 
 .PHONY: image-push
 image-push: ## Push docker image with the manager.
@@ -326,7 +326,7 @@ endef
 generate-goreleaser:
 	go run ./scripts/generate-goreleaser/generate-goreleaser.go
 
-## Cross build binaries for all platforms (Use "make build" in development)
+## Cross build binaries for all platforms (Use "make image-build" in development)
 .PHONY: cross-build
 cross-build: generate-goreleaser manifests generate fmt vet ## Cross build binaries for all platforms (Use "make build" in development)
 	goreleaser release --snapshot --clean
