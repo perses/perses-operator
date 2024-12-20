@@ -20,19 +20,13 @@ make install
 kubectl apply -k config/samples
 ```
 
-3. Build and push your image to the location specified by `IMG`:
+3. Usint the the location specified by `IMG`, build and push the image to the registry, then deploy the controller to the cluster:
 
 ```sh
-make image-build image-push IMG=<some-registry>/perses-operator:tag
+IMG=<some-registry>/perses-operator:tag make image-build image-push deploy
 ```
 
-4. Deploy the controller to the cluster with the image specified by `IMG`:
-
-```sh
-make deploy IMG=<some-registry>/perses-operator:tag
-```
-
-6. Access the Perses UI at `http://localhost:8080`
+5. Access the Perses UI at `http://localhost:8080` by port-forwarding the service:
 
 ```sh
 kubectl port-forward svc/perses-sample 8080:8080
