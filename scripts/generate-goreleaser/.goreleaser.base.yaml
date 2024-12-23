@@ -2,7 +2,7 @@ version: 2
 builds:
   - id: "operator"
     main: ./main.go
-    binary: "operator"
+    binary: "/bin/manager"
     goos:
       - linux
       - windows

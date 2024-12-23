@@ -58,10 +58,10 @@ spec:
       #               - linux
       securityContext:
         runAsNonRoot: true
+        runAsGroup: 65532
+        runAsUser: 65532
       containers:
-      - command:
-        - /manager
-        args:
+      - args:
         - --leader-elect
         image: controller:latest
         imagePullPolicy: Always

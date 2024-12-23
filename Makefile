@@ -150,8 +150,8 @@ run: manifests generate fmt vet ## Run a controller from your host.
 # (i.e. docker build --platform linux/arm64 ). However, you must enable docker buildKit for it.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: image-build
-image-build: test ## Build docker image with the manager.
-	${CONTAINER_RUNTIME} build -f Dockerfile.dev -t ${IMG} .
+image-build: build test ## Build docker image with the manager.
+	${CONTAINER_RUNTIME} build -f Dockerfile -t ${IMG} .
 
 .PHONY: image-push
 image-push: ## Push docker image with the manager.
