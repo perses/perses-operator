@@ -4,8 +4,10 @@ An operator to install [Perses](https://github.com/perses/perses) in a k8s clust
 
 ## Getting Started
 
-You’ll need a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
+You’ll need: 
+- a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
 **Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
+- [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) installed and configured to use your cluster.
 
 ### Running on the cluster
 
@@ -20,13 +22,13 @@ make install
 kubectl apply -k config/samples
 ```
 
-3. Usint the the location specified by `IMG`, build and push the image to the registry, then deploy the controller to the cluster:
+3. Using the the location specified by `IMG`, build a testing image and push it to the registry, then deploy the controller to the cluster:
 
 ```sh
-IMG=<some-registry>/perses-operator:tag make image-build image-push deploy
+IMG=<some-registry>/perses-operator:tag make test-image-build image-push deploy
 ```
 
-5. Access the Perses UI at `http://localhost:8080` by port-forwarding the service:
+4. Port forward the service so you can access the Perses UI at `http://localhost:8080`:
 
 ```sh
 kubectl port-forward svc/perses-sample 8080:8080

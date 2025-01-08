@@ -153,6 +153,10 @@ run: manifests generate fmt vet ## Run a controller from your host.
 image-build: build test ## Build docker image with the manager.
 	${CONTAINER_RUNTIME} build -f Dockerfile -t ${IMG} .
 
+.PHONY: test-image-build
+test-image-build: test ## Build a testing docker image with the manager.
+	${CONTAINER_RUNTIME} build -f Dockerfile.dev -t ${IMG} .
+
 .PHONY: image-push
 image-push: ## Push docker image with the manager.
 	${CONTAINER_RUNTIME} push ${IMG}

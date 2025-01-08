@@ -1,0 +1,21 @@
+FROM golang:1.23-alpine AS build-env
+
+RUN apk add --update --no-cache make bash mailcap
+
+WORKDIR /app
+COPY . .
+
+RUN make build
+
+FROM gcr.io/distroless/static-debian12
+
+LABEL maintainer="The Perses Authors <perses-team@googlegroups.com>"
+
+USER nobody
+
+COPY --from=build-env --chown=nobody:nobody /app/bin/manager  /bin/manager
+COPY --chown=nobody:nobody LICENSE                            /LICENSE
+COPY --from=build-env --chown=nobody:nobody                   /etc/mime.types /etc/mime.types
+
+EXPOSE     8080
+ENTRYPOINT [ "/bin/manager" ]
