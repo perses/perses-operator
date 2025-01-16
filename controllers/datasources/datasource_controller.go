@@ -39,12 +39,12 @@ func (r *PersesDatasourceReconciler) reconcileDatasourcesInAllInstances(ctx cont
 	err := r.Client.List(ctx, persesInstances, opts...)
 	if err != nil {
 		dlog.WithError(err).Error("Failed to get perses instances")
-		return subreconciler.RequeueWithError(err)
+		return subreconciler.RequeueWithDelayAndError(time.Minute, err)
 	}
 
 	if len(persesInstances.Items) == 0 {
 		dlog.Info("No Perses instances found")
-		return subreconciler.DoNotRequeue()
+		return subreconciler.RequeueWithDelay(time.Minute)
 	}
 
 	datasource := &persesv1alpha1.PersesDatasource{}

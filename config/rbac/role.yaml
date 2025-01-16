@@ -9,6 +9,7 @@ rules:
       - apps
     resources:
       - deployments
+      - statefulsets
     verbs:
       - create
       - delete
@@ -30,6 +31,7 @@ rules:
       - deployments
       - services
       - configmaps
+      - statefulsets
     verbs:
       - get
       - patch

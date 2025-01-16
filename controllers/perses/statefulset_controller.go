@@ -29,50 +29,51 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-var dlog = logger.WithField("module", "deployment_controller")
+var stlog = logger.WithField("module", "statefulset_controller")
 
-func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
+func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
 	perses := &v1alpha1.Perses{}
 
 	if r, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(r, err) {
 		return r, err
 	}
 
-	found := &appsv1.Deployment{}
+	found := &appsv1.StatefulSet{}
 	err := r.Get(ctx, types.NamespacedName{Name: perses.Name, Namespace: perses.Namespace}, found)
 	if err != nil && apierrors.IsNotFound(err) {
 
-		dep, err := r.createPersesDeployment(perses)
+		dep, err := r.createPersesStatefulSet(perses)
 		if err != nil {
-			dlog.WithError(err).Error("Failed to define new Deployment resource for perses")
+			stlog.WithError(err).Error("Failed to define new StatefulSet resource for perses")
 
 			meta.SetStatusCondition(&perses.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses,
 				Status: metav1.ConditionFalse, Reason: "Reconciling",
-				Message: fmt.Sprintf("Failed to create Deployment for the custom resource (%s): (%s)", perses.Name, err)})
+				Message: fmt.Sprintf("Failed to create StatefulSet for the custom resource (%s): (%s)", perses.Name, err)})
 
 			if err := r.Status().Update(ctx, perses); err != nil {
-				dlog.Error(err, "Failed to update perses status")
+				stlog.Error(err, "Failed to update perses status")
 				return subreconciler.RequeueWithError(err)
 			}
 
 			return subreconciler.RequeueWithError(err)
 		}
 
-		dlog.Infof("Creating a new Deployment: Deployment.Namespace %s Deployment.Name %s", dep.Namespace, dep.Name)
+		stlog.Infof("Creating a new StatefulSet: StatefulSet.Namespace %s StatefulSet.Name %s", dep.Namespace, dep.Name)
 		if err = r.Create(ctx, dep); err != nil {
-			dlog.WithError(err).Errorf("Failed to create new Deployment: Deployment.Namespace %s Deployment.Name %s", dep.Namespace, dep.Name)
+			stlog.WithError(err).Errorf("Failed to create new StatefulSet: StatefulSet.Namespace %s StatefulSet.Name %s", dep.Namespace, dep.Name)
 			return subreconciler.RequeueWithError(err)
 		}
 
 		return subreconciler.RequeueWithDelay(time.Minute)
 	} else if err != nil {
-		dlog.WithError(err).Error("Failed to get Deployment")
+		stlog.WithError(err).Error("Failed to get StatefulSet")
 
 		return subreconciler.RequeueWithError(err)
 	}
@@ -80,8 +81,8 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 	return subreconciler.ContinueReconciling()
 }
 
-func (r *PersesReconciler) createPersesDeployment(
-	perses *v1alpha1.Perses) (*appsv1.Deployment, error) {
+func (r *PersesReconciler) createPersesStatefulSet(
+	perses *v1alpha1.Perses) (*appsv1.StatefulSet, error) {
 	configName := common.GetConfigName(perses.Name)
 
 	ls, err := common.LabelsForPerses(r.Config.PersesImage, perses.Name, perses.Name)
@@ -95,13 +96,13 @@ func (r *PersesReconciler) createPersesDeployment(
 		return nil, err
 	}
 
-	dep := &appsv1.Deployment{
+	dep := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      perses.Name,
 			Namespace: perses.Namespace,
 			Labels:    ls,
 		},
-		Spec: appsv1.DeploymentSpec{
+		Spec: appsv1.StatefulSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
@@ -139,8 +140,6 @@ func (r *PersesReconciler) createPersesDeployment(
 					//	},
 					//},
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: &[]bool{true}[0],
-						RunAsUser:    &[]int64{65534}[0],
 						SeccompProfile: &corev1.SeccompProfile{
 							Type: corev1.SeccompProfileTypeRuntimeDefault,
 						},
@@ -150,7 +149,6 @@ func (r *PersesReconciler) createPersesDeployment(
 						Name:            "perses",
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						SecurityContext: &corev1.SecurityContext{
-							RunAsNonRoot:             &[]bool{true}[0],
 							AllowPrivilegeEscalation: &[]bool{false}[0],
 							Capabilities: &corev1.Capabilities{
 								Drop: []corev1.Capability{
@@ -173,6 +171,11 @@ func (r *PersesReconciler) createPersesDeployment(
 								Name:      "config",
 								ReadOnly:  true,
 								MountPath: "/perses/config",
+							},
+							{
+								Name:      "storage",
+								ReadOnly:  false,
+								MountPath: "/etc/perses/storage",
 							},
 						},
 						Args: []string{"--config=/perses/config/config.yaml"},
@@ -203,23 +206,32 @@ func (r *PersesReconciler) createPersesDeployment(
 					DNSPolicy:     "ClusterFirst",
 				},
 			},
-			Strategy: appsv1.DeploymentStrategy{
-				Type: "RollingUpdate",
-				RollingUpdate: &appsv1.RollingUpdateDeployment{
-					MaxUnavailable: &intstr.IntOrString{
-						Type:   intstr.Type(1),
-						StrVal: "25%",
+			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: ls,
+						Name:   "storage",
 					},
-					MaxSurge: &intstr.IntOrString{
-						Type:   intstr.Type(1),
-						StrVal: "25%",
+					Spec: corev1.PersistentVolumeClaimSpec{
+						AccessModes: []corev1.PersistentVolumeAccessMode{
+							corev1.ReadWriteOnce,
+						},
+						Resources: corev1.VolumeResourceRequirements{
+							Requests: map[corev1.ResourceName]resource.Quantity{
+								// TODO: allow to configure the storage size
+								corev1.ResourceStorage: resource.MustParse("1Gi"),
+							},
+						},
+						VolumeMode: ptr.To(corev1.PersistentVolumeFilesystem),
+						// TODO: allow to configure the storage class name
+						// StorageClassName: ptr.To(opts.Stack.StorageClassName),
 					},
 				},
 			},
 		},
 	}
 
-	// Set the ownerRef for the Deployment
+	// Set the ownerRef for the StatefulSet
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
 	if err := ctrl.SetControllerReference(perses, dep, r.Scheme); err != nil {
 		return nil, err

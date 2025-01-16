@@ -16,22 +16,27 @@ You’ll need:
 make install
 ```
 
-2. Install custom resources:
+2. Create a namespace for the resources:
+```sh
+kubectl create namespace perses-dev
+```
+
+3. Install custom resources:
 
 ```sh
 kubectl apply -k config/samples
 ```
 
-3. Using the the location specified by `IMG`, build a testing image and push it to the registry, then deploy the controller to the cluster:
+4. Using the the location specified by `IMG`, build a testing image and push it to the registry, then deploy the controller to the cluster:
 
 ```sh
 IMG=<some-registry>/perses-operator:tag make test-image-build image-push deploy
 ```
 
-4. Port forward the service so you can access the Perses UI at `http://localhost:8080`:
+5. Port forward the service so you can access the Perses UI at `http://localhost:8080`:
 
 ```sh
-kubectl port-forward svc/perses-sample 8080:8080
+kubectl -n perses-dev port-forward svc/perses-sample 8080:8080
 ```
 
 ### Uninstall CRDs
@@ -65,7 +70,7 @@ Each instance of the CRD deploys the following resources:
 
 - A ConfigMap holding the perses configuration
 - A Service so perses API can be accessed from within the cluster
-- A Deployment holding the perses API
+- A StatefulSet holding the perses API
 
 ### Test It Out
 

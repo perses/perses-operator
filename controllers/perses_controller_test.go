@@ -119,23 +119,23 @@ var _ = Describe("Perses controller", func() {
 				return k8sClient.Get(ctx, configMapNamespaceName, found)
 			}, time.Minute*3, time.Second).Should(Succeed())
 
-			By("Checking if Deployment was successfully created in the reconciliation")
+			By("Checking if StatefulSet was successfully created in the reconciliation")
 			Eventually(func() error {
-				found := &appsv1.Deployment{}
+				found := &appsv1.StatefulSet{}
 				err = k8sClient.Get(ctx, typeNamespaceName, found)
 
 				if err == nil {
 					if len(found.Spec.Template.Spec.Containers) < 1 {
-						return fmt.Errorf("The number of containers used in the deployment is not the one expected")
+						return fmt.Errorf("The number of containers used in the StatefulSet is not the one expected")
 					}
 					if found.Spec.Template.Spec.Containers[0].Image != persesImage {
-						return fmt.Errorf("The image used in the deployment is not the one expected")
+						return fmt.Errorf("The image used in the StatefulSet is not the one expected")
 					}
 					if len(found.Spec.Template.Spec.Containers[0].Ports) < 1 && found.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort != 8080 {
-						return fmt.Errorf("The port used in the deployment is not the one defined in the custom resource")
+						return fmt.Errorf("The port used in the StatefulSet is not the one defined in the custom resource")
 					}
 					if len(found.Spec.Template.Spec.Containers[0].Args) < 1 && found.Spec.Template.Spec.Containers[0].Args[0] != "--config=/etc/perses/config/config.yaml" {
-						return fmt.Errorf("The config path used in the deployment is not the one defined in the custom resource")
+						return fmt.Errorf("The config path used in the StatefulSet is not the one defined in the custom resource")
 					}
 				}
 
@@ -148,7 +148,7 @@ var _ = Describe("Perses controller", func() {
 					latestStatusCondition := perses.Status.Conditions[len(perses.Status.Conditions)-1]
 					expectedLatestStatusCondition := metav1.Condition{Type: common.TypeAvailablePerses,
 						Status: metav1.ConditionTrue, Reason: "Reconciling",
-						Message: fmt.Sprintf("Deployment for custom resource (%s) created successfully", perses.Name)}
+						Message: fmt.Sprintf("StatefulSet for custom resource (%s) created successfully", perses.Name)}
 					if latestStatusCondition != expectedLatestStatusCondition {
 						return fmt.Errorf("The latest status condition added to the perses instance is not as expected")
 					}
@@ -164,15 +164,15 @@ var _ = Describe("Perses controller", func() {
 			err = k8sClient.Delete(ctx, persesToDelete)
 			Expect(err).To(Not(HaveOccurred()))
 
-			By("Checking if Deployment was successfully deleted in the reconciliation")
+			By("Checking if StatefulSet was successfully deleted in the reconciliation")
 			Eventually(func() error {
-				found := &appsv1.Deployment{}
+				found := &appsv1.StatefulSet{}
 				return k8sClient.Get(ctx, typeNamespaceName, found)
 			}, time.Minute, time.Second).Should(Succeed())
 
 			By("Checking if Service was successfully deleted in the reconciliation")
 			Eventually(func() error {
-				found := &appsv1.Deployment{}
+				found := &appsv1.StatefulSet{}
 				return k8sClient.Get(ctx, typeNamespaceName, found)
 			}, time.Minute, time.Second).Should(Succeed())
 
