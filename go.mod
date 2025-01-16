@@ -6,7 +6,7 @@ toolchain go1.23.4
 
 require (
 	github.com/brunoga/deep v1.2.4
-	github.com/onsi/ginkgo/v2 v2.22.1
+	github.com/onsi/ginkgo/v2 v2.22.2
 	github.com/onsi/gomega v1.36.2
 	github.com/perses/perses v0.50.0-rc.0
 	github.com/sirupsen/logrus v1.9.3
