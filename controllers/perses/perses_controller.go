@@ -56,10 +56,9 @@ var log = logger.WithField("module", "perses_controller")
 // +kubebuilder:rbac:groups=perses.dev,resources=perses/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=perses.dev,resources=perses/finalizers,verbs=update
 // +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
-// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
 func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-
 	subreconcilersForPerses := []subreconciler.FnWithRequest{
 		r.setStatusToUnknown,
 		r.addFinalizer,
@@ -67,6 +66,7 @@ func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		r.reconcileService,
 		r.reconcileConfigMap,
 		r.reconcileDeployment,
+		r.reconcileStatefulSet,
 	}
 
 	// Run all subreconcilers sequentially
@@ -241,6 +241,7 @@ func (r *PersesReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&v1alpha1.Perses{}).
 		Owns(&appsv1.Deployment{}).
+		Owns(&appsv1.StatefulSet{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Service{}).
 		Complete(r)

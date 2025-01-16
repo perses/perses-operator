@@ -8,6 +8,7 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: perses-operator
   name: perses-dashboard-sample
+  namespace: perses-dev
 spec:
   display:
     name: Perses Dashboard Sample
