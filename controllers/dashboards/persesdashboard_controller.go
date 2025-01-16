@@ -84,8 +84,8 @@ func (r *PersesDashboardReconciler) handleDelete(ctx context.Context, req ctrl.R
 
 	if err := r.Get(ctx, req.NamespacedName, dashboard); err != nil {
 		if !apierrors.IsNotFound(err) {
-			log.WithError(err).Error("Failed to get perses dashboard")
-			return subreconciler.RequeueWithError(err)
+			dlog.Info("No Perses instances found, retrying in 1 minute")
+			return subreconciler.RequeueWithDelay(time.Minute)
 		}
 
 		log.Infof("perses dashboard resource not found. Deleting '%s' in '%s'", req.Name, req.Namespace)

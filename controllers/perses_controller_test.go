@@ -172,7 +172,7 @@ var _ = Describe("Perses controller", func() {
 
 			By("Checking if Service was successfully deleted in the reconciliation")
 			Eventually(func() error {
-				found := &appsv1.Deployment{}
+				found := &corev1.Service{}
 				return k8sClient.Get(ctx, typeNamespaceName, found)
 			}, time.Minute, time.Second).Should(Succeed())
 

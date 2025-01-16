@@ -32,6 +32,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -139,8 +140,6 @@ func (r *PersesReconciler) createPersesDeployment(
 					//	},
 					//},
 					SecurityContext: &corev1.PodSecurityContext{
-						RunAsNonRoot: &[]bool{true}[0],
-						RunAsUser:    &[]int64{65534}[0],
 						SeccompProfile: &corev1.SeccompProfile{
 							Type: corev1.SeccompProfileTypeRuntimeDefault,
 						},
@@ -150,7 +149,6 @@ func (r *PersesReconciler) createPersesDeployment(
 						Name:            "perses",
 						ImagePullPolicy: corev1.PullIfNotPresent,
 						SecurityContext: &corev1.SecurityContext{
-							RunAsNonRoot:             &[]bool{true}[0],
 							AllowPrivilegeEscalation: &[]bool{false}[0],
 							Capabilities: &corev1.Capabilities{
 								Drop: []corev1.Capability{
@@ -174,6 +172,11 @@ func (r *PersesReconciler) createPersesDeployment(
 								ReadOnly:  true,
 								MountPath: "/perses/config",
 							},
+							{
+								Name:      "storage",
+								ReadOnly:  false,
+								MountPath: "/etc/perses/storage",
+							},
 						},
 						Args: []string{"--config=/perses/config/config.yaml"},
 					}},
@@ -185,8 +188,14 @@ func (r *PersesReconciler) createPersesDeployment(
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: configName,
 									},
-									DefaultMode: &[]int32{420}[0],
+									DefaultMode: ptr.To[int32](420),
 								},
+							},
+						},
+						{
+							Name: "storage",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
 							},
 						},
 						// {
