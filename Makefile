@@ -10,7 +10,7 @@ DATE := $(shell date +%Y-%m-%d)
 export DATE
 
 # CONTAINER_RUNTIME defines the container runtime to use for building the bundle image.
-CONTAINER_RUNTIME := $(shell command -v podman 2> /dev/null || echo docker)
+CONTAINER_RUNTIME := $(shell if podman ps >/dev/null 2>&1; then echo podman; else echo docker; fi)
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
