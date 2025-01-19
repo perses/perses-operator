@@ -10,7 +10,20 @@ DATE := $(shell date +%Y-%m-%d)
 export DATE
 
 # CONTAINER_RUNTIME defines the container runtime to use for building the bundle image.
-CONTAINER_RUNTIME := $(shell if podman ps >/dev/null 2>&1; then echo podman; else echo docker; fi)
+.PHONY: check-container-runtime
+check-container-runtime:
+	@if podman ps >/dev/null 2>&1; then \
+		echo "Using podman as container runtime"; \
+		echo podman > .container_runtime; \
+	elif docker ps >/dev/null 2>&1; then \
+		echo "Using docker as container runtime"; \
+		echo docker > .container_runtime; \
+	else \
+		echo "Error: Neither podman nor docker daemon is running" >&2; \
+		exit 1; \
+	fi
+
+CONTAINER_RUNTIME := $(shell cat .container_runtime 2>/dev/null || echo docker)
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -154,7 +167,7 @@ image-build: build test ## Build docker image with the manager.
 	${CONTAINER_RUNTIME} build -f Dockerfile -t ${IMG} .
 
 .PHONY: test-image-build
-test-image-build: test ## Build a testing docker image with the manager.
+test-image-build: check-container-runtime test ## Build a testing docker image with the manager.
 	${CONTAINER_RUNTIME} build -f Dockerfile.dev -t ${IMG} .
 
 .PHONY: image-push
