@@ -9,7 +9,7 @@ VERSION ?= 0.1.0
 DATE := $(shell date +%Y-%m-%d)
 export DATE
 
-# CONTAINER_RUNTIME defines the container runtime to use for building the bundle image.
+
 .PHONY: check-container-runtime
 check-container-runtime:
 	@if podman ps >/dev/null 2>&1; then \
@@ -17,13 +17,11 @@ check-container-runtime:
 		echo "============================================"; \
 		echo " ✅ Using Podman the container runtime"; \
 		echo "============================================"; \
-		CONTAINER_RUNTIME=podman; \
 	elif docker ps >/dev/null 2>&1; then \
 		echo ""; \
 		echo "============================================"; \
 		echo " ✅ Using Docker the container runtime"; \
 		echo "============================================"; \
-		CONTAINER_RUNTIME=docker; \
 	else \
 		echo ""; \
 		echo "============================================"; \
@@ -32,8 +30,8 @@ check-container-runtime:
 		exit 1; \
 	fi
 
-
-CONTAINER_RUNTIME := $(shell cat .container_runtime 2>/dev/null || echo docker)
+# CONTAINER_RUNTIME defines the container runtime to use for building the bundle image.
+CONTAINER_RUNTIME := $(shell if podman ps >/dev/null 2>&1; then echo podman; elif docker ps >/dev/null 2>&1; then echo docker; fi)
 
 # CHANNELS define the bundle channels used in the bundle.
 # Add a new line here if you would like to change its default config. (E.g CHANNELS = "candidate,fast,stable")
@@ -173,7 +171,7 @@ run: manifests generate fmt vet ## Run a controller from your host.
 # (i.e. docker build --platform linux/arm64 ). However, you must enable docker buildKit for it.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: image-build
-image-build: build test ## Build docker image with the manager.
+image-build: check-container-runtime build test ## Build docker image with the manager.
 	${CONTAINER_RUNTIME} build -f Dockerfile -t ${IMG} .
 
 .PHONY: test-image-build
@@ -327,7 +325,7 @@ endif
 # This recipe invokes 'opm' in 'semver' bundle add mode. For more information on add modes, see:
 # https://github.com/operator-framework/community-operators/blob/7f1438c/docs/packaging-operator.md#updating-your-existing-operator
 .PHONY: catalog-build
-catalog-build: opm ## Build a catalog image.
+catalog-build: check-container-runtime opm ## Build a catalog image.
 	$(OPM) index add --container-tool $(CONTAINER_RUNTIME) --mode semver --tag $(CATALOG_IMG) --bundles $(BUNDLE_IMGS) $(FROM_INDEX_OPT)
 
 # Push the catalog image.
