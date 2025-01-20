@@ -13,15 +13,25 @@ export DATE
 .PHONY: check-container-runtime
 check-container-runtime:
 	@if podman ps >/dev/null 2>&1; then \
-		echo "Using podman as container runtime"; \
-		echo podman > .container_runtime; \
+		echo ""; \
+		echo "============================================"; \
+		echo " ✅ Using Podman the container runtime"; \
+		echo "============================================"; \
+		CONTAINER_RUNTIME=podman; \
 	elif docker ps >/dev/null 2>&1; then \
-		echo "Using docker as container runtime"; \
-		echo docker > .container_runtime; \
+		echo ""; \
+		echo "============================================"; \
+		echo " ✅ Using Docker the container runtime"; \
+		echo "============================================"; \
+		CONTAINER_RUNTIME=docker; \
 	else \
-		echo "Error: Neither podman nor docker daemon is running" >&2; \
+		echo ""; \
+		echo "============================================"; \
+		echo " ❌ Neither Podman nor Docker daemon is running"; \
+		echo "============================================"; \
 		exit 1; \
 	fi
+
 
 CONTAINER_RUNTIME := $(shell cat .container_runtime 2>/dev/null || echo docker)
 
