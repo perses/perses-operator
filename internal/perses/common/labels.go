@@ -70,3 +70,7 @@ func ImageForPerses(persesImageFromFlags string) (string, error) {
 func GetConfigName(instanceName string) string {
 	return fmt.Sprintf("%s-config", instanceName)
 }
+
+func GetStorageName(instanceName string) string {
+	return fmt.Sprintf("%s-storage", instanceName)
+}
