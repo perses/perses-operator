@@ -28,6 +28,7 @@ kubectl apply -k config/samples
 ```
 
 4. Using the the location specified by `IMG`, build a testing image and push it to the registry, then deploy the controller to the cluster:
+> **Note:** Make sure the image is accessible either publicly or from the cluster internal registry.
 
 ```sh
 IMG=<some-registry>/perses-operator:tag make test-image-build image-push deploy
