@@ -81,17 +81,23 @@ func (r *PersesReconciler) reconcileService(ctx context.Context, req ctrl.Reques
 
 func (r *PersesReconciler) createPersesService(
 	perses *v1alpha1.Perses) (*corev1.Service, error) {
-	ls, err := common.LabelsForPerses(r.Config.PersesImage, perses.Name, perses.Name)
+	ls, err := common.LabelsForPerses(r.Config.PersesImage, perses.Name, perses.Name, perses.Spec.Metadata)
 
 	if err != nil {
 		return nil, err
 	}
 
+	annotations := map[string]string{}
+	if perses.Spec.Metadata != nil && perses.Spec.Metadata.Annotations != nil {
+		annotations = perses.Spec.Metadata.Annotations
+	}
+
 	ser := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      perses.Name,
-			Namespace: perses.Namespace,
-			Labels:    ls,
+			Name:        perses.Name,
+			Namespace:   perses.Namespace,
+			Annotations: annotations,
+			Labels:      ls,
 		},
 		Spec: corev1.ServiceSpec{
 			Type: corev1.ServiceTypeClusterIP,

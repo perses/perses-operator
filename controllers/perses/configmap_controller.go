@@ -83,10 +83,15 @@ func (r *PersesReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Requ
 
 func createPersesConfigMap(r *PersesReconciler, perses *v1alpha1.Perses) (*corev1.ConfigMap, error) {
 	configName := common.GetConfigName(perses.Name)
-	ls, err := common.LabelsForPerses(r.Config.PersesImage, configName, perses.Name)
+	ls, err := common.LabelsForPerses(r.Config.PersesImage, configName, perses.Name, perses.Spec.Metadata)
 
 	if err != nil {
 		return nil, err
+	}
+
+	annotations := map[string]string{}
+	if perses.Spec.Metadata != nil && perses.Spec.Metadata.Annotations != nil {
+		annotations = perses.Spec.Metadata.Annotations
 	}
 
 	persesConfig, err := yaml.Marshal(perses.Spec.Config.Config)
@@ -102,9 +107,10 @@ func createPersesConfigMap(r *PersesReconciler, perses *v1alpha1.Perses) (*corev
 
 	cm := &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      configName,
-			Namespace: perses.Namespace,
-			Labels:    ls,
+			Name:        configName,
+			Namespace:   perses.Namespace,
+			Annotations: annotations,
+			Labels:      ls,
 		},
 		Data: configData,
 	}

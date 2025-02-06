@@ -10,6 +10,9 @@ metadata:
   name: perses-sample
   namespace: perses-dev
 spec:
+  metadata:
+    labels:
+      instance: perses-sample
   config:
     database:
       file:
