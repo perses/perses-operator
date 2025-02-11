@@ -101,9 +101,14 @@ func (r *PersesReconciler) createPersesStatefulSet(
 	perses *v1alpha1.Perses) (*appsv1.StatefulSet, error) {
 	configName := common.GetConfigName(perses.Name)
 
-	ls, err := common.LabelsForPerses(r.Config.PersesImage, perses.Name, perses.Name)
+	ls, err := common.LabelsForPerses(r.Config.PersesImage, perses.Name, perses.Name, perses.Spec.Metadata)
 	if err != nil {
 		return nil, err
+	}
+
+	annotations := map[string]string{}
+	if perses.Spec.Metadata != nil && perses.Spec.Metadata.Annotations != nil {
+		annotations = perses.Spec.Metadata.Annotations
 	}
 
 	// Get the Operand image
@@ -116,47 +121,25 @@ func (r *PersesReconciler) createPersesStatefulSet(
 
 	dep := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      perses.Name,
-			Namespace: perses.Namespace,
-			Labels:    ls,
+			Name:        perses.Name,
+			Namespace:   perses.Namespace,
+			Annotations: annotations,
+			Labels:      ls,
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Selector: &metav1.LabelSelector{
 				MatchLabels: ls,
 			},
+			Replicas: perses.Spec.Replicas,
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: ls,
+					Annotations: annotations,
+					Labels:      ls,
 				},
 				Spec: corev1.PodSpec{
-					// TODO(user): Uncomment the following code to configure the nodeAffinity expression
-					// according to the platforms which are supported by your solution. It is considered
-					// best practice to support multiple architectures. build your manager image using the
-					// makefile target docker-buildx. Also, you can use docker manifest inspect <image>
-					// to check what are the platforms supported.
-					// More info: https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#node-affinity
-					//Affinity: &corev1.Affinity{
-					//	NodeAffinity: &corev1.NodeAffinity{
-					//		RequiredDuringSchedulingIgnoredDuringExecution: &corev1.NodeSelector{
-					//			NodeSelectorTerms: []corev1.NodeSelectorTerm{
-					//				{
-					//					MatchExpressions: []corev1.NodeSelectorRequirement{
-					//						{
-					//							Key:      "kubernetes.io/arch",
-					//							Operator: "In",
-					//							Values:   []string{"amd64", "arm64", "ppc64le", "s390x"},
-					//						},
-					//						{
-					//							Key:      "kubernetes.io/os",
-					//							Operator: "In",
-					//							Values:   []string{"linux"},
-					//						},
-					//					},
-					//				},
-					//			},
-					//		},
-					//	},
-					//},
+					NodeSelector: perses.Spec.NodeSelector,
+					Tolerations:  perses.Spec.Tolerations,
+					Affinity:     perses.Spec.Affinity,
 					SecurityContext: &corev1.PodSecurityContext{
 						SeccompProfile: &corev1.SeccompProfile{
 							Type: corev1.SeccompProfileTypeRuntimeDefault,

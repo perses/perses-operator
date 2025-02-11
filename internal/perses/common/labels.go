@@ -18,11 +18,12 @@ package common
 
 import (
 	"fmt"
+	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
 	"os"
 	"strings"
 )
 
-func LabelsForPerses(persesImageFromFlags string, name string, instanceName string) (map[string]string, error) {
+func LabelsForPerses(persesImageFromFlags string, name string, instanceName string, metadata *persesv1alpha1.Metadata) (map[string]string, error) {
 	var imageTag string
 	image, err := ImageForPerses(persesImageFromFlags)
 
@@ -36,13 +37,26 @@ func LabelsForPerses(persesImageFromFlags string, name string, instanceName stri
 		imageTag = "latest"
 	}
 
-	return map[string]string{"app.kubernetes.io/name": name,
+	persesLabels := map[string]string{
+		"app.kubernetes.io/name":       name,
 		"app.kubernetes.io/instance":   instanceName,
 		"app.kubernetes.io/version":    imageTag,
 		"app.kubernetes.io/part-of":    "perses-operator",
 		"app.kubernetes.io/created-by": "controller-manager",
 		"app.kubernetes.io/managed-by": "perses-operator",
-	}, nil
+	}
+
+	if metadata != nil {
+		for label, value := range metadata.Labels {
+			// don't overwrite default labels
+			if _, ok := persesLabels[label]; !ok {
+				persesLabels[label] = value
+			}
+		}
+	}
+
+	return persesLabels, nil
+
 }
 
 // imageForPerses gets the Operand image which is managed by this controller

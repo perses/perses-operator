@@ -60,12 +60,22 @@ var _ = Describe("Perses controller", func() {
 			perses := &persesv1alpha1.Perses{}
 			err := k8sClient.Get(ctx, typeNamespaceName, perses)
 			if err != nil && errors.IsNotFound(err) {
+				replicas := int32(2)
 				perses := &persesv1alpha1.Perses{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      PersesName,
 						Namespace: namespace.Name,
 					},
 					Spec: persesv1alpha1.PersesSpec{
+						Metadata: &persesv1alpha1.Metadata{
+							Annotations: map[string]string{
+								"testing": "true",
+							},
+							Labels: map[string]string{
+								"instance": PersesName,
+							},
+						},
+						Replicas:      &replicas,
 						ContainerPort: 8080,
 						Config: persesv1alpha1.PersesConfig{
 							Config: persesconfig.Config{
@@ -118,6 +128,16 @@ var _ = Describe("Perses controller", func() {
 					if found.Spec.Selector["app.kubernetes.io/instance"] != PersesName {
 						return fmt.Errorf("The selector used in the service is not the one defined in the custom resource")
 					}
+					if value, ok := found.ObjectMeta.Annotations["testing"]; ok {
+						if value != "true" {
+							return fmt.Errorf("The annotation in the service is not the one defined in the custom resource")
+						}
+					}
+					if value, ok := found.ObjectMeta.Labels["instance"]; ok {
+						if value != PersesName {
+							return fmt.Errorf("The label in the service is not the one defined in the custom resource")
+						}
+					}
 				}
 
 				return err
@@ -146,6 +166,16 @@ var _ = Describe("Perses controller", func() {
 					}
 					if len(found.Spec.Template.Spec.Containers[0].Args) < 1 && found.Spec.Template.Spec.Containers[0].Args[0] != "--config=/etc/perses/config/config.yaml" {
 						return fmt.Errorf("The config path used in the StatefulSet is not the one defined in the custom resource")
+					}
+					if value, ok := found.ObjectMeta.Annotations["testing"]; ok {
+						if value != "true" {
+							return fmt.Errorf("The annotation in the StatefulSet is not the one defined in the custom resource")
+						}
+					}
+					if value, ok := found.ObjectMeta.Labels["instance"]; ok {
+						if value != PersesName {
+							return fmt.Errorf("The label in the StatefulSet is not the one defined in the custom resource")
+						}
 					}
 				}
 
