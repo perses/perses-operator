@@ -19,19 +19,21 @@ package perses
 import (
 	"context"
 	"fmt"
-	"time"
 
-	"github.com/perses/perses-operator/api/v1alpha1"
-	"github.com/perses/perses-operator/internal/perses/common"
-	"github.com/perses/perses-operator/internal/subreconciler"
 	logger "github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/perses/perses-operator/api/v1alpha1"
+	"github.com/perses/perses-operator/internal/perses/common"
+	"github.com/perses/perses-operator/internal/subreconciler"
 )
 
 var cmlog = logger.WithField("module", "configmap_controller")
@@ -39,29 +41,33 @@ var cmlog = logger.WithField("module", "configmap_controller")
 func (r *PersesReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
 	perses := &v1alpha1.Perses{}
 
-	if r, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(r, err) {
-		return r, err
+	if result, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(result, err) {
+		return result, err
 	}
 
 	configName := common.GetConfigName(perses.Name)
 
 	found := &corev1.ConfigMap{}
-	err := r.Get(ctx, types.NamespacedName{Name: configName, Namespace: perses.Namespace}, found)
-	if err != nil && apierrors.IsNotFound(err) {
-		cm, err := createPersesConfigMap(r, perses)
-		if err != nil {
-			cmlog.WithError(err).Error("Failed to define new ConfigMap resource for perses")
+	if err := r.Get(ctx, types.NamespacedName{Name: configName, Namespace: perses.Namespace}, found); err != nil {
+		if !apierrors.IsNotFound(err) {
+			cmlog.WithError(err).Error("Failed to get ConfigMap")
+			return subreconciler.RequeueWithError(err)
+		}
+
+		cm, err2 := r.createPersesConfigMap(perses)
+		if err2 != nil {
+			cmlog.WithError(err2).Error("Failed to define new ConfigMap resource for perses")
 
 			meta.SetStatusCondition(&perses.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses,
 				Status: metav1.ConditionFalse, Reason: "Reconciling",
-				Message: fmt.Sprintf("Failed to create ConfigMap for the custom resource (%s): (%s)", perses.Name, err)})
+				Message: fmt.Sprintf("Failed to create ConfigMap for the custom resource (%s): (%s)", perses.Name, err2)})
 
-			if err := r.Status().Update(ctx, perses); err != nil {
+			if err = r.Status().Update(ctx, perses); err != nil {
 				cmlog.WithError(err).Error("Failed to update perses status")
 				return subreconciler.RequeueWithError(err)
 			}
 
-			return subreconciler.RequeueWithError(err)
+			return subreconciler.RequeueWithError(err2)
 		}
 
 		cmlog.Infof("Creating a new ConfigMap: ConfigMap.Namespace %s ConfigMap.Name %s", cm.Namespace, cm.Name)
@@ -70,18 +76,32 @@ func (r *PersesReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Requ
 			return subreconciler.RequeueWithError(err)
 		}
 
-		return subreconciler.RequeueWithDelay(time.Minute)
+		return subreconciler.ContinueReconciling()
 	}
 
+	cm, err := r.createPersesConfigMap(perses)
 	if err != nil {
-		cmlog.WithError(err).Error("Failed to get ConfigMap")
+		cmlog.WithError(err).Error("Failed to define new ConfigMap resource for perses")
 		return subreconciler.RequeueWithError(err)
+	}
+
+	// call update with dry run to fill out fields that are also returned via the k8s api
+	if err := r.Update(ctx, cm, client.DryRunAll); err != nil {
+		cmlog.Error(err, "Failed to update ConfigMap with dry run")
+		return subreconciler.RequeueWithError(err)
+	}
+
+	if !equality.Semantic.DeepEqual(found, cm) {
+		if err := r.Update(ctx, cm); err != nil {
+			cmlog.Error(err, "Failed to update ConfigMap")
+			return subreconciler.RequeueWithError(err)
+		}
 	}
 
 	return subreconciler.ContinueReconciling()
 }
 
-func createPersesConfigMap(r *PersesReconciler, perses *v1alpha1.Perses) (*corev1.ConfigMap, error) {
+func (r *PersesReconciler) createPersesConfigMap(perses *v1alpha1.Perses) (*corev1.ConfigMap, error) {
 	configName := common.GetConfigName(perses.Name)
 	ls, err := common.LabelsForPerses(r.Config.PersesImage, configName, perses.Name, perses.Spec.Metadata)
 

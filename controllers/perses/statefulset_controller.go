@@ -21,12 +21,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/perses/perses-operator/api/v1alpha1"
-	"github.com/perses/perses-operator/internal/perses/common"
-	"github.com/perses/perses-operator/internal/subreconciler"
 	logger "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -34,6 +32,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/perses/perses-operator/api/v1alpha1"
+	"github.com/perses/perses-operator/internal/perses/common"
+	"github.com/perses/perses-operator/internal/subreconciler"
 )
 
 var stlog = logger.WithField("module", "statefulset_controller")
@@ -41,8 +44,8 @@ var stlog = logger.WithField("module", "statefulset_controller")
 func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
 	perses := &v1alpha1.Perses{}
 
-	if r, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(r, err) {
-		return r, err
+	if result, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(result, err) {
+		return result, err
 	}
 
 	if perses.Spec.Config.Database.File == nil {
@@ -62,23 +65,27 @@ func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Re
 	}
 
 	found := &appsv1.StatefulSet{}
-	err := r.Get(ctx, types.NamespacedName{Name: perses.Name, Namespace: perses.Namespace}, found)
-	if err != nil && apierrors.IsNotFound(err) {
+	if err := r.Get(ctx, types.NamespacedName{Name: perses.Name, Namespace: perses.Namespace}, found); err != nil {
+		if !apierrors.IsNotFound(err) {
+			stlog.WithError(err).Error("Failed to get StatefulSet")
 
-		dep, err := r.createPersesStatefulSet(perses)
-		if err != nil {
-			stlog.WithError(err).Error("Failed to define new StatefulSet resource for perses")
+			return subreconciler.RequeueWithError(err)
+		}
+
+		dep, err2 := r.createPersesStatefulSet(perses)
+		if err2 != nil {
+			stlog.WithError(err2).Error("Failed to define new StatefulSet resource for perses")
 
 			meta.SetStatusCondition(&perses.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses,
 				Status: metav1.ConditionFalse, Reason: "Reconciling",
 				Message: fmt.Sprintf("Failed to create StatefulSet for the custom resource (%s): (%s)", perses.Name, err)})
 
-			if err := r.Status().Update(ctx, perses); err != nil {
+			if err = r.Status().Update(ctx, perses); err != nil {
 				stlog.Error(err, "Failed to update perses status")
 				return subreconciler.RequeueWithError(err)
 			}
 
-			return subreconciler.RequeueWithError(err)
+			return subreconciler.RequeueWithError(err2)
 		}
 
 		stlog.Infof("Creating a new StatefulSet: StatefulSet.Namespace %s StatefulSet.Name %s", dep.Namespace, dep.Name)
@@ -88,10 +95,25 @@ func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Re
 		}
 
 		return subreconciler.RequeueWithDelay(time.Minute)
-	} else if err != nil {
-		stlog.WithError(err).Error("Failed to get StatefulSet")
+	}
 
+	sts, err := r.createPersesStatefulSet(perses)
+	if err != nil {
+		stlog.WithError(err).Error("Failed to define new StatefulSet resource for perses")
 		return subreconciler.RequeueWithError(err)
+	}
+
+	// call update with dry run to fill out fields that are also returned via the k8s api
+	if err = r.Update(ctx, sts, client.DryRunAll); err != nil {
+		stlog.Error(err, "Failed to update StatefulSet with dry run")
+		return subreconciler.RequeueWithError(err)
+	}
+
+	if !equality.Semantic.DeepEqual(found, sts) {
+		if err = r.Update(ctx, sts); err != nil {
+			stlog.Error(err, "Failed to update StatefulSet")
+			return subreconciler.RequeueWithError(err)
+		}
 	}
 
 	return subreconciler.ContinueReconciling()
