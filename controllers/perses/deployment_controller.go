@@ -19,14 +19,11 @@ package perses
 import (
 	"context"
 	"fmt"
-	"time"
 
-	"github.com/perses/perses-operator/api/v1alpha1"
-	"github.com/perses/perses-operator/internal/perses/common"
-	"github.com/perses/perses-operator/internal/subreconciler"
 	logger "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,6 +31,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/perses/perses-operator/api/v1alpha1"
+	"github.com/perses/perses-operator/internal/perses/common"
+	"github.com/perses/perses-operator/internal/subreconciler"
 )
 
 var dlog = logger.WithField("module", "deployment_controller")
@@ -41,8 +43,8 @@ var dlog = logger.WithField("module", "deployment_controller")
 func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
 	perses := &v1alpha1.Perses{}
 
-	if r, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(r, err) {
-		return r, err
+	if result, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(result, err) {
+		return result, err
 	}
 
 	if perses.Spec.Config.Database.SQL == nil {
@@ -62,11 +64,14 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 	}
 
 	found := &appsv1.Deployment{}
-	err := r.Get(ctx, types.NamespacedName{Name: perses.Name, Namespace: perses.Namespace}, found)
-	if err != nil && apierrors.IsNotFound(err) {
+	if err := r.Get(ctx, types.NamespacedName{Name: perses.Name, Namespace: perses.Namespace}, found); err != nil {
+		if !apierrors.IsNotFound(err) {
+			dlog.WithError(err).Error("Failed to get Deployment")
+			return subreconciler.RequeueWithError(err)
+		}
 
-		dep, err := r.createPersesDeployment(perses)
-		if err != nil {
+		dep, err2 := r.createPersesDeployment(perses)
+		if err2 != nil {
 			dlog.WithError(err).Error("Failed to define new Deployment resource for perses")
 
 			meta.SetStatusCondition(&perses.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses,
@@ -87,11 +92,26 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 			return subreconciler.RequeueWithError(err)
 		}
 
-		return subreconciler.RequeueWithDelay(time.Minute)
-	} else if err != nil {
-		dlog.WithError(err).Error("Failed to get Deployment")
+		return subreconciler.ContinueReconciling()
+	}
 
+	dep, err := r.createPersesDeployment(perses)
+	if err != nil {
+		dlog.WithError(err).Error("Failed to define new Deployment resource for perses")
 		return subreconciler.RequeueWithError(err)
+	}
+
+	// call update with dry run to fill out fields that are also returned via the k8s api
+	if err = r.Update(ctx, dep, client.DryRunAll); err != nil {
+		dlog.Error(err, "Failed to update Deployment with dry run")
+		return subreconciler.RequeueWithError(err)
+	}
+
+	if !equality.Semantic.DeepEqual(found.Spec, dep.Spec) {
+		if err = r.Update(ctx, dep); err != nil {
+			dlog.Error(err, "Failed to update Deployment")
+			return subreconciler.RequeueWithError(err)
+		}
 	}
 
 	return subreconciler.ContinueReconciling()
