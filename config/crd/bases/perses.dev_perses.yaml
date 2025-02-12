@@ -959,6 +959,74 @@ spec:
                         x-kubernetes-list-type: atomic
                     type: object
                 type: object
+              args:
+                description: Args extra arguments to pass to perses
+                items:
+                  type: string
+                type: array
+              client:
+                description: Client perses client configuration
+                properties:
+                  tls:
+                    description: TLS the equivalent to the tls_config for perses client
+                    properties:
+                      caCert:
+                        description: CaCert to verify the perses certificate
+                        properties:
+                          certFile:
+                            description: CertFile path to certificate
+                            type: string
+                          certKeyFile:
+                            description: CertKeyFile path to certificate key file
+                            type: string
+                          name:
+                            description: Name of certificate k8s resource
+                            type: string
+                          type:
+                            description: Type source type of certificate
+                            enum:
+                            - secret
+                            - configmap
+                            type: string
+                        required:
+                        - certFile
+                        - name
+                        - type
+                        type: object
+                      enable:
+                        description: Enable TLS connection to perses
+                        type: boolean
+                      insecureSkipVerify:
+                        description: InsecureSkipVerify skip verify of perses certificate
+                        type: boolean
+                      userCert:
+                        description: UserCert client cert/key for mTLS
+                        properties:
+                          certFile:
+                            description: CertFile path to certificate
+                            type: string
+                          certKeyFile:
+                            description: CertKeyFile path to certificate key file
+                            type: string
+                          name:
+                            description: Name of certificate k8s resource
+                            type: string
+                          type:
+                            description: Type source type of certificate
+                            enum:
+                            - secret
+                            - configmap
+                            type: string
+                        required:
+                        - certFile
+                        - name
+                        - type
+                        type: object
+                    required:
+                    - caCert
+                    - enable
+                    type: object
+                type: object
               config:
                 properties:
                   api_prefix:
