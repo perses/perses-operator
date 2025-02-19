@@ -5,7 +5,6 @@ metadata:
     app.kubernetes.io/name: perses-dashboard
     app.kubernetes.io/instance: perses-dashboard-sample
     app.kubernetes.io/part-of: perses-operator
-    app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: perses-operator
   name: perses-dashboard-sample
   namespace: perses-dev

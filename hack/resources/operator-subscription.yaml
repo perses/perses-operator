@@ -1,0 +1,11 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: my-perses-operator-subscription
+  namespace: operators
+spec:
+  channel: alpha
+  name: perses-operator
+  startingCSV: perses-operator.v0.1.1
+  source: my-perses-test-catalog
+  sourceNamespace: olm

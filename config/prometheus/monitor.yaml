@@ -10,7 +10,6 @@ metadata:
     app.kubernetes.io/component: metrics
     app.kubernetes.io/created-by: perses-operator
     app.kubernetes.io/part-of: perses-operator
-    app.kubernetes.io/managed-by: kustomize
   name: controller-manager-metrics-monitor
   namespace: system
 spec:
