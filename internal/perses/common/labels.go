@@ -18,9 +18,10 @@ package common
 
 import (
 	"fmt"
-	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
 	"os"
 	"strings"
+
+	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
 )
 
 func LabelsForPerses(persesImageFromFlags string, name string, instanceName string, metadata *persesv1alpha1.Metadata) (map[string]string, error) {

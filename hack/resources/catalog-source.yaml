@@ -1,0 +1,8 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: CatalogSource
+metadata:
+  name: my-perses-test-catalog
+  namespace: olm
+spec:
+  sourceType: grpc
+  image: docker.io/perses-dev/perses-operator-catalog:v0.1.1

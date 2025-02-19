@@ -5,11 +5,11 @@ FROM gcr.io/distroless/static-debian12
 
 LABEL maintainer="The Perses Authors <perses-team@googlegroups.com>"
 
-USER nobody
+USER 65532:65532
 
-COPY --chown=nobody:nobody bin/manager                   /bin/manager
-COPY --chown=nobody:nobody LICENSE                       /LICENSE
-COPY --from=build-env --chown=nobody:nobody              /etc/mime.types /etc/mime.types
+COPY --chown=65532:65532 bin/manager                   /bin/manager
+COPY --chown=65532:65532 LICENSE                       /LICENSE
+COPY --from=build-env --chown=65532:65532              /etc/mime.types /etc/mime.types
 
 EXPOSE     8080
 ENTRYPOINT [ "/bin/manager" ]

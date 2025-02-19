@@ -5,7 +5,6 @@ metadata:
     app.kubernetes.io/name: perses-datasource
     app.kubernetes.io/instance: perses-prometheus-datasource
     app.kubernetes.io/part-of: perses-operator
-    app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: perses-operator
   name: perses-datasource-sample
   namespace: perses-dev

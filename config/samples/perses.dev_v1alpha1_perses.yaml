@@ -5,7 +5,6 @@ metadata:
     app.kubernetes.io/name: perses
     app.kubernetes.io/instance: perses-sample
     app.kubernetes.io/part-of: perses-operator
-    app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/created-by: perses-operator
   name: perses-sample
   namespace: perses-dev
