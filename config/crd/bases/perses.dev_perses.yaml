@@ -1843,6 +1843,8 @@ spec:
               containerPort:
                 format: int32
                 type: integer
+              image:
+                type: string
               metadata:
                 description: Metadata to add to deployed pods
                 properties:

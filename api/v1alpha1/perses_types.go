@@ -37,6 +37,8 @@ type PersesSpec struct {
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	Image *string `json:"image,omitempty"`
 }
 
 // Metadata to add to deployed pods

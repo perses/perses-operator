@@ -18,15 +18,15 @@ package common
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
-	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	"github.com/perses/perses-operator/api/v1alpha1"
 )
 
-func LabelsForPerses(persesImageFromFlags string, name string, instanceName string, metadata *persesv1alpha1.Metadata) (map[string]string, error) {
+func LabelsForPerses(persesImageFromFlags string, name string, perses *v1alpha1.Perses) (map[string]string, error) {
+	instanceName := perses.Name
 	var imageTag string
-	image, err := ImageForPerses(persesImageFromFlags)
+	image, err := ImageForPerses(perses, persesImageFromFlags)
 
 	if err != nil {
 		return nil, fmt.Errorf("unable to get the image for perses: %s", err)
@@ -47,8 +47,8 @@ func LabelsForPerses(persesImageFromFlags string, name string, instanceName stri
 		"app.kubernetes.io/managed-by": "perses-operator",
 	}
 
-	if metadata != nil {
-		for label, value := range metadata.Labels {
+	if perses.Spec.Metadata != nil {
+		for label, value := range perses.Spec.Metadata.Labels {
 			// don't overwrite default labels
 			if _, ok := persesLabels[label]; !ok {
 				persesLabels[label] = value
@@ -61,24 +61,24 @@ func LabelsForPerses(persesImageFromFlags string, name string, instanceName stri
 }
 
 // imageForPerses gets the Operand image which is managed by this controller
-// from the PERSES_IMAGE environment variable defined in the config/manager/manager.yaml
-func ImageForPerses(persesImageFromFlags string) (string, error) {
+// from the image field in the CR or PERSES_IMAGE environment variable defined in the config/manager/manager.yaml
+func ImageForPerses(perses *v1alpha1.Perses, persesImageFromFlags string) (string, error) {
 	image := persesImageFromFlags
 
-	if persesImageFromFlags == "" {
-		var imageEnvVar = "PERSES_IMAGE"
-		imageFromEnv, found := os.LookupEnv(imageEnvVar)
-		if !found {
-			return "", fmt.Errorf("unable to find %s environment variable with the image", imageEnvVar)
-		}
+	if perses.Spec.Image != nil && *perses.Spec.Image != "" {
+		image = *perses.Spec.Image
+	}
 
-		image = imageFromEnv
+	if image == "" {
+		return "", fmt.Errorf("perses image operand was not provided")
 	}
 
 	imageParts := strings.Split(image, ":")
+
 	if len(imageParts) < 2 {
 		return "", fmt.Errorf("image provided for perses %s does not have a tag version", image)
 	}
+
 	return image, nil
 }
 

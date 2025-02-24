@@ -123,7 +123,7 @@ func (r *PersesReconciler) createPersesStatefulSet(
 	perses *v1alpha1.Perses) (*appsv1.StatefulSet, error) {
 	configName := common.GetConfigName(perses.Name)
 
-	ls, err := common.LabelsForPerses(r.Config.PersesImage, perses.Name, perses.Name, perses.Spec.Metadata)
+	ls, err := common.LabelsForPerses(r.Config.PersesImage, perses.Name, perses)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (r *PersesReconciler) createPersesStatefulSet(
 	}
 
 	// Get the Operand image
-	image, err := common.ImageForPerses(r.Config.PersesImage)
+	image, err := common.ImageForPerses(perses, r.Config.PersesImage)
 	if err != nil {
 		return nil, err
 	}

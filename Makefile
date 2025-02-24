@@ -199,6 +199,12 @@ docker-buildx: test ## Build and push docker image for the manager for cross-pla
 	- docker buildx rm project-v3-builder
 	rm Dockerfile.cross
 
+.PHONY: podman-cross-build
+podman-cross-build: test
+	podman manifest create ${IMG}
+	podman build --platform $(PLATFORMS) --manifest ${IMG} -f Dockerfile.dev
+	podman manifest push ${IMG}
+
 ifndef ignore-not-found
   ignore-not-found = false
 endif

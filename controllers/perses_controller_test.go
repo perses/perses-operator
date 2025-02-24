@@ -77,6 +77,7 @@ var _ = Describe("Perses controller", func() {
 						},
 						Replicas:      &replicas,
 						ContainerPort: 8080,
+						Image:         &persesImage,
 						Config: persesv1alpha1.PersesConfig{
 							Config: persesconfig.Config{
 								Database: persesconfig.Database{
