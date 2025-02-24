@@ -363,3 +363,7 @@ cross-build: generate-goreleaser manifests generate fmt vet ## Cross build binar
 .PHONY: cross-release
 cross-release: generate-goreleaser manifests generate fmt vet
 	goreleaser release --clean
+
+.PHONY: bin
+bin: 
+	go build -mod=readonly -o bin/manager main.go
