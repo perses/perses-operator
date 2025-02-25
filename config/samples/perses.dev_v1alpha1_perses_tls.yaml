@@ -1,0 +1,39 @@
+apiVersion: perses.dev/v1alpha1
+kind: Perses
+metadata:
+  labels:
+    app.kubernetes.io/name: perses
+    app.kubernetes.io/instance: perses-tls-sample
+    app.kubernetes.io/part-of: perses-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: perses-operator
+  name: perses-tls-sample
+  namespace: perses-dev
+spec:
+  client:
+    tls:
+      enable: true
+      caCert:
+        type: secret
+        name: perses-certs
+        certFile: ca.crt
+      userCert:
+        type: secret
+        name: perses-certs
+        certFile: tls.crt
+        certKeyFile: tls.key
+
+  config:
+    database:
+      file:
+        folder: "/etc/perses/storage"
+        extension: "yaml"
+    schemas:
+      panels_path: "/etc/perses/cue/schemas/panels"
+      queries_path: "/etc/perses/cue/schemas/queries"
+      datasources_path: "/etc/perses/cue/schemas/datasources"
+      variables_path: "/etc/perses/cue/schemas/variables"
+    ephemeral_dashboard:
+      enable: false
+      cleanup_interval: "1s"
+  containerPort: 8080
