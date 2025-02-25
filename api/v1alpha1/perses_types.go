@@ -38,7 +38,14 @@ type PersesSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	Image *string `json:"image,omitempty"`
+	// +optional
+	// Image specifies the container image that should be used for the Perses deployment.
+	Image string `json:"image,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	// serviceName specifies the name of the service that this perses instance will be associated with
+	// If not provided, the service name will be the same as the perses instance name
+	ServiceName string `json:"serviceName,omitempty"`
 }
 
 // Metadata to add to deployed pods

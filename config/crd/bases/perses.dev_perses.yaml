@@ -1844,6 +1844,8 @@ spec:
                 format: int32
                 type: integer
               image:
+                description: Image specifies the container image that should be used
+                  for the Perses deployment.
                 type: string
               metadata:
                 description: Metadata to add to deployed pods
@@ -1864,6 +1866,11 @@ spec:
               replicas:
                 format: int32
                 type: integer
+              serviceName:
+                description: |-
+                  serviceName specifies the name of the service that this perses instance will be associated with
+                  If not provided, the service name will be the same as the perses instance name
+                type: string
               tolerations:
                 items:
                   description: |-

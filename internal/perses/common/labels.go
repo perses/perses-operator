@@ -65,8 +65,8 @@ func LabelsForPerses(persesImageFromFlags string, name string, perses *v1alpha1.
 func ImageForPerses(perses *v1alpha1.Perses, persesImageFromFlags string) (string, error) {
 	image := persesImageFromFlags
 
-	if perses.Spec.Image != nil && *perses.Spec.Image != "" {
-		image = *perses.Spec.Image
+	if len(perses.Spec.Image) > 0 {
+		image = perses.Spec.Image
 	}
 
 	if image == "" {
