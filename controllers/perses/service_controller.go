@@ -113,9 +113,15 @@ func (r *PersesReconciler) createPersesService(
 		annotations = perses.Spec.Metadata.Annotations
 	}
 
+	serviceName := perses.Name
+
+	if len(perses.Spec.ServiceName) > 0 {
+		serviceName = perses.Spec.ServiceName
+	}
+
 	ser := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        perses.Name,
+			Name:        serviceName,
 			Namespace:   perses.Namespace,
 			Annotations: annotations,
 			Labels:      ls,

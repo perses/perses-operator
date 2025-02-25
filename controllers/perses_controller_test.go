@@ -36,6 +36,7 @@ var _ = Describe("Perses controller", func() {
 		typeNamespaceName := types.NamespacedName{Name: PersesName, Namespace: PersesName}
 		configMapNamespaceName := types.NamespacedName{Name: common.GetConfigName(PersesName), Namespace: PersesName}
 		persesImage := "perses-dev.io/perses:test"
+		persesServiceName := "perses-custom-service-name"
 
 		BeforeEach(func() {
 			By("Creating the Namespace to perform the tests")
@@ -77,7 +78,8 @@ var _ = Describe("Perses controller", func() {
 						},
 						Replicas:      &replicas,
 						ContainerPort: 8080,
-						Image:         &persesImage,
+						Image:         persesImage,
+						ServiceName:   persesServiceName,
 						Config: persesv1alpha1.PersesConfig{
 							Config: persesconfig.Config{
 								Database: persesconfig.Database{
@@ -114,7 +116,7 @@ var _ = Describe("Perses controller", func() {
 			By("Checking if Service was successfully created in the reconciliation")
 			Eventually(func() error {
 				found := &corev1.Service{}
-				err = k8sClient.Get(ctx, typeNamespaceName, found)
+				err = k8sClient.Get(ctx, types.NamespacedName{Name: persesServiceName, Namespace: PersesName}, found)
 
 				if err == nil {
 					if len(found.Spec.Ports) < 1 {
@@ -214,7 +216,7 @@ var _ = Describe("Perses controller", func() {
 			By("Checking if Service was successfully deleted in the reconciliation")
 			Eventually(func() error {
 				found := &corev1.Service{}
-				return k8sClient.Get(ctx, typeNamespaceName, found)
+				return k8sClient.Get(ctx, types.NamespacedName{Name: persesServiceName, Namespace: PersesName}, found)
 			}, time.Minute, time.Second).Should(Succeed())
 
 			By("Checking if ConfigMap was successfully deleted in the reconciliation")
