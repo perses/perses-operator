@@ -54,6 +54,8 @@ jobs:
           enable_npm: false
       - name: generate files
         run: make generate
+      - name: check bundle changes
+        run: make bundle-check
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6.5.0
         with:

@@ -1016,16 +1016,31 @@ spec:
       specDescriptors:
       - displayName: Affinity
         path: affinity
+      - description: Args extra arguments to pass to perses
+        displayName: Args
+        path: args
+      - description: Client perses client configuration
+        displayName: Client
+        path: client
       - displayName: Config
         path: config
       - displayName: Container Port
         path: containerPort
+      - description: Image specifies the container image that should be used for the
+          Perses deployment.
+        displayName: Image
+        path: image
       - displayName: Metadata
         path: metadata
       - displayName: Node Selector
         path: nodeSelector
       - displayName: Replicas
         path: replicas
+      - description: serviceName specifies the name of the service that this perses
+          instance will be associated with If not provided, the service name will
+          be the same as the perses instance name
+        displayName: Service Name
+        path: serviceName
       - displayName: Tolerations
         path: tolerations
       statusDescriptors:
