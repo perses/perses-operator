@@ -29,7 +29,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -119,7 +118,6 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 
 func (r *PersesReconciler) createPersesDeployment(
 	perses *v1alpha1.Perses) (*appsv1.Deployment, error) {
-	configName := common.GetConfigName(perses.Name)
 
 	ls, err := common.LabelsForPerses(r.Config.PersesImage, perses.Name, perses)
 	if err != nil {
@@ -179,54 +177,10 @@ func (r *PersesReconciler) createPersesDeployment(
 							ContainerPort: perses.Spec.ContainerPort,
 							Name:          "perses",
 						}},
-						VolumeMounts: []corev1.VolumeMount{
-							// TODO: check if perses supports passing certificates for TLS
-							// {
-							// 	Name:      "serving-cert",
-							// 	ReadOnly:  true,
-							// 	MountPath: "/var/serving-cert",
-							// },
-							{
-								Name:      "config",
-								ReadOnly:  true,
-								MountPath: "/perses/config",
-							},
-							{
-								Name:      "storage",
-								ReadOnly:  false,
-								MountPath: "/etc/perses/storage",
-							},
-						},
-						Args: []string{"--config=/perses/config/config.yaml"},
+						VolumeMounts: common.GetVolumeMounts(perses.Spec.Client.TLS),
+						Args:         common.GetPersesArgs(perses.Spec.Client.TLS, perses.Spec.Args),
 					}},
-					Volumes: []corev1.Volume{
-						{
-							Name: "config",
-							VolumeSource: corev1.VolumeSource{
-								ConfigMap: &corev1.ConfigMapVolumeSource{
-									LocalObjectReference: corev1.LocalObjectReference{
-										Name: configName,
-									},
-									DefaultMode: ptr.To[int32](420),
-								},
-							},
-						},
-						{
-							Name: "storage",
-							VolumeSource: corev1.VolumeSource{
-								EmptyDir: &corev1.EmptyDirVolumeSource{},
-							},
-						},
-						// {
-						// 	Name: "serving-cert",
-						// 	VolumeSource: corev1.VolumeSource{
-						// 		Secret: &corev1.SecretVolumeSource{
-						// 			SecretName:  "perses-serving-cert",
-						// 			DefaultMode: &[]int32{420}[0],
-						// 		},
-						// 	},
-						// },
-					},
+					Volumes:       common.GetVolumes(perses.Name, perses.Spec.Client.TLS),
 					RestartPolicy: "Always",
 					DNSPolicy:     "ClusterFirst",
 				},

@@ -26,7 +26,13 @@ type PersesSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Metadata *Metadata `json:"metadata,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// Client perses client configuration
+	Client Client `json:"client,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Config PersesConfig `json:"config,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// Args extra arguments to pass to perses
+	Args []string `json:"args,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	ContainerPort int32 `json:"containerPort,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
@@ -52,6 +58,46 @@ type PersesSpec struct {
 type Metadata struct {
 	Labels      map[string]string `json:"labels,omitempty"`
 	Annotations map[string]string `json:"annotations,omitempty"`
+}
+
+type Client struct {
+	// TLS the equivalent to the tls_config for perses client
+	// +optional
+	TLS *TLS `json:"tls,omitempty"`
+}
+
+type TLS struct {
+	// Enable TLS connection to perses
+	Enable bool `json:"enable"`
+	// CaCert to verify the perses certificate
+	CaCert Certificate `json:"caCert"`
+	// UserCert client cert/key for mTLS
+	// +optional
+	UserCert *Certificate `json:"userCert,omitempty"`
+	// InsecureSkipVerify skip verify of perses certificate
+	// +optional
+	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
+}
+
+// CertificateType types of certificate sources in k8s
+type CertificateType string
+
+const (
+	CertificateTypeSecret    CertificateType = "secret"
+	CertificateTypeConfigMap CertificateType = "configmap"
+)
+
+type Certificate struct {
+	// +kubebuilder:validation:Enum:={"secret", "configmap"}
+	// Type source type of certificate
+	Type CertificateType `json:"type"`
+	// Name of certificate k8s resource
+	Name string `json:"name"`
+	// CertFile path to certificate
+	CertFile string `json:"certFile"`
+	// CertKeyFile path to certificate key file
+	// +optional
+	CertKeyFile string `json:"certKeyFile,omitempty"`
 }
 
 // PersesStatus defines the observed state of Perses
