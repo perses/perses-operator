@@ -137,8 +137,6 @@ func (r *PersesReconciler) createPersesStatefulSet(
 		return nil, err
 	}
 
-	storageName := common.GetStorageName(perses.Name)
-
 	dep := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        perses.Name,
@@ -181,10 +179,10 @@ func (r *PersesReconciler) createPersesStatefulSet(
 							ContainerPort: perses.Spec.ContainerPort,
 							Name:          "perses",
 						}},
-						VolumeMounts: common.GetVolumeMounts(perses.Spec.Client.TLS),
-						Args:         common.GetPersesArgs(perses.Spec.Client.TLS, perses.Spec.Args),
+						VolumeMounts: common.GetVolumeMounts(perses),
+						Args:         common.GetPersesArgs(perses),
 					}},
-					Volumes:       common.GetVolumes(perses.Name, perses.Spec.Client.TLS),
+					Volumes:       common.GetVolumes(perses),
 					RestartPolicy: "Always",
 					DNSPolicy:     "ClusterFirst",
 				},
@@ -192,7 +190,7 @@ func (r *PersesReconciler) createPersesStatefulSet(
 			VolumeClaimTemplates: []corev1.PersistentVolumeClaim{
 				{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: storageName,
+						Name: common.StorageVolumeName,
 					},
 					Spec: corev1.PersistentVolumeClaimSpec{
 						AccessModes: []corev1.PersistentVolumeAccessMode{

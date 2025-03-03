@@ -7,111 +7,114 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-func GetVolumes(name string, tls *v1alpha1.TLS) []corev1.Volume {
-	configName := GetConfigName(name)
+// GetVolumes returns the volumes needed for the Perses container
+func GetVolumes(perses *v1alpha1.Perses) []corev1.Volume {
+	configName := GetConfigName(perses.Name)
 
 	volumes := []corev1.Volume{
 		{
-			Name: "config",
+			Name: configVolumeName,
 			VolumeSource: corev1.VolumeSource{
 				ConfigMap: &corev1.ConfigMapVolumeSource{
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: configName,
 					},
-					DefaultMode: ptr.To[int32](420),
+					DefaultMode: ptr.To[int32](defaultFileMode),
 				},
-			},
-		},
-		{
-			Name: "storage",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{},
 			},
 		},
 	}
 
-	if tls != nil && tls.Enable {
-		switch tls.CaCert.Type {
-		case v1alpha1.CertificateTypeSecret:
-			volumes = append(volumes, corev1.Volume{
-				Name: "ca",
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName:  tls.CaCert.Name,
-						DefaultMode: &[]int32{420}[0],
-					},
+	if perses.Spec.Config.Database.File != nil {
+		volumes = append(volumes, corev1.Volume{
+			Name: StorageVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+					ClaimName: GetStorageName(perses.Name),
 				},
-			})
-		case v1alpha1.CertificateTypeConfigMap:
-			volumes = append(volumes, corev1.Volume{
-				Name: "ca",
-				VolumeSource: corev1.VolumeSource{
-					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: tls.CaCert.Name,
-						},
-					},
-				},
-			})
-		}
+			},
+		})
+	} else {
+		volumes = append(volumes, corev1.Volume{
+			Name: StorageVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		})
+	}
 
+	// Add TLS volumes if enabled
+	if isTLSEnabled(perses) {
+		tls := perses.Spec.Client.TLS
+
+		// Add CA certificate volume
+		volumes = append(volumes, createCertVolume(caVolumeName, tls.CaCert))
+
+		// Add user certificate volume if provided
 		if tls.UserCert != nil {
-			switch tls.UserCert.Type {
-			case v1alpha1.CertificateTypeSecret:
-				volumes = append(volumes, corev1.Volume{
-					Name: "tls",
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName:  tls.UserCert.Name,
-							DefaultMode: &[]int32{420}[0],
-						},
-					},
-				})
-			case v1alpha1.CertificateTypeConfigMap:
-				volumes = append(volumes, corev1.Volume{
-					Name: "tls",
-					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: tls.UserCert.Name,
-							},
-							DefaultMode: &[]int32{420}[0],
-						},
-					},
-				})
-			}
+			volumes = append(volumes, createCertVolume(tlsVolumeName, *tls.UserCert))
 		}
 	}
 
 	return volumes
 }
 
-func GetVolumeMounts(tls *v1alpha1.TLS) []corev1.VolumeMount {
+// createCertVolume creates a volume for a certificate based on its type (Secret or ConfigMap)
+func createCertVolume(name string, cert v1alpha1.Certificate) corev1.Volume {
+	volume := corev1.Volume{
+		Name: name,
+	}
+
+	switch cert.Type {
+	case v1alpha1.CertificateTypeSecret:
+		volume.VolumeSource = corev1.VolumeSource{
+			Secret: &corev1.SecretVolumeSource{
+				SecretName:  cert.Name,
+				DefaultMode: ptr.To[int32](defaultFileMode),
+			},
+		}
+	case v1alpha1.CertificateTypeConfigMap:
+		volume.VolumeSource = corev1.VolumeSource{
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: cert.Name,
+				},
+				DefaultMode: ptr.To[int32](defaultFileMode),
+			},
+		}
+	}
+
+	return volume
+}
+
+// GetVolumeMounts returns the volume mounts needed for the Perses container
+func GetVolumeMounts(perses *v1alpha1.Perses) []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{
-			Name:      "config",
+			Name:      configVolumeName,
 			ReadOnly:  true,
-			MountPath: "/perses/config",
+			MountPath: configMountPath,
 		},
 		{
-			Name:      "storage",
+			Name:      StorageVolumeName,
 			ReadOnly:  false,
-			MountPath: "/etc/perses/storage",
+			MountPath: storageMountPath,
 		},
 	}
 
-	if tls != nil && tls.Enable {
+	// Add TLS volume mounts if enabled
+	if isTLSEnabled(perses) {
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{
-			Name:      "ca",
+			Name:      caVolumeName,
 			ReadOnly:  true,
-			MountPath: "/ca",
+			MountPath: caMountPath,
 		})
 
-		if tls.UserCert != nil {
+		if perses.Spec.Client.TLS.UserCert != nil {
 			volumeMounts = append(volumeMounts, corev1.VolumeMount{
-				Name:      "tls",
+				Name:      tlsVolumeName,
 				ReadOnly:  true,
-				MountPath: "/tls",
+				MountPath: tlsCertMountPath,
 			})
 		}
 	}

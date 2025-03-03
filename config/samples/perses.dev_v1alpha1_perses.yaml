@@ -15,7 +15,7 @@ spec:
   config:
     database:
       file:
-        folder: "/etc/perses/storage"
+        folder: "/perses"
         extension: "yaml"
     schemas:
       panels_path: "/etc/perses/cue/schemas/panels"

@@ -349,7 +349,11 @@ func (in *PersesSpec) DeepCopyInto(out *PersesSpec) {
 		*out = new(Metadata)
 		(*in).DeepCopyInto(*out)
 	}
-	in.Client.DeepCopyInto(&out.Client)
+	if in.Client != nil {
+		in, out := &in.Client, &out.Client
+		*out = new(Client)
+		(*in).DeepCopyInto(*out)
+	}
 	in.Config.DeepCopyInto(&out.Config)
 	if in.Args != nil {
 		in, out := &in.Args, &out.Args

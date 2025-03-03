@@ -2,20 +2,26 @@ package common
 
 import (
 	"fmt"
+
 	"github.com/perses/perses-operator/api/v1alpha1"
 )
 
-func GetPersesArgs(tls *v1alpha1.TLS, args []string) []string {
-	defaultArgs := []string{"--config=/perses/config/config.yaml"}
+// GetPersesArgs returns the command line arguments for the Perses server.
+// It includes the configuration file path, TLS settings if enabled,
+// and any additional user-specified arguments.
+func GetPersesArgs(perses *v1alpha1.Perses) []string {
+	args := []string{fmt.Sprintf("--config=%s", defaultConfigPath)}
 
-	// append tls cert args if user cert and key is provided
-	if tls != nil && tls.Enable && tls.UserCert != nil {
-		defaultArgs = append(defaultArgs, fmt.Sprintf("--web.tls-cert-file=/tls/%s", tls.UserCert.CertFile))
-		defaultArgs = append(defaultArgs, fmt.Sprintf("--web.tls-key-file=/tls/%s", tls.UserCert.CertKeyFile))
+	// Append TLS cert args if TLS is enabled and user certificates are provided
+	if hasTLSConfiguration(perses) {
+		args = append(args, fmt.Sprintf("--web.tls-cert-file=%s/%s",
+			tlsCertMountPath, perses.Spec.Client.TLS.UserCert.CertFile))
+		args = append(args, fmt.Sprintf("--web.tls-key-file=%s/%s",
+			tlsCertMountPath, perses.Spec.Client.TLS.UserCert.CertKeyFile))
 	}
 
-	// append user provided args
-	defaultArgs = append(defaultArgs, args...)
+	// Append user provided args
+	args = append(args, perses.Spec.Args...)
 
-	return defaultArgs
+	return args
 }
