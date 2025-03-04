@@ -26,8 +26,9 @@ type PersesSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Metadata *Metadata `json:"metadata,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
 	// Client perses client configuration
-	Client Client `json:"client,omitempty"`
+	Client *Client `json:"client,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Config PersesConfig `json:"config,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
@@ -36,12 +37,14 @@ type PersesSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	ContainerPort int32 `json:"containerPort,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional

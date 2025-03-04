@@ -16,8 +16,46 @@ limitations under the License.
 
 package common
 
+import "github.com/perses/perses-operator/api/v1alpha1"
+
 const (
 	PersesFinalizer     = "perses.dev/finalizer"
 	TypeAvailablePerses = "Available"
 	TypeDegradedPerses  = "Degraded"
+
+	// Flags
+	PersesServerURLFlag = "perses-server-url"
+
+	// Volume names
+	configVolumeName  = "config"
+	StorageVolumeName = "storage"
+
+	// TLS volume names
+	caVolumeName     = "ca"
+	caMountPath      = "/ca"
+	tlsVolumeName    = "tls"
+	tlsCertMountPath = "/tls"
+
+	// Mount paths
+	storageMountPath  = "/perses"
+	configMountPath   = "/etc/perses/config"
+	defaultConfigPath = configMountPath + "/config.yaml"
+
+	defaultFileMode = 420
 )
+
+// isTLSEnabled checks if TLS is enabled in the Perses configuration
+func isTLSEnabled(perses *v1alpha1.Perses) bool {
+	return perses != nil &&
+		perses.Spec.Client != nil &&
+		perses.Spec.Client.TLS != nil &&
+		perses.Spec.Client.TLS.Enable
+}
+
+// hasTLSConfiguration checks if valid TLS configuration is present
+func hasTLSConfiguration(perses *v1alpha1.Perses) bool {
+	return isTLSEnabled(perses) &&
+		perses.Spec.Client.TLS.UserCert != nil &&
+		perses.Spec.Client.TLS.UserCert.CertFile != "" &&
+		perses.Spec.Client.TLS.UserCert.CertKeyFile != ""
+}

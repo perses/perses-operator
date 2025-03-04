@@ -18,6 +18,7 @@ package common
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/perses/perses-operator/api/v1alpha1"
@@ -63,7 +64,11 @@ func LabelsForPerses(persesImageFromFlags string, name string, perses *v1alpha1.
 // imageForPerses gets the Operand image which is managed by this controller
 // from the image field in the CR or PERSES_IMAGE environment variable defined in the config/manager/manager.yaml
 func ImageForPerses(perses *v1alpha1.Perses, persesImageFromFlags string) (string, error) {
-	image := persesImageFromFlags
+	image := os.Getenv("PERSES_IMAGE")
+
+	if persesImageFromFlags != "" {
+		image = persesImageFromFlags
+	}
 
 	if len(perses.Spec.Image) > 0 {
 		image = perses.Spec.Image

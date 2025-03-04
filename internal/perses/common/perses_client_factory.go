@@ -28,12 +28,13 @@ func (f *PersesClientFactoryWithConfig) CreateClient(perses persesv1alpha1.Perse
 	var urlStr string
 
 	var httpProtocol = "http"
-	if perses.Spec.Client.TLS != nil && perses.Spec.Client.TLS.Enable {
+	if isTLSEnabled(&perses) {
 		httpProtocol = "https"
 	}
 
-	if flag.Lookup("perses-server-url").Value.String() != "" {
-		urlStr = flag.Lookup("perses-server-url").Value.String()
+	serverURLFlag := flag.Lookup(PersesServerURLFlag)
+	if serverURLFlag != nil && serverURLFlag.Value.String() != "" {
+		urlStr = serverURLFlag.Value.String()
 	} else {
 		urlStr = fmt.Sprintf("%s://%s.%s.svc.cluster.local:%d", httpProtocol, perses.Name, perses.Namespace, perses.Spec.ContainerPort)
 	}
@@ -46,15 +47,15 @@ func (f *PersesClientFactoryWithConfig) CreateClient(perses persesv1alpha1.Perse
 		URL: parsedURL,
 	}
 
-	if perses.Spec.Client.TLS != nil && perses.Spec.Client.TLS.Enable {
+	if isTLSEnabled(&perses) {
 		tlsConfig := &secret.TLSConfig{
 			InsecureSkipVerify: perses.Spec.Client.TLS.InsecureSkipVerify,
-			CAFile:             filepath.Join("/ca", perses.Spec.Client.TLS.CaCert.CertFile),
+			CAFile:             filepath.Join(caMountPath, perses.Spec.Client.TLS.CaCert.CertFile),
 		}
 
-		if perses.Spec.Client.TLS.UserCert != nil {
-			tlsConfig.CertFile = filepath.Join("/tls", perses.Spec.Client.TLS.UserCert.CertFile)
-			tlsConfig.KeyFile = filepath.Join("/tls", perses.Spec.Client.TLS.UserCert.CertKeyFile)
+		if hasTLSConfiguration(&perses) {
+			tlsConfig.CertFile = filepath.Join(tlsCertMountPath, perses.Spec.Client.TLS.UserCert.CertFile)
+			tlsConfig.KeyFile = filepath.Join(tlsCertMountPath, perses.Spec.Client.TLS.UserCert.CertKeyFile)
 		}
 
 		config.TLSConfig = tlsConfig
