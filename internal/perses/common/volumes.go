@@ -47,8 +47,10 @@ func GetVolumes(perses *v1alpha1.Perses) []corev1.Volume {
 	if isTLSEnabled(perses) {
 		tls := perses.Spec.Client.TLS
 
-		// Add CA certificate volume
-		volumes = append(volumes, createCertVolume(caVolumeName, tls.CaCert))
+		if tls.CaCert != nil {
+			// Add CA certificate volume
+			volumes = append(volumes, createCertVolume(caVolumeName, *tls.CaCert))
+		}
 
 		// Add user certificate volume if provided
 		if tls.UserCert != nil {
