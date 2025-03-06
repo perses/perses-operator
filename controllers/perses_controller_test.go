@@ -79,7 +79,12 @@ var _ = Describe("Perses controller", func() {
 						Replicas:      &replicas,
 						ContainerPort: 8080,
 						Image:         persesImage,
-						ServiceName:   persesServiceName,
+						Service: &persesv1alpha1.PersesService{
+							Name: persesServiceName,
+							Annotations: map[string]string{
+								"custom-annotation": "true",
+							},
+						},
 						Config: persesv1alpha1.PersesConfig{
 							Config: persesconfig.Config{
 								Database: persesconfig.Database{
@@ -134,6 +139,11 @@ var _ = Describe("Perses controller", func() {
 					if value, ok := found.ObjectMeta.Annotations["testing"]; ok {
 						if value != "true" {
 							return fmt.Errorf("The annotation in the service is not the one defined in the custom resource")
+						}
+					}
+					if value, ok := found.ObjectMeta.Annotations["custom-annotation"]; ok {
+						if value != "true" {
+							return fmt.Errorf("The custom annotation in the service is not the one defined in the custom resource")
 						}
 					}
 					if value, ok := found.ObjectMeta.Labels["instance"]; ok {
