@@ -1039,8 +1039,12 @@ spec:
       - description: serviceName specifies the name of the service that this perses
           instance will be associated with If not provided, the service name will
           be the same as the perses instance name
-        displayName: Service Name
-        path: serviceName
+        displayName: Service
+        path: service
+      - displayName: Annotations
+        path: service.annotations
+      - displayName: Name
+        path: service.name
       - displayName: Tolerations
         path: tolerations
       statusDescriptors:

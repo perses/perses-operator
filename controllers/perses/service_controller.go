@@ -31,6 +31,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"maps"
+
 	"github.com/perses/perses-operator/api/v1alpha1"
 	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
@@ -113,10 +115,14 @@ func (r *PersesReconciler) createPersesService(
 		annotations = perses.Spec.Metadata.Annotations
 	}
 
+	if perses.Spec.Service != nil && perses.Spec.Service.Annotations != nil {
+		maps.Copy(annotations, perses.Spec.Service.Annotations)
+	}
+
 	serviceName := perses.Name
 
-	if len(perses.Spec.ServiceName) > 0 {
-		serviceName = perses.Spec.ServiceName
+	if perses.Spec.Service != nil && len(perses.Spec.Service.Name) > 0 {
+		serviceName = perses.Spec.Service.Name
 	}
 
 	ser := &corev1.Service{

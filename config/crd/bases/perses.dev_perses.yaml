@@ -1934,11 +1934,18 @@ spec:
               replicas:
                 format: int32
                 type: integer
-              serviceName:
+              service:
                 description: |-
                   serviceName specifies the name of the service that this perses instance will be associated with
                   If not provided, the service name will be the same as the perses instance name
-                type: string
+                properties:
+                  annotations:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  name:
+                    type: string
+                type: object
               tolerations:
                 items:
                   description: |-
