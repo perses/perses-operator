@@ -82,6 +82,7 @@ type TLS struct {
 	// Enable TLS connection to perses
 	Enable bool `json:"enable"`
 	// CaCert to verify the perses certificate
+	// +optional
 	CaCert *Certificate `json:"caCert"`
 	// UserCert client cert/key for mTLS
 	// +optional
