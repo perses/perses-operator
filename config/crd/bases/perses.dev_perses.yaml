@@ -1023,7 +1023,6 @@ spec:
                         - type
                         type: object
                     required:
-                    - caCert
                     - enable
                     type: object
                 type: object
