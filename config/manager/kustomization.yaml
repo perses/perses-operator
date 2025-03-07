@@ -5,4 +5,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: docker.io/persesdev/perses-operator
-  newTag: v0.1.5
+  newTag: v0.1.6
