@@ -55,6 +55,14 @@ type PersesSpec struct {
 	// serviceName specifies the name of the service that this perses instance will be associated with
 	// If not provided, the service name will be the same as the perses instance name
 	Service *PersesService `json:"service,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
 }
 
 // Metadata to add to deployed pods
