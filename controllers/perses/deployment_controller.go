@@ -135,6 +135,8 @@ func (r *PersesReconciler) createPersesDeployment(
 		return nil, err
 	}
 
+	livenessProbe, readinessProbe := common.GetProbes(perses)
+
 	dep := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        perses.Name,
@@ -177,8 +179,10 @@ func (r *PersesReconciler) createPersesDeployment(
 							ContainerPort: perses.Spec.ContainerPort,
 							Name:          "perses",
 						}},
-						VolumeMounts: common.GetVolumeMounts(perses),
-						Args:         common.GetPersesArgs(perses),
+						VolumeMounts:   common.GetVolumeMounts(perses),
+						Args:           common.GetPersesArgs(perses),
+						LivenessProbe:  livenessProbe,
+						ReadinessProbe: readinessProbe,
 					}},
 					Volumes:       common.GetVolumes(perses),
 					RestartPolicy: "Always",
