@@ -370,4 +370,4 @@ cross-release: generate-goreleaser manifests generate fmt vet
 
 .PHONY: bin
 bin: 
-	go build -mod=readonly -o bin/manager main.go
+	go build $(BUILD_OPTS) -mod=readonly -o bin/manager main.go
