@@ -1030,10 +1030,14 @@ spec:
           Perses deployment.
         displayName: Image
         path: image
+      - displayName: Liveness Probe
+        path: livenessProbe
       - displayName: Metadata
         path: metadata
       - displayName: Node Selector
         path: nodeSelector
+      - displayName: Readiness Probe
+        path: readinessProbe
       - displayName: Replicas
         path: replicas
       - description: serviceName specifies the name of the service that this perses
