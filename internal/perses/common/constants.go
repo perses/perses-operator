@@ -47,15 +47,22 @@ const (
 // isTLSEnabled checks if TLS is enabled in the Perses configuration
 func isTLSEnabled(perses *v1alpha1.Perses) bool {
 	return perses != nil &&
-		perses.Spec.Client != nil &&
-		perses.Spec.Client.TLS != nil &&
-		perses.Spec.Client.TLS.Enable
+		perses.Spec.TLS != nil &&
+		perses.Spec.TLS.Enable
 }
 
 // hasTLSConfiguration checks if valid TLS configuration is present
 func hasTLSConfiguration(perses *v1alpha1.Perses) bool {
 	return isTLSEnabled(perses) &&
-		perses.Spec.Client.TLS.UserCert != nil &&
-		perses.Spec.Client.TLS.UserCert.CertFile != "" &&
-		perses.Spec.Client.TLS.UserCert.CertKeyFile != ""
+		perses.Spec.TLS.UserCert != nil &&
+		perses.Spec.TLS.UserCert.CertFile != "" &&
+		perses.Spec.TLS.UserCert.CertKeyFile != ""
+}
+
+// isClientTLSEnabled checks if TLS is enabled in the Perses client configuration
+func isClientTLSEnabled(perses *v1alpha1.Perses) bool {
+	return perses != nil &&
+		perses.Spec.Client != nil &&
+		perses.Spec.Client.TLS != nil &&
+		perses.Spec.Client.TLS.Enable
 }

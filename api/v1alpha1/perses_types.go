@@ -27,7 +27,7 @@ type PersesSpec struct {
 	Metadata *Metadata `json:"metadata,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	// Client perses client configuration
+	// Perses client configuration
 	Client *Client `json:"client,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Config PersesConfig `json:"config,omitempty"`
@@ -52,8 +52,7 @@ type PersesSpec struct {
 	Image string `json:"image,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	// serviceName specifies the name of the service that this perses instance will be associated with
-	// If not provided, the service name will be the same as the perses instance name
+	// service specifies the service configuration for the perses instance
 	Service *PersesService `json:"service,omitempty"`
 
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
@@ -63,6 +62,10 @@ type PersesSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	// tls specifies the tls configuration for the perses instance
+	TLS *TLS `json:"tls,omitempty"`
 }
 
 // Metadata to add to deployed pods

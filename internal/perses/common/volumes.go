@@ -45,10 +45,10 @@ func GetVolumes(perses *v1alpha1.Perses) []corev1.Volume {
 
 	// Add TLS volumes if enabled
 	if isTLSEnabled(perses) {
-		tls := perses.Spec.Client.TLS
+		tls := perses.Spec.TLS
 
+		// Add CA certificate volume if provided
 		if tls.CaCert != nil {
-			// Add CA certificate volume
 			volumes = append(volumes, createCertVolume(caVolumeName, *tls.CaCert))
 		}
 
@@ -106,7 +106,7 @@ func GetVolumeMounts(perses *v1alpha1.Perses) []corev1.VolumeMount {
 
 	// Add TLS volume mounts if enabled
 	if isTLSEnabled(perses) {
-		if perses.Spec.Client.TLS.CaCert != nil {
+		if perses.Spec.TLS.CaCert != nil {
 			volumeMounts = append(volumeMounts, corev1.VolumeMount{
 				Name:      caVolumeName,
 				ReadOnly:  true,
@@ -114,7 +114,7 @@ func GetVolumeMounts(perses *v1alpha1.Perses) []corev1.VolumeMount {
 			})
 		}
 
-		if perses.Spec.Client.TLS.UserCert != nil {
+		if perses.Spec.TLS.UserCert != nil {
 			volumeMounts = append(volumeMounts, corev1.VolumeMount{
 				Name:      tlsVolumeName,
 				ReadOnly:  true,
