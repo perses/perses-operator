@@ -1019,7 +1019,7 @@ spec:
       - description: Args extra arguments to pass to perses
         displayName: Args
         path: args
-      - description: Client perses client configuration
+      - description: Perses client configuration
         displayName: Client
         path: client
       - displayName: Config
@@ -1040,15 +1040,16 @@ spec:
         path: readinessProbe
       - displayName: Replicas
         path: replicas
-      - description: serviceName specifies the name of the service that this perses
-          instance will be associated with If not provided, the service name will
-          be the same as the perses instance name
+      - description: service specifies the service configuration for the perses instance
         displayName: Service
         path: service
       - displayName: Annotations
         path: service.annotations
       - displayName: Name
         path: service.name
+      - description: tls specifies the tls configuration for the perses instance
+        displayName: TLS
+        path: tls
       - displayName: Tolerations
         path: tolerations
       statusDescriptors:

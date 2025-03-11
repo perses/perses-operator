@@ -15,7 +15,7 @@ func GetProbes(perses *v1alpha1.Perses) (*v1.Probe, *v1.Probe) {
 				HTTPGet: &v1.HTTPGetAction{
 					Path:   perses.Spec.Config.APIPrefix + "/metrics",
 					Port:   intstr.FromInt32(8080),
-					Scheme: "HTTP",
+					Scheme: v1.URISchemeHTTP,
 				},
 			},
 			InitialDelaySeconds: perses.Spec.LivenessProbe.InitialDelaySeconds,
@@ -31,7 +31,7 @@ func GetProbes(perses *v1alpha1.Perses) (*v1.Probe, *v1.Probe) {
 				HTTPGet: &v1.HTTPGetAction{
 					Path:   perses.Spec.Config.APIPrefix + "/metrics",
 					Port:   intstr.FromInt32(8080),
-					Scheme: "HTTP",
+					Scheme: v1.URISchemeHTTP,
 				},
 			},
 			InitialDelaySeconds: perses.Spec.ReadinessProbe.InitialDelaySeconds,
