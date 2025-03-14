@@ -22,27 +22,55 @@ import (
 	"strings"
 
 	"github.com/perses/perses-operator/api/v1alpha1"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
+
+func isAlphaNumeric(r rune) bool {
+	return (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9')
+}
+
+func sanitizeLabel(label string) string {
+	replacer := strings.NewReplacer(
+		" ", "-",
+		"/", "-",
+		":", "-",
+	)
+	sanitized := replacer.Replace(strings.ToLower(label))
+
+	if len(sanitized) > 0 && !isAlphaNumeric(rune(sanitized[0])) {
+		sanitized = "x" + sanitized[1:]
+	}
+	if len(sanitized) > validation.LabelValueMaxLength {
+		sanitized = sanitized[:validation.LabelValueMaxLength]
+	}
+	if len(sanitized) > 0 && !isAlphaNumeric(rune(sanitized[len(sanitized)-1])) {
+		sanitized = sanitized[:len(sanitized)-1] + "x"
+	}
+
+	return sanitized
+}
 
 func LabelsForPerses(persesImageFromFlags string, name string, perses *v1alpha1.Perses) (map[string]string, error) {
 	instanceName := perses.Name
-	var imageTag string
 	image, err := ImageForPerses(perses, persesImageFromFlags)
 
 	if err != nil {
 		return nil, fmt.Errorf("unable to get the image for perses: %s", err)
 	}
 
+	imageTag := "latest"
+
 	if strings.Contains(image, ":") {
-		imageTag = strings.Split(image, ":")[1]
-	} else {
-		imageTag = "latest"
+		parts := strings.SplitN(image, ":", 2)
+		if len(parts) > 1 {
+			imageTag = parts[1]
+		}
 	}
 
 	persesLabels := map[string]string{
 		"app.kubernetes.io/name":       name,
 		"app.kubernetes.io/instance":   instanceName,
-		"app.kubernetes.io/version":    imageTag,
+		"app.kubernetes.io/version":    sanitizeLabel(imageTag),
 		"app.kubernetes.io/part-of":    "perses-operator",
 		"app.kubernetes.io/created-by": "controller-manager",
 		"app.kubernetes.io/managed-by": "perses-operator",
