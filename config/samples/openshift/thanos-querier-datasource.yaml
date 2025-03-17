@@ -8,6 +8,6 @@ spec:
     name: "Thanos Querier Datasource"
   default: true
   plugin:
-    kind: "PrometheusDatasource"
+    kind: PrometheusDatasource
     spec:
-      directUrl: "/api/prometheus"
+      directUrl: "https://console-openshift-console.apps.rosa.s4g4m-qn5ab-r8m.a9cz.p3.openshiftapps.com/api/prometheus"
