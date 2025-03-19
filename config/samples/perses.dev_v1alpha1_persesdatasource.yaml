@@ -9,10 +9,11 @@ metadata:
   name: perses-datasource-sample
   namespace: perses-dev
 spec:
-  display:
-    name: "Default Datasource"
-  default: true
-  plugin:
-    kind: "PrometheusDatasource"
-    spec:
-      directUrl: "https://prometheus.demo.do.prometheus.io"
+  config:
+    display:
+      name: "Default Datasource"
+    default: true
+    plugin:
+      kind: "PrometheusDatasource"
+      spec:
+        directUrl: "https://prometheus.demo.prometheus.io"
