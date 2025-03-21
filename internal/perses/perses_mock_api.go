@@ -82,3 +82,28 @@ func (d *MockDatasource) Create(dashboard *modelv1.Datasource) (*modelv1.Datasou
 	args := d.Called(dashboard)
 	return args.Get(0).(*modelv1.Datasource), args.Error(1)
 }
+
+type MockSecret struct {
+	v1.SecretInterface
+	mock.Mock
+}
+
+func (c *MockClient) Secret(secretName string) v1.SecretInterface {
+	args := c.Called(secretName)
+	return args.Get(0).(v1.SecretInterface)
+}
+
+func (c *MockSecret) Create(secret *modelv1.Secret) (*modelv1.Secret, error) {
+	args := c.Called(secret)
+	return args.Get(0).(*modelv1.Secret), args.Error(1)
+}
+
+func (c *MockSecret) Get(name string) (*modelv1.Secret, error) {
+	args := c.Called(name)
+	return args.Get(0).(*modelv1.Secret), args.Error(1)
+}
+
+func (c *MockSecret) Delete(name string) error {
+	args := c.Called(name)
+	return args.Error(0)
+}
