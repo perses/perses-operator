@@ -973,24 +973,25 @@ spec:
                       caCert:
                         description: CaCert to verify the perses certificate
                         properties:
-                          certFile:
-                            description: CertFile path to certificate
-                            type: string
-                          certKeyFile:
-                            description: CertKeyFile path to certificate key file
+                          certPath:
+                            description: Path to Certificate
                             type: string
                           name:
-                            description: Name of certificate k8s resource
+                            description: Name of certificate k8s resource (when type
+                              is secret or configmap)
+                            type: string
+                          privateKeyPath:
+                            description: Path to Private key certificate
                             type: string
                           type:
                             description: Type source type of certificate
                             enum:
                             - secret
                             - configmap
+                            - file
                             type: string
                         required:
-                        - certFile
-                        - name
+                        - certPath
                         - type
                         type: object
                       enable:
@@ -1002,24 +1003,25 @@ spec:
                       userCert:
                         description: UserCert client cert/key for mTLS
                         properties:
-                          certFile:
-                            description: CertFile path to certificate
-                            type: string
-                          certKeyFile:
-                            description: CertKeyFile path to certificate key file
+                          certPath:
+                            description: Path to Certificate
                             type: string
                           name:
-                            description: Name of certificate k8s resource
+                            description: Name of certificate k8s resource (when type
+                              is secret or configmap)
+                            type: string
+                          privateKeyPath:
+                            description: Path to Private key certificate
                             type: string
                           type:
                             description: Type source type of certificate
                             enum:
                             - secret
                             - configmap
+                            - file
                             type: string
                         required:
-                        - certFile
-                        - name
+                        - certPath
                         - type
                         type: object
                     required:
@@ -2289,24 +2291,25 @@ spec:
                   caCert:
                     description: CaCert to verify the perses certificate
                     properties:
-                      certFile:
-                        description: CertFile path to certificate
-                        type: string
-                      certKeyFile:
-                        description: CertKeyFile path to certificate key file
+                      certPath:
+                        description: Path to Certificate
                         type: string
                       name:
-                        description: Name of certificate k8s resource
+                        description: Name of certificate k8s resource (when type is
+                          secret or configmap)
+                        type: string
+                      privateKeyPath:
+                        description: Path to Private key certificate
                         type: string
                       type:
                         description: Type source type of certificate
                         enum:
                         - secret
                         - configmap
+                        - file
                         type: string
                     required:
-                    - certFile
-                    - name
+                    - certPath
                     - type
                     type: object
                   enable:
@@ -2318,24 +2321,25 @@ spec:
                   userCert:
                     description: UserCert client cert/key for mTLS
                     properties:
-                      certFile:
-                        description: CertFile path to certificate
-                        type: string
-                      certKeyFile:
-                        description: CertKeyFile path to certificate key file
+                      certPath:
+                        description: Path to Certificate
                         type: string
                       name:
-                        description: Name of certificate k8s resource
+                        description: Name of certificate k8s resource (when type is
+                          secret or configmap)
+                        type: string
+                      privateKeyPath:
+                        description: Path to Private key certificate
                         type: string
                       type:
                         description: Type source type of certificate
                         enum:
                         - secret
                         - configmap
+                        - file
                         type: string
                     required:
-                    - certFile
-                    - name
+                    - certPath
                     - type
                     type: object
                 required:

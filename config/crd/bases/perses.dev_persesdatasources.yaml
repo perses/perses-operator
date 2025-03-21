@@ -38,6 +38,69 @@ spec:
             type: object
           spec:
             properties:
+              client:
+                properties:
+                  tls:
+                    description: TLS the equivalent to the tls_config for perses client
+                    properties:
+                      caCert:
+                        description: CaCert to verify the perses certificate
+                        properties:
+                          certPath:
+                            description: Path to Certificate
+                            type: string
+                          name:
+                            description: Name of certificate k8s resource (when type
+                              is secret or configmap)
+                            type: string
+                          privateKeyPath:
+                            description: Path to Private key certificate
+                            type: string
+                          type:
+                            description: Type source type of certificate
+                            enum:
+                            - secret
+                            - configmap
+                            - file
+                            type: string
+                        required:
+                        - certPath
+                        - type
+                        type: object
+                      enable:
+                        description: Enable TLS connection to perses
+                        type: boolean
+                      insecureSkipVerify:
+                        description: InsecureSkipVerify skip verify of perses certificate
+                        type: boolean
+                      userCert:
+                        description: UserCert client cert/key for mTLS
+                        properties:
+                          certPath:
+                            description: Path to Certificate
+                            type: string
+                          name:
+                            description: Name of certificate k8s resource (when type
+                              is secret or configmap)
+                            type: string
+                          privateKeyPath:
+                            description: Path to Private key certificate
+                            type: string
+                          type:
+                            description: Type source type of certificate
+                            enum:
+                            - secret
+                            - configmap
+                            - file
+                            type: string
+                        required:
+                        - certPath
+                        - type
+                        type: object
+                    required:
+                    - enable
+                    type: object
+                type: object
               config:
                 properties:
                   default:
@@ -65,116 +128,6 @@ spec:
                 required:
                 - default
                 - plugin
-                type: object
-              secret:
-                properties:
-                  authorization:
-                    description: The HTTP authorization credentials for the targets.
-                    properties:
-                      credentials:
-                        type: string
-                      credentialsFile:
-                        type: string
-                      type:
-                        type: string
-                    type: object
-                  basicAuth:
-                    properties:
-                      password:
-                        type: string
-                      passwordFile:
-                        description: PasswordFile is a path to a file that contains
-                          a password
-                        type: string
-                      username:
-                        type: string
-                    required:
-                    - username
-                    type: object
-                  oauth:
-                    description: Oauth configuration for the targets.
-                    properties:
-                      authStyle:
-                        description: |-
-                          AuthStyle optionally specifies how the endpoint wants the
-                          client ID & client secret sent. The zero value means to
-                          auto-detect.
-                        type: integer
-                      clientID:
-                        description: ClientID is the application's ID.
-                        type: string
-                      clientSecret:
-                        description: ClientSecret is the application's secret.
-                        type: string
-                      clientSecretfile:
-                        type: string
-                      endpointParams:
-                        additionalProperties:
-                          items:
-                            type: string
-                          type: array
-                        description: EndpointParams specifies additional parameters
-                          for requests to the token endpoint.
-                        type: object
-                      scopes:
-                        description: Scope specifies optional requested permissions.
-                        items:
-                          type: string
-                        type: array
-                      tokenURL:
-                        description: |-
-                          TokenURL is the resource server's token endpoint
-                          URL. This is a constant specific to each server.
-                        type: string
-                    required:
-                    - authStyle
-                    - clientID
-                    - clientSecret
-                    - clientSecretfile
-                    - endpointParams
-                    - scopes
-                    - tokenURL
-                    type: object
-                  tlsConfig:
-                    description: TLSConfig to use to connect to the targets.
-                    properties:
-                      ca:
-                        description: Text of the CA cert to use for the targets.
-                        type: string
-                      caFile:
-                        description: The CA cert to use for the targets.
-                        type: string
-                      cert:
-                        description: Text of the client cert file for the targets.
-                        type: string
-                      certFile:
-                        description: The client cert file for the targets.
-                        type: string
-                      insecureSkipVerify:
-                        description: Disable target certificate validation.
-                        type: boolean
-                      key:
-                        description: Text of the client key file for the targets.
-                        type: string
-                      keyFile:
-                        description: The client key file for the targets.
-                        type: string
-                      maxVersion:
-                        description: |-
-                          Maximum acceptable TLS version. Accepted values: TLS10 (TLS 1.0), TLS11 (TLS 1.1), TLS12 (TLS 1.2), TLS13 (TLS 1.3).
-                          If unset, Perses will use Go default maximum version, which is TLS 1.3.
-                          See MaxVersion in https://pkg.go.dev/crypto/tls#Config.
-                        type: string
-                      minVersion:
-                        description: |-
-                          Minimum acceptable TLS version. Accepted values: TLS10 (TLS 1.0), TLS11 (TLS 1.1), TLS12 (TLS 1.2), TLS13 (TLS 1.3).
-                          If unset, Perses will use Go default minimum version, which is TLS 1.2.
-                          See MinVersion in https://pkg.go.dev/crypto/tls#Config.
-                        type: string
-                      serverName:
-                        description: Used to verify the hostname for the targets.
-                        type: string
-                    type: object
                 type: object
             type: object
           status:

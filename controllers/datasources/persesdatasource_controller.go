@@ -48,6 +48,7 @@ var log = logger.WithField("module", "perses_datasource_controller")
 // +kubebuilder:rbac:groups=perses.dev,resources=persesdatasources,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=perses.dev,resources=persesdatasources/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=perses.dev,resources=persesdatasources/finalizers,verbs=update
+// +kubebuilder:rbac:groups="",resources=configmaps;secrets,verbs=watch;get
 func (r *PersesDatasourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log.Infof("Reconciling PersesDatasource: %s/%s", req.Namespace, req.Name)
 	subreconcilersForPerses := []subreconciler.FnWithRequest{

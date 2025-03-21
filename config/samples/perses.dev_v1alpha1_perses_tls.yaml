@@ -34,8 +34,8 @@ spec:
     userCert:
       type: secret
       name: perses-certs
-      certFile: tls.crt
-      certKeyFile: tls.key
+      certPath: tls.crt
+      privateKeyPath: tls.key
   config:
     database:
       file:

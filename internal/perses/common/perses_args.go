@@ -15,9 +15,9 @@ func GetPersesArgs(perses *v1alpha1.Perses) []string {
 	// Append TLS cert args if TLS is enabled and user certificates are provided
 	if hasTLSConfiguration(perses) {
 		args = append(args, fmt.Sprintf("--web.tls-cert-file=%s/%s",
-			tlsCertMountPath, perses.Spec.TLS.UserCert.CertFile))
+			tlsCertMountPath, perses.Spec.TLS.UserCert.CertPath))
 		args = append(args, fmt.Sprintf("--web.tls-key-file=%s/%s",
-			tlsCertMountPath, perses.Spec.TLS.UserCert.CertKeyFile))
+			tlsCertMountPath, perses.Spec.TLS.UserCert.PrivateKeyPath))
 	}
 
 	// Append user provided args

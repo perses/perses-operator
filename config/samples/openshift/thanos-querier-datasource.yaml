@@ -16,7 +16,9 @@ spec:
           spec:
             url: https://thanos-querier.openshift-monitoring.svc.cluster.local:9091
             secret: thanos-querier-datasource-secret
-  secret:
-    tlsConfig:
-      caFile: /ca/service-ca.crt
-      insecureSkipVerify: false
+  client:
+    tls:
+      enable: true
+      caCert:
+        type: file
+        certPath: /ca/service-ca.crt

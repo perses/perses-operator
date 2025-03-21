@@ -35,12 +35,12 @@ spec:
       caCert:
         type: secret
         name: perses-certs
-        certFile: ca.crt
+        certPath: ca.crt
       userCert:
         type: secret
         name: perses-certs
-        certFile: tls.crt
-        certKeyFile: tls.key
+        certPath: tls.crt
+        privateKeyPath: tls.key
 
   config:
     database:
