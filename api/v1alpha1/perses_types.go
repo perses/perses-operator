@@ -109,19 +109,21 @@ type CertificateType string
 const (
 	CertificateTypeSecret    CertificateType = "secret"
 	CertificateTypeConfigMap CertificateType = "configmap"
+	CertificateTypeFile      CertificateType = "file"
 )
 
 type Certificate struct {
-	// +kubebuilder:validation:Enum:={"secret", "configmap"}
+	// +kubebuilder:validation:Enum:={"secret", "configmap", "file"}
 	// Type source type of certificate
 	Type CertificateType `json:"type"`
-	// Name of certificate k8s resource
-	Name string `json:"name"`
-	// CertFile path to certificate
-	CertFile string `json:"certFile"`
-	// CertKeyFile path to certificate key file
+	// Name of certificate k8s resource (when type is secret or configmap)
 	// +optional
-	CertKeyFile string `json:"certKeyFile,omitempty"`
+	Name string `json:"name,omitempty"`
+	// Path to Certificate
+	CertPath string `json:"certPath"`
+	// Path to Private key certificate
+	// +optional
+	PrivateKeyPath string `json:"privateKeyPath,omitempty"`
 }
 
 // PersesStatus defines the observed state of Perses

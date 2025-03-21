@@ -54,13 +54,13 @@ func (f *PersesClientFactoryWithConfig) CreateClient(perses persesv1alpha1.Perse
 			InsecureSkipVerify: tls.InsecureSkipVerify,
 		}
 
-		if tls.CaCert != nil && tls.CaCert.CertFile != "" {
-			tlsConfig.CAFile = filepath.Join(caMountPath, tls.CaCert.CertFile)
+		if tls.CaCert != nil && tls.CaCert.CertPath != "" {
+			tlsConfig.CAFile = filepath.Join(caMountPath, tls.CaCert.CertPath)
 		}
 
-		if tls.UserCert != nil && tls.UserCert.CertFile != "" && tls.UserCert.CertKeyFile != "" {
-			tlsConfig.CertFile = filepath.Join(tlsCertMountPath, tls.UserCert.CertFile)
-			tlsConfig.KeyFile = filepath.Join(tlsCertMountPath, tls.UserCert.CertKeyFile)
+		if tls.UserCert != nil && tls.UserCert.CertPath != "" && tls.UserCert.PrivateKeyPath != "" {
+			tlsConfig.CertFile = filepath.Join(tlsCertMountPath, tls.UserCert.CertPath)
+			tlsConfig.KeyFile = filepath.Join(tlsCertMountPath, tls.UserCert.PrivateKeyPath)
 		}
 
 		config.TLSConfig = tlsConfig

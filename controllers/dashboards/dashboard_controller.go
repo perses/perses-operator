@@ -73,7 +73,6 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 	_, err = persesClient.Project().Get(dashboard.Namespace)
 
 	if err != nil {
-		dlog.WithError(err).Errorf("project error: %s", dashboard.Namespace)
 		if errors.Is(err, perseshttp.RequestNotFoundError) {
 			_, err := persesClient.Project().Create(&persesv1.Project{
 				Kind: "Project",
@@ -93,9 +92,10 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 			}
 
 			dlog.Infof("Project created: %s", dashboard.Namespace)
+		} else {
+			dlog.WithError(err).Errorf("project error: %s", dashboard.Namespace)
+			return subreconciler.RequeueWithError(err)
 		}
-
-		return subreconciler.RequeueWithError(err)
 	}
 
 	_, err = persesClient.Dashboard(dashboard.Namespace).Get(dashboard.Name)

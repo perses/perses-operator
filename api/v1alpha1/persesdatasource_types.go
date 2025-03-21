@@ -31,7 +31,7 @@ type DatasourceSpec struct {
 	Config Datasource `json:"config,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	Secret *PersesSecret `json:"secret,omitempty"`
+	Client *Client `json:"client,omitempty"`
 }
 
 // +kubebuilder:object:root=true
