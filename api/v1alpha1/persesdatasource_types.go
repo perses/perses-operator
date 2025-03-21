@@ -26,15 +26,22 @@ type PersesDatasourceStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+type DatasourceSpec struct {
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	Config Datasource `json:"config,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	Client *Client `json:"client,omitempty"`
+}
 
+// +kubebuilder:object:root=true
+// +kubebuilder:subresource:status
 // PersesDatasource is the Schema for the PersesDatasources API
 type PersesDatasource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   Datasource             `json:"spec,omitempty"`
+	Spec   DatasourceSpec         `json:"spec,omitempty"`
 	Status PersesDatasourceStatus `json:"status,omitempty"`
 }
 

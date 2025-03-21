@@ -1090,6 +1090,7 @@ spec:
           - ""
           resources:
           - services
+          - secrets
           - configmaps
           verbs:
           - get

@@ -55,8 +55,8 @@ func isTLSEnabled(perses *v1alpha1.Perses) bool {
 func hasTLSConfiguration(perses *v1alpha1.Perses) bool {
 	return isTLSEnabled(perses) &&
 		perses.Spec.TLS.UserCert != nil &&
-		perses.Spec.TLS.UserCert.CertFile != "" &&
-		perses.Spec.TLS.UserCert.CertKeyFile != ""
+		perses.Spec.TLS.UserCert.CertPath != "" &&
+		perses.Spec.TLS.UserCert.PrivateKeyPath != ""
 }
 
 // isClientTLSEnabled checks if TLS is enabled in the Perses client configuration

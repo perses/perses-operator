@@ -27,6 +27,7 @@ var _ = Describe("Datasource controller", func() {
 		const PersesName = "perses-for-datasource"
 		const PersesNamespace = "perses-datasource-test"
 		const DatasourceName = "my-custom-datasource"
+		const PersesSecretName = DatasourceName + "-secret"
 
 		ctx := context.Background()
 
@@ -59,6 +60,16 @@ var _ = Describe("Datasource controller", func() {
 					Spec: map[string]interface{}{},
 				},
 			},
+		}
+
+		newSecret := &persesv1.Secret{
+			Kind: "Secret",
+			Metadata: persesv1.ProjectMetadata{
+				Metadata: persesv1.Metadata{
+					Name: PersesSecretName,
+				},
+			},
+			Spec: persesv1.SecretSpec{},
 		}
 
 		BeforeEach(func() {
@@ -107,8 +118,10 @@ var _ = Describe("Datasource controller", func() {
 						Name:      DatasourceName,
 						Namespace: PersesNamespace,
 					},
-					Spec: persesv1alpha1.Datasource{
-						DatasourceSpec: newDatasource.Spec,
+					Spec: persesv1alpha1.DatasourceSpec{
+						Config: persesv1alpha1.Datasource{
+							DatasourceSpec: newDatasource.Spec,
+						},
 					},
 				}
 
@@ -125,10 +138,13 @@ var _ = Describe("Datasource controller", func() {
 			// Mock the Perses API to assert that Is creating a new datasource when reconciling
 			mockPersesClient := new(internal.MockClient)
 			mockDatasource := new(internal.MockDatasource)
+			mockSecret := new(internal.MockSecret)
 
 			mockPersesClient.On("Datasource", PersesNamespace).Return(mockDatasource)
+			mockPersesClient.On("Secret", PersesNamespace).Return(mockSecret)
 			getDatasource := mockDatasource.On("Get", DatasourceName).Return(&persesv1.Datasource{}, perseshttp.RequestNotFoundError)
 			mockDatasource.On("Create", newDatasource).Return(&persesv1.Datasource{}, nil)
+			mockSecret.On("Create", newSecret).Return(&persesv1.Secret{}, nil)
 
 			By("Reconciling the custom resource created")
 			datasourceReconciler := &datasourcecontroller.PersesDatasourceReconciler{
@@ -176,6 +192,7 @@ var _ = Describe("Datasource controller", func() {
 			}, time.Minute, time.Second).Should(Succeed())
 
 			mockDatasource.On("Delete", DatasourceName).Return(nil)
+			mockSecret.On("Delete", PersesSecretName).Return(nil)
 
 			datasourceToDelete := &persesv1alpha1.PersesDatasource{}
 			err = k8sClient.Get(ctx, datasourceNamespaceName, datasourceToDelete)
