@@ -12,7 +12,7 @@ spec:
     listKind: PersesList
     plural: perses
     shortNames:
-    - pr
+    - per
     singular: perses
   scope: Namespaced
   versions:

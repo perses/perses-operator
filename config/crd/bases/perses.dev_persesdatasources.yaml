@@ -12,7 +12,7 @@ spec:
     listKind: PersesDatasourceList
     plural: persesdatasources
     shortNames:
-    - prds
+    - perds
     singular: persesdatasource
   scope: Namespaced
   versions:

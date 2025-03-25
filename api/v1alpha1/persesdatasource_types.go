@@ -36,7 +36,7 @@ type DatasourceSpec struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:shortName=prds
+// +kubebuilder:resource:shortName=perds
 
 // PersesDatasource is the Schema for the PersesDatasources API
 type PersesDatasource struct {

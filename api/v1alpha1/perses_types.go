@@ -134,7 +134,7 @@ type PersesStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:resource:shortName=pr
+//+kubebuilder:resource:shortName=per
 
 // Perses is the Schema for the perses API
 type Perses struct {
