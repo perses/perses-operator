@@ -239,6 +239,7 @@ metadata:
   name: perses
   namespace: monitoring
 spec:
+  image: docker.io/perses/perses:v0.50.3
   config:
     database:
       file:
