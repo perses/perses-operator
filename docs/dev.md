@@ -81,19 +81,19 @@ Each instance of the CRD deploys the following resources:
 1. Install Instances of Custom Resources and run the controller:
 
 ```sh
-PERSES_IMAGE=docker.io/persesdev/perses:latest make install run
+PERSES_IMAGE=docker.io/persesdev/perses:v0.50.3 make install run
 ```
 
 2. Install a CRD instance
 
 ```sh
-kubectl apply -f config/samples/v1alpha1_perses.yaml --namespace default
+kubectl apply -f config/samples/v1alpha1_perses.yaml
 ```
 
 3. Uninstall the CRD instance
 
 ```sh
-kubectl delete -f config/samples/v1alpha1_perses.yaml --namespace default
+kubectl delete -f config/samples/v1alpha1_perses.yaml
 ```
 
 ### Modifying the API definitions
