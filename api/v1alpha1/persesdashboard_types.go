@@ -28,6 +28,7 @@ type PersesDashboardStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:resource:shortName=prdb
 
 // PersesDashboard is the Schema for the persesdashboards API
 type PersesDashboard struct {
