@@ -4,8 +4,13 @@ An operator to install [Perses](https://github.com/perses/perses) in a k8s clust
 
 ## Getting Started
 
-You’ll need: 
-- a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
+Install the Perses Operator in your Kubernetes cluster. You can use [KIND](https://sigs.k8s.io/kind) to get a local cluster for testing, or run against a remote cluster.
+
+### Prerequisites
+
+You’ll need:
+
+- a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) or [minikube](https://minikube.sigs.k8s.io/docs/) to get a local cluster for testing, or run against a remote cluster.
 **Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
 - [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) installed and configured to use your cluster.
 
@@ -27,16 +32,7 @@ kubectl create namespace perses-dev
 kubectl apply -k config/samples
 ```
 
-4. Using the the location specified by `IMG`, build a testing image and push it to the registry, then deploy the controller to the cluster:
-> **Note:** Make sure the image is accessible either publicly or from the cluster internal registry.
-
-```sh
-IMG=<some-registry>/perses-operator:tag make test-image-build image-push deploy
-```
-
-> **Note:** If you already have an image built, you can deploy it to the cluster using `IMG=<some-registry>/perses-operator:tag make deploy`.
-
-5. Port forward the service so you can access the Perses UI at `http://localhost:8080`:
+4. Check the Perses UI:
 
 ```sh
 kubectl -n perses-dev port-forward svc/perses-sample 8080:8080
@@ -58,55 +54,14 @@ UnDeploy the controller from the cluster:
 make undeploy
 ```
 
-## Contributing
+## Docs
 
-// TODO
-
-### How it works
-
-This project aims to follow the Kubernetes [Operator pattern](https://kubernetes.io/docs/concepts/extend-kubernetes/operator/).
-
-It uses [Controllers](https://kubernetes.io/docs/concepts/architecture/controller/),
-which provide a reconcile function responsible for synchronizing resources until the desired state is reached on the cluster.
-
-Each instance of the CRD deploys the following resources:
-
-- A ConfigMap holding the perses configuration
-- A Service so perses API can be accessed from within the cluster
-- A Deployment holding the perses API
-
-### Test It Out
-
-1. Install Instances of Custom Resources and run the controller:
-
-```sh
-PERSES_IMAGE=docker.io/persesdev/perses:latest make install run
-```
-
-2. Install a CRD instance
-
-```sh
-kubectl apply -f config/samples/v1alpha1_perses.yaml --namespace default
-```
-
-3. Uninstall the CRD instance
-
-```sh
-kubectl delete -f config/samples/v1alpha1_perses.yaml --namespace default
-```
-
-### Modifying the API definitions
-
-If you are editing the API definitions, generate the manifests such as CRs or CRDs using:
-
-```sh
-make manifests # Generate YAML manifests like CRDs, RBAC etc.
-make generate # Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-```
-
-**NOTE:** Run `make --help` for more information on all potential `make` targets
-
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
+- [API Docs](docs/api.md)
+- [Developer Docs](docs/dev.md)
+- Sample CRDs
+  - [Kubernetes](config/samples)
+  - [OpenShift](config/samples/openshift)
+  - [Using TLS](config/samples/tls)
 
 ## License
 
