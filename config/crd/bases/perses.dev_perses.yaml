@@ -11,6 +11,8 @@ spec:
     kind: Perses
     listKind: PersesList
     plural: perses
+    shortNames:
+    - per
     singular: perses
   scope: Namespaced
   versions:

@@ -11,6 +11,8 @@ spec:
     kind: PersesDatasource
     listKind: PersesDatasourceList
     plural: persesdatasources
+    shortNames:
+    - perds
     singular: persesdatasource
   scope: Namespaced
   versions:
