@@ -2287,6 +2287,26 @@ spec:
                   name:
                     type: string
                 type: object
+              storage:
+                default:
+                  size: 1Gi
+                description: Storage configuration used by the StatefulSet
+                properties:
+                  size:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      Size of the storage.
+                      cannot be decreased.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
+                  storageClass:
+                    description: |-
+                      StorageClass to use for PVCs.
+                      If not specified, will use the default storage class
+                    type: string
+                type: object
               tls:
                 description: tls specifies the tls configuration for the perses instance
                 properties:

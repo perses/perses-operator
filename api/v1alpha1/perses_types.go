@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -66,6 +67,11 @@ type PersesSpec struct {
 	// +optional
 	// tls specifies the tls configuration for the perses instance
 	TLS *TLS `json:"tls,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +kubebuilder:default:={size: "1Gi"}
+	// +optional
+	// Storage configuration used by the StatefulSet
+	Storage *StorageConfiguration `json:"storage,omitempty"`
 }
 
 // Metadata to add to deployed pods
@@ -124,6 +130,18 @@ type Certificate struct {
 	// Path to Private key certificate
 	// +optional
 	PrivateKeyPath string `json:"privateKeyPath,omitempty"`
+}
+
+// StorageConfiguration is the configuration used to create and reconcile PVCs
+type StorageConfiguration struct {
+	// StorageClass to use for PVCs.
+	// If not specified, will use the default storage class
+	// +optional
+	StorageClass *string `json:"storageClass,omitempty"`
+	// Size of the storage.
+	// cannot be decreased.
+	// +optional
+	Size resource.Quantity `json:"size,omitempty"`
 }
 
 // PersesStatus defines the observed state of Perses
