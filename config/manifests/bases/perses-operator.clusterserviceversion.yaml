@@ -1047,6 +1047,9 @@ spec:
         path: service.annotations
       - displayName: Name
         path: service.name
+      - description: Storage configuration used by the StatefulSet
+        displayName: Storage
+        path: storage
       - description: tls specifies the tls configuration for the perses instance
         displayName: TLS
         path: tls
