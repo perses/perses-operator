@@ -125,6 +125,9 @@ type Certificate struct {
 	// Name of certificate k8s resource (when type is secret or configmap)
 	// +optional
 	Name string `json:"name,omitempty"`
+	// Namsespace of certificate k8s resource (when type is secret or configmap)
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
 	// Path to Certificate
 	CertPath string `json:"certPath"`
 	// Path to Private key certificate
