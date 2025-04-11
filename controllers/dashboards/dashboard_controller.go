@@ -21,14 +21,15 @@ import (
 	"errors"
 	"time"
 
-	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
-	"github.com/perses/perses-operator/internal/subreconciler"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	"github.com/perses/perses/pkg/model/api/v1/common"
 	logger "github.com/sirupsen/logrus"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	"github.com/perses/perses-operator/internal/subreconciler"
 )
 
 var dlog = logger.WithField("module", "dashboard_controller")
@@ -63,7 +64,7 @@ func (r *PersesDashboardReconciler) reconcileDashboardInAllInstances(ctx context
 }
 
 func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, perses persesv1alpha1.Perses, dashboard *persesv1alpha1.PersesDashboard) (*ctrl.Result, error) {
-	persesClient, err := r.ClientFactory.CreateClient(perses)
+	persesClient, err := r.ClientFactory.CreateClient(ctx, r.Client, perses)
 
 	if err != nil {
 		dlog.WithError(err).Error("Failed to create perses rest client")
@@ -163,7 +164,7 @@ func (r *PersesDashboardReconciler) deleteDashboardInAllInstances(ctx context.Co
 }
 
 func (r *PersesDashboardReconciler) deleteDashboard(ctx context.Context, perses persesv1alpha1.Perses, dashboardNamespace string, dashboardName string) (*ctrl.Result, error) {
-	persesClient, err := r.ClientFactory.CreateClient(perses)
+	persesClient, err := r.ClientFactory.CreateClient(ctx, r.Client, perses)
 
 	if err != nil {
 		dlog.WithError(err).Error("Failed to create perses rest client")
