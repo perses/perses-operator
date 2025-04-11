@@ -21,6 +21,10 @@ func GetTLSCertData(ctx context.Context, client client.Client, namespace string,
 			return "", "", fmt.Errorf("No name found for tls certificate: %s with type: %s", cert.CertPath, cert.Type)
 		}
 
+		if len(cert.Namespace) != 0 {
+			namespace = cert.Namespace
+		}
+
 		switch cert.Type {
 		case v1alpha1.CertificateTypeSecret:
 			secret := &corev1.Secret{}
