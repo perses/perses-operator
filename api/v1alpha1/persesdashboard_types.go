@@ -26,6 +26,14 @@ type PersesDashboardStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 
+type PersesDashboardSpec struct {
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	Config Dashboard `json:"config"`
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	InstanceSelector *metav1.LabelSelector `json:"instanceSelector,omitempty"`
+}
+
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:shortName=perdb
@@ -35,7 +43,7 @@ type PersesDashboard struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   Dashboard             `json:"spec,omitempty"`
+	Spec   PersesDashboardSpec   `json:"spec,omitempty"`
 	Status PersesDashboardStatus `json:"status,omitempty"`
 }
 
