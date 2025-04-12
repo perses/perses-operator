@@ -982,6 +982,10 @@ spec:
                             description: Name of certificate k8s resource (when type
                               is secret or configmap)
                             type: string
+                          namespace:
+                            description: Namsespace of certificate k8s resource (when
+                              type is secret or configmap)
+                            type: string
                           privateKeyPath:
                             description: Path to Private key certificate
                             type: string
@@ -1011,6 +1015,10 @@ spec:
                           name:
                             description: Name of certificate k8s resource (when type
                               is secret or configmap)
+                            type: string
+                          namespace:
+                            description: Namsespace of certificate k8s resource (when
+                              type is secret or configmap)
                             type: string
                           privateKeyPath:
                             description: Path to Private key certificate
@@ -2320,6 +2328,10 @@ spec:
                         description: Name of certificate k8s resource (when type is
                           secret or configmap)
                         type: string
+                      namespace:
+                        description: Namsespace of certificate k8s resource (when
+                          type is secret or configmap)
+                        type: string
                       privateKeyPath:
                         description: Path to Private key certificate
                         type: string
@@ -2349,6 +2361,10 @@ spec:
                       name:
                         description: Name of certificate k8s resource (when type is
                           secret or configmap)
+                        type: string
+                      namespace:
+                        description: Namsespace of certificate k8s resource (when
+                          type is secret or configmap)
                         type: string
                       privateKeyPath:
                         description: Path to Private key certificate
