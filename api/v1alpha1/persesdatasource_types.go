@@ -28,10 +28,13 @@ type PersesDatasourceStatus struct {
 
 type DatasourceSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	Config Datasource `json:"config,omitempty"`
+	Config Datasource `json:"config"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Client *Client `json:"client,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	InstanceSelector *metav1.LabelSelector `json:"instanceSelector,omitempty"`
 }
 
 // +kubebuilder:object:root=true

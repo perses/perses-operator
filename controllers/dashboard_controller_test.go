@@ -8,10 +8,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
-	dashboardcontroller "github.com/perses/perses-operator/controllers/dashboards"
-	internal "github.com/perses/perses-operator/internal/perses"
-	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	persescommon "github.com/perses/perses/pkg/model/api/v1/common"
@@ -21,6 +17,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	dashboardcontroller "github.com/perses/perses-operator/controllers/dashboards"
+	internal "github.com/perses/perses-operator/internal/perses"
+	"github.com/perses/perses-operator/internal/perses/common"
 )
 
 var _ = Describe("Dashboard controller", func() {
@@ -118,8 +119,10 @@ var _ = Describe("Dashboard controller", func() {
 						Name:      DashboardName,
 						Namespace: PersesNamespace,
 					},
-					Spec: persesv1alpha1.Dashboard{
-						DashboardSpec: newDashboard.Spec,
+					Spec: persesv1alpha1.PersesDashboardSpec{
+						Config: persesv1alpha1.Dashboard{
+							DashboardSpec: newDashboard.Spec,
+						},
 					},
 				}
 
