@@ -90,9 +90,47 @@ type PersesService struct {
 }
 
 type Client struct {
+	// BasicAuth basic auth config for datasource client
+	// +optional
+	BasicAuth *BasicAuth `json:"basicAuth,omitempty"`
+	// OAuth configuration for datasource client
+	// +optional
+	OAuth *OAuth `json:"oauth,omitempty"`
 	// TLS the equivalent to the tls_config for perses client
 	// +optional
 	TLS *TLS `json:"tls,omitempty"`
+}
+
+type BasicAuth struct {
+	SecretSource `json:",inline"`
+	// Username for basic auth
+	Username string `json:"username"`
+	// Path to password
+	PasswordPath string `json:"password_path"`
+}
+
+type OAuth struct {
+	SecretSource `json:",inline"`
+	// Path to client id
+	// +optional
+	ClientIDPath string `json:"clientIDPath"`
+	// Path to client secret
+	// +optional
+	ClientSecretPath string `json:"clientSecretPath"`
+	// TokenURL is the resource server's token endpoint
+	// URL. This is a constant specific to each server.
+	TokenURL string `json:"tokenURL"`
+	// +optional
+	// Scope specifies optional requested permissions.
+	Scopes []string `json:"scopes,omitempty"`
+	// +optional
+	// EndpointParams specifies additional parameters for requests to the token endpoint.
+	EndpointParams map[string][]string `json:"endpointParams,omitempty"`
+	// +optional
+	// AuthStyle optionally specifies how the endpoint wants the
+	// client ID & client secret sent. The zero value means to
+	// auto-detect.
+	AuthStyle int `json:"authStyle,omitempty"`
 }
 
 type TLS struct {
@@ -109,25 +147,30 @@ type TLS struct {
 	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
 }
 
-// CertificateType types of certificate sources in k8s
-type CertificateType string
+// SecretSourceType types of secret sources in k8s
+type SecretSourceType string
 
 const (
-	CertificateTypeSecret    CertificateType = "secret"
-	CertificateTypeConfigMap CertificateType = "configmap"
-	CertificateTypeFile      CertificateType = "file"
+	SecretSourceTypeSecret    SecretSourceType = "secret"
+	SecretSourceTypeConfigMap SecretSourceType = "configmap"
+	SecretSourceTypeFile      SecretSourceType = "file"
 )
 
-type Certificate struct {
+// SecretSource configuration for a perses secret source
+type SecretSource struct {
 	// +kubebuilder:validation:Enum:={"secret", "configmap", "file"}
-	// Type source type of certificate
-	Type CertificateType `json:"type"`
-	// Name of certificate k8s resource (when type is secret or configmap)
+	// Type source type of secret
+	Type SecretSourceType `json:"type"`
+	// Name of basic auth k8s resource (when type is secret or configmap)
 	// +optional
 	Name string `json:"name,omitempty"`
 	// Namsespace of certificate k8s resource (when type is secret or configmap)
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
+}
+
+type Certificate struct {
+	SecretSource `json:",inline"`
 	// Path to Certificate
 	CertPath string `json:"certPath"`
 	// Path to Private key certificate
