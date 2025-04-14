@@ -19,6 +19,8 @@ package datasources
 import (
 	"context"
 	"errors"
+	"fmt"
+	"os"
 	"time"
 
 	v1 "github.com/perses/perses/pkg/client/api/v1"
@@ -105,9 +107,9 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 		}
 	}
 
-	// create a secret holding the TLS configuration so the datasource can reference it
-	if datasource.Spec.Client != nil && datasource.Spec.Client.TLS != nil && datasource.Spec.Client.TLS.Enable {
-		_, err := r.syncPersesSecretForTLS(ctx, persesClient, datasource)
+	// create a secret holding the secret configuration so the datasource can reference it
+	if persescommon.HasSecretConfig(datasource.Spec.Client) {
+		_, err := r.syncPersesSecret(ctx, persesClient, datasource)
 
 		if err != nil {
 			dlog.WithError(err).Errorf("Failed to create datasource secret: %s", datasource.Name)
@@ -156,60 +158,15 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 	return subreconciler.ContinueReconciling()
 }
 
-// creates/updates a Perses Secret with TLS configuration,
+// creates/updates a Perses Secret with configuration,
 // retrieving cert/key data from Secrets, ConfigMaps, or files specified in the PersesDatasource.
-func (r *PersesDatasourceReconciler) syncPersesSecretForTLS(ctx context.Context, persesClient v1.ClientInterface, datasource *persesv1alpha1.PersesDatasource) (*ctrl.Result, error) {
+func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, persesClient v1.ClientInterface, datasource *persesv1alpha1.PersesDatasource) (*ctrl.Result, error) {
 	namespace := datasource.Namespace
 	datasourceName := datasource.Name
 	secretName := datasourceName + secretNameSuffix
+	basicAuth := datasource.Spec.Client.BasicAuth
+	oauth := datasource.Spec.Client.OAuth
 	tls := datasource.Spec.Client.TLS
-
-	tlsConfig := secret.TLSConfig{
-		InsecureSkipVerify: tls.InsecureSkipVerify,
-	}
-
-	if tls.CaCert != nil {
-		if tls.CaCert.Type == v1alpha1.CertificateTypeSecret || tls.CaCert.Type == v1alpha1.CertificateTypeConfigMap {
-			caData, _, err := persescommon.GetTLSCertData(ctx, r.Client, namespace, datasourceName, tls.CaCert)
-
-			if err != nil {
-				dlog.WithFields(logger.Fields{
-					"datasource": datasourceName,
-					"namespace":  namespace,
-					"error":      err,
-				}).Error("Failed to get CA data for datasource")
-				return subreconciler.RequeueWithError(err)
-			}
-
-			tlsConfig.CA = caData
-		} else if tls.CaCert.Type == v1alpha1.CertificateTypeFile {
-			tlsConfig.CAFile = tls.CaCert.CertPath
-		}
-	}
-
-	if tls.UserCert != nil {
-		if tls.UserCert.Type == v1alpha1.CertificateTypeSecret || tls.UserCert.Type == v1alpha1.CertificateTypeConfigMap {
-			certData, keyData, err := persescommon.GetTLSCertData(ctx, r.Client, namespace, datasourceName, tls.UserCert)
-
-			if err != nil {
-				dlog.WithFields(logger.Fields{
-					"datasource": datasourceName,
-					"namespace":  namespace,
-					"error":      err,
-				}).Error("Failed to get user certifitate data for datasource")
-				return subreconciler.RequeueWithError(err)
-			}
-
-			tlsConfig.Cert = certData
-			tlsConfig.Key = keyData
-		} else if tls.UserCert.Type == v1alpha1.CertificateTypeFile {
-			tlsConfig.CertFile = tls.UserCert.CertPath
-
-			if len(tls.UserCert.PrivateKeyPath) > 0 {
-				tlsConfig.KeyFile = tls.UserCert.PrivateKeyPath
-			}
-		}
-	}
 
 	secretWithName := &persesv1.Secret{
 		Kind: persesv1.KindSecret,
@@ -218,9 +175,122 @@ func (r *PersesDatasourceReconciler) syncPersesSecretForTLS(ctx context.Context,
 				Name: secretName,
 			},
 		},
-		Spec: persesv1.SecretSpec{
-			TLSConfig: &tlsConfig,
-		},
+		Spec: persesv1.SecretSpec{},
+	}
+
+	if basicAuth != nil {
+		basicAuthConfig := &secret.BasicAuth{}
+		basicAuthConfig.Username = basicAuth.Username
+
+		if basicAuth.Type == v1alpha1.SecretSourceTypeSecret || tls.UserCert.Type == v1alpha1.SecretSourceTypeConfigMap {
+			passwordData, err := persescommon.GetBasicAuthData(ctx, r.Client, namespace, datasourceName, basicAuth)
+
+			if err != nil {
+				dlog.WithFields(logger.Fields{
+					"datasource": datasourceName,
+					"namespace":  namespace,
+					"error":      err,
+				}).Error("Failed to get user basic auth password data for datasource")
+				return subreconciler.RequeueWithError(err)
+			}
+
+			basicAuthConfig.Password = passwordData
+		} else if basicAuth.Type == v1alpha1.SecretSourceTypeFile {
+			basicAuthConfig.PasswordFile = basicAuth.PasswordPath
+		}
+
+		secretWithName.Spec.BasicAuth = basicAuthConfig
+	}
+
+	if oauth != nil {
+		oAuthConfig := &secret.OAuth{
+			TokenURL:       oauth.TokenURL,
+			Scopes:         oauth.Scopes,
+			EndpointParams: oauth.EndpointParams,
+		}
+
+		if oauth.AuthStyle != 0 {
+			oAuthConfig.AuthStyle = oauth.AuthStyle
+		}
+
+		oAuthConfig.TokenURL = oauth.TokenURL
+		if oauth.Type == v1alpha1.SecretSourceTypeSecret || oauth.Type == v1alpha1.SecretSourceTypeConfigMap {
+			clientIDData, clientSecretData, err := persescommon.GetOAuthData(ctx, r.Client, namespace, datasourceName, oauth)
+
+			if err != nil {
+				dlog.WithFields(logger.Fields{
+					"datasource": datasourceName,
+					"namespace":  namespace,
+					"error":      err,
+				}).Error("Failed to get user oauth data for datasource")
+				return subreconciler.RequeueWithError(err)
+			}
+
+			oAuthConfig.ClientID = clientIDData
+			oAuthConfig.ClientSecret = clientSecretData
+		} else if oauth.Type == v1alpha1.SecretSourceTypeFile {
+			// the clientID is a Hidden field in perses API,
+			// but doesn't expose it as a file field for it, so we need to read it and use the value
+			clientID, err := os.ReadFile(oauth.ClientIDPath)
+			if err != nil {
+				return subreconciler.RequeueWithError(fmt.Errorf("failed to read the OAuth client ID file: %s", oauth.ClientIDPath))
+			}
+			oAuthConfig.ClientID = string(clientID)
+			oAuthConfig.ClientSecretFile = oauth.ClientSecretPath
+		}
+
+		secretWithName.Spec.OAuth = oAuthConfig
+	}
+
+	if tls != nil {
+		tlsConfig := &secret.TLSConfig{
+			InsecureSkipVerify: tls.InsecureSkipVerify,
+		}
+
+		if tls.CaCert != nil {
+			if tls.CaCert.Type == v1alpha1.SecretSourceTypeSecret || tls.CaCert.Type == v1alpha1.SecretSourceTypeConfigMap {
+				caData, _, err := persescommon.GetTLSCertData(ctx, r.Client, namespace, datasourceName, tls.CaCert)
+
+				if err != nil {
+					dlog.WithFields(logger.Fields{
+						"datasource": datasourceName,
+						"namespace":  namespace,
+						"error":      err,
+					}).Error("Failed to get CA data for datasource")
+					return subreconciler.RequeueWithError(err)
+				}
+
+				tlsConfig.CA = caData
+			} else if tls.CaCert.Type == v1alpha1.SecretSourceTypeFile {
+				tlsConfig.CAFile = tls.CaCert.CertPath
+			}
+		}
+
+		if tls.UserCert != nil {
+			if tls.UserCert.Type == v1alpha1.SecretSourceTypeSecret || tls.UserCert.Type == v1alpha1.SecretSourceTypeConfigMap {
+				certData, keyData, err := persescommon.GetTLSCertData(ctx, r.Client, namespace, datasourceName, tls.UserCert)
+
+				if err != nil {
+					dlog.WithFields(logger.Fields{
+						"datasource": datasourceName,
+						"namespace":  namespace,
+						"error":      err,
+					}).Error("Failed to get user certifitate data for datasource")
+					return subreconciler.RequeueWithError(err)
+				}
+
+				tlsConfig.Cert = certData
+				tlsConfig.Key = keyData
+			} else if tls.UserCert.Type == v1alpha1.SecretSourceTypeFile {
+				tlsConfig.CertFile = tls.UserCert.CertPath
+
+				if len(tls.UserCert.PrivateKeyPath) > 0 {
+					tlsConfig.KeyFile = tls.UserCert.PrivateKeyPath
+				}
+			}
+		}
+
+		secretWithName.Spec.TLSConfig = tlsConfig
 	}
 
 	_, err := persesClient.Secret(namespace).Get(secretName)

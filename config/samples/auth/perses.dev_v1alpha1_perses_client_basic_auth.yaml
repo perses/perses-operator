@@ -1,0 +1,43 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    app.kubernetes.io/name: perses
+    app.kubernetes.io/instance: perses-basic-auth-sample
+    app.kubernetes.io/part-of: perses-operator
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: perses-operator
+  name: perses-basic-auth
+  namespace: perses-dev
+data:
+  password: cGFzc3dvcmQxMjM=
+---
+apiVersion: perses.dev/v1alpha1
+kind: PersesDatasource
+metadata:
+  labels:
+    app.kubernetes.io/name: perses-datasource
+    app.kubernetes.io/instance: perses-prometheus-basic-auth-datasource
+    app.kubernetes.io/part-of: perses-operator
+    app.kubernetes.io/created-by: perses-operator
+  name: perses-datasource-basic-auth-sample
+  namespace: perses-dev
+spec:
+  client:
+    basicAuth:
+      type: secret
+      name: perses-basic-auth
+      username: testuser
+      password_path: password
+    tls:
+      enable: true
+      insecureSkipVerify: true
+  config:
+    display:
+      name: "Basic Auth Datasource"
+    default: false
+    plugin:
+      kind: "PrometheusDatasource"
+      spec:
+        directUrl: "https://prometheus.demo.prometheus.io"
