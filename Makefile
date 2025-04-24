@@ -118,7 +118,7 @@ help: ## Display this help.
 .PHONY: checkformat
 checkformat:
 	@echo ">> checking go code format"
-	! gofmt -d $$(find . -name '*.go' -not -path "./ui/*" -print) | grep '^'
+	! gofmt -d $$(find . -name '*.go' -print) | grep '^'
 
 .PHONY: checkunused
 checkunused:
