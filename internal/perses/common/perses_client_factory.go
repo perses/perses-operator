@@ -56,7 +56,7 @@ func (f *PersesClientFactoryWithConfig) CreateClient(ctx context.Context, client
 		}
 
 		if tls.CaCert != nil {
-			if tls.CaCert.Type == persesv1alpha1.CertificateTypeSecret || tls.CaCert.Type == persesv1alpha1.CertificateTypeConfigMap {
+			if tls.CaCert.Type == persesv1alpha1.SecretSourceTypeSecret || tls.CaCert.Type == persesv1alpha1.SecretSourceTypeConfigMap {
 				caData, _, err := GetTLSCertData(ctx, client, perses.Namespace, perses.Name, tls.CaCert)
 
 				if err != nil {
@@ -64,13 +64,13 @@ func (f *PersesClientFactoryWithConfig) CreateClient(ctx context.Context, client
 				}
 
 				tlsConfig.CA = caData
-			} else if tls.CaCert.Type == persesv1alpha1.CertificateTypeFile {
+			} else if tls.CaCert.Type == persesv1alpha1.SecretSourceTypeFile {
 				tlsConfig.CAFile = tls.CaCert.CertPath
 			}
 		}
 
 		if tls.UserCert != nil {
-			if tls.UserCert.Type == persesv1alpha1.CertificateTypeSecret || tls.UserCert.Type == persesv1alpha1.CertificateTypeConfigMap {
+			if tls.UserCert.Type == persesv1alpha1.SecretSourceTypeSecret || tls.UserCert.Type == persesv1alpha1.SecretSourceTypeConfigMap {
 				cert, key, err := GetTLSCertData(ctx, client, perses.Namespace, perses.Name, tls.UserCert)
 
 				if err != nil {
@@ -79,7 +79,7 @@ func (f *PersesClientFactoryWithConfig) CreateClient(ctx context.Context, client
 
 				tlsConfig.Cert = cert
 				tlsConfig.Key = key
-			} else if tls.UserCert.Type == persesv1alpha1.CertificateTypeFile {
+			} else if tls.UserCert.Type == persesv1alpha1.SecretSourceTypeFile {
 				tlsConfig.CertFile = tls.UserCert.CertPath
 			}
 		}
