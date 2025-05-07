@@ -24,6 +24,8 @@ jobs:
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
+          enable_go_cache: true
+          go_version: "1.23"
       - name: check format
         run: make checkformat
       - name: check go.mod
@@ -38,6 +40,8 @@ jobs:
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
+          enable_go_cache: true
+          go_version: "1.23"
       - name: test
         run: make test
   golangci:
@@ -50,8 +54,9 @@ jobs:
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
-          enable_go_cache: false
+          enable_go_cache: true
           enable_npm: false
+          go_version: "1.23"
       - name: generate files
         run: make generate
       - name: check bundle changes
