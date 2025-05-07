@@ -140,7 +140,15 @@ func (r *PersesReconciler) createPersesService(
 				Protocol:   corev1.ProtocolTCP,
 				TargetPort: intstr.FromInt32(8080),
 			}},
-			Selector: ls,
+			Selector: func() map[string]string {
+				selector := make(map[string]string)
+				for k, v := range ls {
+					if k != "app.kubernetes.io/version" {
+						selector[k] = v
+					}
+				}
+				return selector
+			}(),
 		},
 	}
 
