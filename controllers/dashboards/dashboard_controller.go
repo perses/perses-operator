@@ -52,7 +52,7 @@ func (r *PersesDashboardReconciler) reconcileDashboardInAllInstances(ctx context
 		LabelSelector: labelSelector,
 	}
 
-	err = r.Client.List(ctx, persesInstances, opts)
+	err = r.List(ctx, persesInstances, opts)
 	if err != nil {
 		dlog.WithError(err).Error("Failed to get perses instances")
 		return subreconciler.RequeueWithDelayAndError(time.Minute, err)
@@ -149,10 +149,10 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 	return subreconciler.ContinueReconciling()
 }
 
-func (r *PersesDashboardReconciler) deleteDashboardInAllInstances(ctx context.Context, req ctrl.Request, dashbboardNamespace string, dashboardName string) (*ctrl.Result, error) {
+func (r *PersesDashboardReconciler) deleteDashboardInAllInstances(ctx context.Context, _ ctrl.Request, dashbboardNamespace string, dashboardName string) (*ctrl.Result, error) {
 	persesInstances := &persesv1alpha1.PersesList{}
 	var opts []client.ListOption
-	err := r.Client.List(ctx, persesInstances, opts...)
+	err := r.List(ctx, persesInstances, opts...)
 	if err != nil {
 		dlog.WithError(err).Error("Failed to get perses instances")
 		return subreconciler.RequeueWithError(err)

@@ -23,6 +23,9 @@ import (
 	"os"
 	"time"
 
+	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	persescommon "github.com/perses/perses-operator/internal/perses/common"
+	"github.com/perses/perses-operator/internal/subreconciler"
 	v1 "github.com/perses/perses/pkg/client/api/v1"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
@@ -32,11 +35,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/perses/perses-operator/api/v1alpha1"
-	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
-	persescommon "github.com/perses/perses-operator/internal/perses/common"
-	"github.com/perses/perses-operator/internal/subreconciler"
 )
 
 const secretNameSuffix = "-secret"
@@ -60,7 +58,7 @@ func (r *PersesDatasourceReconciler) reconcileDatasourcesInAllInstances(ctx cont
 		LabelSelector: labelSelector,
 	}
 
-	err = r.Client.List(ctx, persesInstances, opts)
+	err = r.List(ctx, persesInstances, opts)
 	if err != nil {
 		dlog.WithError(err).Error("Failed to get perses instances")
 		return subreconciler.RequeueWithDelayAndError(time.Minute, err)
@@ -191,7 +189,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 		basicAuthConfig := &secret.BasicAuth{}
 		basicAuthConfig.Username = basicAuth.Username
 
-		if basicAuth.Type == v1alpha1.SecretSourceTypeSecret || tls.UserCert.Type == v1alpha1.SecretSourceTypeConfigMap {
+		if basicAuth.Type == persesv1alpha1.SecretSourceTypeSecret || tls.UserCert.Type == persesv1alpha1.SecretSourceTypeConfigMap { //nolint: staticcheck
 			passwordData, err := persescommon.GetBasicAuthData(ctx, r.Client, namespace, datasourceName, basicAuth)
 
 			if err != nil {
@@ -204,7 +202,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 			}
 
 			basicAuthConfig.Password = passwordData
-		} else if basicAuth.Type == v1alpha1.SecretSourceTypeFile {
+		} else if basicAuth.Type == persesv1alpha1.SecretSourceTypeFile {
 			basicAuthConfig.PasswordFile = basicAuth.PasswordPath
 		}
 
@@ -223,7 +221,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 		}
 
 		oAuthConfig.TokenURL = oauth.TokenURL
-		if oauth.Type == v1alpha1.SecretSourceTypeSecret || oauth.Type == v1alpha1.SecretSourceTypeConfigMap {
+		if oauth.Type == persesv1alpha1.SecretSourceTypeSecret || oauth.Type == persesv1alpha1.SecretSourceTypeConfigMap { //nolint: staticcheck
 			clientIDData, clientSecretData, err := persescommon.GetOAuthData(ctx, r.Client, namespace, datasourceName, oauth)
 
 			if err != nil {
@@ -237,7 +235,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 
 			oAuthConfig.ClientID = clientIDData
 			oAuthConfig.ClientSecret = clientSecretData
-		} else if oauth.Type == v1alpha1.SecretSourceTypeFile {
+		} else if oauth.Type == persesv1alpha1.SecretSourceTypeFile {
 			// the clientID is a Hidden field in perses API,
 			// but doesn't expose it as a file field for it, so we need to read it and use the value
 			clientID, err := os.ReadFile(oauth.ClientIDPath)
@@ -257,7 +255,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 		}
 
 		if tls.CaCert != nil {
-			if tls.CaCert.Type == v1alpha1.SecretSourceTypeSecret || tls.CaCert.Type == v1alpha1.SecretSourceTypeConfigMap {
+			if tls.CaCert.Type == persesv1alpha1.SecretSourceTypeSecret || tls.CaCert.Type == persesv1alpha1.SecretSourceTypeConfigMap { //nolint: staticcheck
 				caData, _, err := persescommon.GetTLSCertData(ctx, r.Client, namespace, datasourceName, tls.CaCert)
 
 				if err != nil {
@@ -270,13 +268,13 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 				}
 
 				tlsConfig.CA = caData
-			} else if tls.CaCert.Type == v1alpha1.SecretSourceTypeFile {
+			} else if tls.CaCert.Type == persesv1alpha1.SecretSourceTypeFile {
 				tlsConfig.CAFile = tls.CaCert.CertPath
 			}
 		}
 
 		if tls.UserCert != nil {
-			if tls.UserCert.Type == v1alpha1.SecretSourceTypeSecret || tls.UserCert.Type == v1alpha1.SecretSourceTypeConfigMap {
+			if tls.UserCert.Type == persesv1alpha1.SecretSourceTypeSecret || tls.UserCert.Type == persesv1alpha1.SecretSourceTypeConfigMap { //nolint: staticcheck
 				certData, keyData, err := persescommon.GetTLSCertData(ctx, r.Client, namespace, datasourceName, tls.UserCert)
 
 				if err != nil {
@@ -290,7 +288,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 
 				tlsConfig.Cert = certData
 				tlsConfig.Key = keyData
-			} else if tls.UserCert.Type == v1alpha1.SecretSourceTypeFile {
+			} else if tls.UserCert.Type == persesv1alpha1.SecretSourceTypeFile {
 				tlsConfig.CertFile = tls.UserCert.CertPath
 
 				if len(tls.UserCert.PrivateKeyPath) > 0 {
@@ -336,7 +334,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 func (r *PersesDatasourceReconciler) deleteDatasourceInAllInstances(ctx context.Context, datasourceNamespace string, datasourceName string) (*ctrl.Result, error) {
 	persesInstances := &persesv1alpha1.PersesList{}
 	var opts []client.ListOption
-	err := r.Client.List(ctx, persesInstances, opts...)
+	err := r.List(ctx, persesInstances, opts...)
 	if err != nil {
 		dlog.WithError(err).Error("Failed to get perses instances")
 		return subreconciler.RequeueWithError(err)

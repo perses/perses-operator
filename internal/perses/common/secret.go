@@ -21,7 +21,7 @@ func GetBasicAuthData(ctx context.Context, client client.Client, namespace strin
 
 	if basicAuth.Type == v1alpha1.SecretSourceTypeSecret || basicAuth.Type == v1alpha1.SecretSourceTypeConfigMap {
 		if len(basicAuth.Name) == 0 {
-			return "", fmt.Errorf("No name found for basic auth: %s with type: %s", basicAuth.Username, basicAuth.Type)
+			return "", fmt.Errorf("no name found for basic auth: %s with type: %s", basicAuth.Username, basicAuth.Type)
 		}
 
 		if len(basicAuth.Namespace) != 0 {
@@ -51,7 +51,7 @@ func GetBasicAuthData(ctx context.Context, client client.Client, namespace strin
 		}
 
 		if passwordData == "" {
-			return "", fmt.Errorf("No password data found for basic auth: %s in namespace: %s for %s", basicAuth.PasswordPath, namespace, name)
+			return "", fmt.Errorf("no password data found for basic auth: %s in namespace: %s for %s", basicAuth.PasswordPath, namespace, name)
 		}
 
 		return passwordData, nil
@@ -67,7 +67,7 @@ func GetOAuthData(ctx context.Context, client client.Client, namespace string, n
 
 	if oauth.Type == v1alpha1.SecretSourceTypeSecret || oauth.Type == v1alpha1.SecretSourceTypeConfigMap {
 		if len(oauth.Name) == 0 {
-			return "", "", fmt.Errorf("No name found for oauth: %s with type: %s", oauth.ClientIDPath, oauth.Type)
+			return "", "", fmt.Errorf("no name found for oauth: %s with type: %s", oauth.ClientIDPath, oauth.Type)
 		}
 
 		if len(oauth.Namespace) != 0 {
@@ -99,11 +99,11 @@ func GetOAuthData(ctx context.Context, client client.Client, namespace string, n
 		}
 
 		if clientIDData == "" {
-			return "", "", fmt.Errorf("No client id data found for oauth: %s in namespace: %s for %s", oauth.ClientIDPath, namespace, name)
+			return "", "", fmt.Errorf("no client id data found for oauth: %s in namespace: %s for %s", oauth.ClientIDPath, namespace, name)
 		}
 
 		if clientSecretData == "" {
-			return "", "", fmt.Errorf("No client secret data found for oauth: %s in namespace: %s for %s", oauth.ClientSecretPath, namespace, name)
+			return "", "", fmt.Errorf("no client secret data found for oauth: %s in namespace: %s for %s", oauth.ClientSecretPath, namespace, name)
 		}
 
 		return clientIDData, clientSecretData, nil
@@ -119,7 +119,7 @@ func GetTLSCertData(ctx context.Context, client client.Client, namespace string,
 
 	if cert.Type == v1alpha1.SecretSourceTypeSecret || cert.Type == v1alpha1.SecretSourceTypeConfigMap {
 		if len(cert.Name) == 0 {
-			return "", "", fmt.Errorf("No name found for tls certificate: %s with type: %s", cert.CertPath, cert.Type)
+			return "", "", fmt.Errorf("no name found for tls certificate: %s with type: %s", cert.CertPath, cert.Type)
 		}
 
 		if len(cert.Namespace) != 0 {
@@ -151,7 +151,7 @@ func GetTLSCertData(ctx context.Context, client client.Client, namespace string,
 		}
 
 		if certData == "" {
-			return "", "", fmt.Errorf("No data found for certificate: %s in namespace: %s for %s", cert.CertPath, namespace, name)
+			return "", "", fmt.Errorf("no data found for certificate: %s in namespace: %s for %s", cert.CertPath, namespace, name)
 		}
 
 		return certData, keyData, nil
