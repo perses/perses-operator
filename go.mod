@@ -1,7 +1,8 @@
 module github.com/perses/perses-operator
 
-go 1.23.4
-toolchain go1.24.1
+go 1.24.0
+
+toolchain go1.24.2
 
 require (
 	github.com/brunoga/deep v1.2.4
