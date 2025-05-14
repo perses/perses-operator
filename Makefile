@@ -4,6 +4,8 @@ VERSION?=$(shell cat VERSION)
 DATE := $(shell date +%Y-%m-%d)
 export DATE
 
+XARGS ?= $(shell which gxargs 2>/dev/null || which xargs)
+
 
 .PHONY: check-container-runtime
 check-container-runtime:
@@ -129,8 +131,16 @@ checkunused:
 ##@ Development
 
 .PHONY: manifests
-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: controller-gen gojsontoyaml ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd:ignoreUnexportedFields=true webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	find config/crd/bases -name '*.yaml' -print0 | $(XARGS) -0 -I{} sh -c '$(GOJSONTOYAML_BINARY) -yamltojson < "$$1" | jq > "$(PWD)/jsonnet/$$(basename $$1 | cut -d'_' -f2 | cut -d. -f1)-crd.json"' -- {}
+
+.PHONY: jsonnet-resources
+jsonnet-resources: jsonnet gojsontoyaml
+	@echo ">>>>> Running perses operator jsonnet"
+	rm -f jsonnet/examples/*.yaml
+	$(JSONNET_BINARY) -m jsonnet/examples jsonnet/example.jsonnet | $(XARGS) -I{} sh -c 'cat {} | $(GOJSONTOYAML_BINARY) > {}.yaml' -- {}
+	find jsonnet/examples -type f -not -name "*.*" -delete
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -231,12 +241,15 @@ $(LOCALBIN):
 ## Tool Binaries
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
+GOJSONTOYAML_BINARY ?= $(LOCALBIN)/gojsontoyaml
 ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
+JSONNET_BINARY ?= $(LOCALBIN)/jsonnet
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
 CONTROLLER_TOOLS_VERSION ?= v0.16.0
-
+GOJSONTOYAML_VERSION ?= v0.1.0
+JSONNET_VERSION ?= v0.19.1
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
@@ -253,6 +266,17 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
 	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 
+.PHONY: gojsontoyaml
+gojsontoyaml: $(GOJSONTOYAML_BINARY) ## Download gojsontoyaml locally if necessary. If wrong version is installed, it will be overwritten.
+$(GOJSONTOYAML_BINARY): $(LOCALBIN)
+	test -s $(LOCALBIN)/gojsontoyaml && $(LOCALBIN)/gojsontoyaml --version | grep -q $(GOJSONTOYAML_VERSION) || \
+	GOBIN=$(LOCALBIN) go install github.com/brancz/gojsontoyaml@$(GOJSONTOYAML_VERSION)
+
+.PHONY: jsonnet
+jsonnet: $(JSONNET_BINARY) ## Download jsonnet locally if necessary. If wrong version is installed, it will be overwritten.
+$(JSONNET_BINARY): $(LOCALBIN)
+	test -s $(LOCALBIN)/jsonnet && $(LOCALBIN)/jsonnet --version | grep -q $(JSONNET_VERSION) || \
+	GOBIN=$(LOCALBIN) go install github.com/google/go-jsonnet/cmd/jsonnet@$(JSONNET_VERSION)
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
