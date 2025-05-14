@@ -3,7 +3,6 @@ local persesOperator = import 'perses-operator.libsonnet';
 // Define the configuration for the perses operator
 local config = {
   namespace: 'perses-dev',
-  version: 'v1.0.0',
   image: 'persesdev/perses-operator:v1.0.0',
   resources: {
     limits: { cpu: '500m', memory: '128Mi' },
