@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/part-of: perses-operator
     app.kubernetes.io/version: v1.0.0
   name: perses-operator
-  namespace: system
+  namespace: perses-dev
 spec:
   replicas: 1
   selector:
@@ -46,6 +46,7 @@ spec:
       - args:
         - --leader-elect
         image: persesdev/perses-operator:v1.0.0
+        imagePullPolicy: Always
         livenessProbe:
           httpGet:
             path: /healthz

@@ -133,7 +133,30 @@ checkunused:
 .PHONY: manifests
 manifests: controller-gen gojsontoyaml ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd:ignoreUnexportedFields=true webhook paths="./..." output:crd:artifacts:config=config/crd/bases
-	find config/crd/bases -name '*.yaml' -print0 | $(XARGS) -0 -I{} sh -c '$(GOJSONTOYAML_BINARY) -yamltojson < "$$1" | jq > "$(PWD)/jsonnet/$$(basename $$1 | cut -d'_' -f2 | cut -d. -f1)-crd.json"' -- {}
+	find config/crd/bases -name '*.yaml' ! -name 'kustomization.yaml' -exec sh -c '\
+	  for file do \
+	    filename=$$(basename "$$file" .yaml); \
+	    out_file="$$(pwd)/jsonnet/$${filename}-crd.json"; \
+	    gojsontoyaml -yamltojson < "$$file" | jq > "$$out_file"; \
+	  done' sh {} +
+	find config/rbac -name '*.yaml' ! -name 'kustomization.yaml' -exec sh -c '\
+	  for file do \
+	    filename=$$(basename "$$file" .yaml); \
+	    out_file="$$(pwd)/jsonnet/$${filename}.json"; \
+	    gojsontoyaml -yamltojson < "$$file" | jq > "$$out_file"; \
+	  done' sh {} +
+	find config/manager -name '*.yaml' ! -name 'kustomization.yaml' -exec sh -c '\
+	  for file do \
+	    filename=$$(basename "$$file" .yaml); \
+	    out_file="$$(pwd)/jsonnet/$${filename}.json"; \
+	    gojsontoyaml -yamltojson < "$$file" | jq > "$$out_file"; \
+	  done' sh {} +
+	find config/prometheus -name '*.yaml' ! -name 'kustomization.yaml' -exec sh -c '\
+	  for file do \
+	    filename=$$(basename "$$file" .yaml); \
+	    out_file="$$(pwd)/jsonnet/$${filename}.json"; \
+	    gojsontoyaml -yamltojson < "$$file" | jq > "$$out_file"; \
+	  done' sh {} +
 
 .PHONY: jsonnet-resources
 jsonnet-resources: jsonnet gojsontoyaml

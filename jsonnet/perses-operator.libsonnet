@@ -9,7 +9,7 @@ local defaults = {
     requests: { cpu: '10m', memory: '64Mi' },
   },
   commonLabels:: {
-    'app.kubernetes.io/name': 'perses-operator',
+    'app.kubernetes.io/name': defaults.name,
     'app.kubernetes.io/version': defaults.version,
     'app.kubernetes.io/component': 'controller',
     'app.kubernetes.io/created-by': 'perses-operator',
@@ -27,188 +27,149 @@ function(params) {
   config:: defaults + params,
 
   // Prefixing with 0 to ensure these manifests are listed and therefore created first.
-  '0persesCustomResourceDefinition': import 'perses-crd.json',
-  '0persesdashboardsCustomResourceDefinition': import 'persesdashboards-crd.json',
-  '0persesdatasourcesCustomResourceDefinition': import 'persesdatasources-crd.json',
+  '0persesCustomResourceDefinition': import 'perses.dev_perses-crd.json',
+  '0persesdashboardsCustomResourceDefinition': import 'perses.dev_persesdashboards-crd.json',
+  '0persesdatasourcesCustomResourceDefinition': import 'perses.dev_persesdatasources-crd.json',
 
-  namespace: {
-    apiVersion: 'v1',
-    kind: 'Namespace',
-    metadata: {
-      name: po.config.namespace,
-      labels: po.config.commonLabels,
-    },
-  },
+  local deployment_gen = import 'manager.json',
+  local service_account_gen = import 'service_account.json',
+  local perses_editor_role_gen = import 'perses_editor_role.json',
+  local perses_viewer_role_gen = import 'perses_viewer_role.json',
+  local persesdashboard_viewer_role_gen = import 'persesdashboard_viewer_role.json',
+  local persesdashboard_editor_role_gen = import 'persesdashboard_editor_role.json',
+  local persesdatasource_viewer_role_gen = import 'persesdatasource_viewer_role.json',
+  local persesdatasource_editor_role_gen = import 'persesdatasource_editor_role.json',
+  local role_binding_gen = import 'role_binding.json',
+  local role_gen = import 'role.json',
+  local service_monitor_gen = import 'monitor.json',
 
-  deployment: {
-    apiVersion: 'apps/v1',
-    kind: 'Deployment',
-    metadata: {
+  deployment: deployment_gen {
+    metadata+: {
       name: po.config.name,
       namespace: po.config.namespace,
       labels: po.config.commonLabels,
     },
-    spec: {
-      replicas: 1,
+    spec+: {
       selector: { matchLabels: po.config.selectorLabels },
-      template: {
-        metadata: {
+      template+: {
+        metadata+: {
           labels: po.config.commonLabels,
-          annotations: {
-            'kubectl.kubernetes.io/default-container': 'manager',
-          },
         },
-        spec: {
-          containers: [{
-            name: 'manager',
-            image: po.config.image,
-            args: ['--leader-elect'],
-            securityContext: {
-              allowPrivilegeEscalation: false,
-              capabilities: { drop: ['ALL'] },
-            },
-            livenessProbe: {
-              httpGet: {
-                path: '/healthz',
-                port: 8081,
-              },
-              initialDelaySeconds: 15,
-              periodSeconds: 20,
-            },
-            readinessProbe: {
-              httpGet: {
-                path: '/readyz',
-                port: 8081,
-              },
-              initialDelaySeconds: 5,
-              periodSeconds: 10,
-            },
-            resources: po.config.resources,
-          }],
+        spec+: {
+          containers: [
+            deployment_gen.spec.template.spec.containers[0] {
+              image: po.config.image,
+              resources: po.config.resources,
+            }],
           serviceAccountName: po.config.name,
-          terminationGracePeriodSeconds: 10,
-          affinity: {
-            nodeAffinity: {
-              requiredDuringSchedulingIgnoredDuringExecution: {
-                nodeSelectorTerms: [{
-                  matchExpressions: [
-                    {
-                      key: 'kubernetes.io/arch',
-                      operator: 'In',
-                      values: ['amd64', 'arm64'],
-                    },
-                    {
-                      key: 'kubernetes.io/os',
-                      operator: 'In',
-                      values: ['linux'],
-                    },
-                  ],
-                }],
-              },
-            },
-          },
         },
       },
     },
   },
 
-  serviceAccount: {
-    apiVersion: 'v1',
-    kind: 'ServiceAccount',
-    metadata: {
+  serviceAccount: service_account_gen {
+    metadata+: {
       name: po.config.name,
       namespace: po.config.namespace,
       labels: po.config.commonLabels,
     },
   },
 
-  clusterRole: {
-    apiVersion: 'rbac.authorization.k8s.io/v1',
-    kind: 'ClusterRole',
-    metadata: {
+  persesEditorRole: perses_editor_role_gen {
+    metadata+: {
+      name:'perses-editor-role',
+      labels: po.config.commonLabels + {
+        'app.kubernetes.io/component': 'rbac',
+        'app.kubernetes.io/instance': 'perses-editor-role',
+      },
+    },
+  },
+
+  persesViewerRole: perses_viewer_role_gen {
+    metadata+: {
+      name:'perses-viewer-role',
+      labels: po.config.commonLabels + {
+        'app.kubernetes.io/component': 'rbac',
+        'app.kubernetes.io/instance': 'perses-viewer-role',
+      },
+    },
+  },
+
+  persesDashboardEditorRole: persesdashboard_editor_role_gen {
+    metadata+: {
+      name:'persesdashboard-editor-role',
+      labels: po.config.commonLabels + {
+        'app.kubernetes.io/component': 'rbac',
+        'app.kubernetes.io/instance': 'persesdashboard-editor-role',
+      },
+    },
+  },
+
+  persesDashboardViewerRole: persesdashboard_viewer_role_gen {
+    metadata+: {
+      name:'persesdashboard-viewer-role',
+      labels: po.config.commonLabels + {
+        'app.kubernetes.io/component': 'rbac',
+        'app.kubernetes.io/instance': 'persesdashboard-viewer-role',
+      },
+    },
+  },
+
+  persesDatasourceEditorRole: persesdatasource_editor_role_gen {
+    metadata+: {
+      name:'persesdatasource-editor-role',
+      labels: po.config.commonLabels + {
+        'app.kubernetes.io/component': 'rbac',
+        'app.kubernetes.io/instance': 'persesdatasource-editor-role',
+      },
+    },
+  },
+
+  persesDatasourceViewerRole: persesdatasource_viewer_role_gen {
+    metadata+: {
+      name:'persesdatasource-viewer-role',
+      labels: po.config.commonLabels + {
+        'app.kubernetes.io/component': 'rbac',
+        'app.kubernetes.io/instance': 'persesdatasource-viewer-role',
+      },
+    },
+  },
+
+  roleBinding: role_binding_gen {
+    metadata+: {
       name: po.config.name,
+      namespace: po.config.namespace,
       labels: po.config.commonLabels,
     },
-    rules: [
-      {
-        apiGroups: ['apps'],
-        resources: ['deployments', 'statefulsets'],
-        verbs: ['create', 'delete', 'get', 'list', 'patch', 'update', 'watch'],
-      },
-      {
-        apiGroups: [''],
-        resources: ['events'],
-        verbs: ['create', 'patch'],
-      },
-      {
-        apiGroups: [''],
-        resources: ['services', 'configmaps', 'secrets'],
-        verbs: ['get', 'patch', 'update', 'create', 'delete', 'list', 'watch'],
-      },
-      {
-        apiGroups: ['perses.dev'],
-        resources: ['perses'],
-        verbs: ['create', 'delete', 'get', 'list', 'patch', 'update', 'watch'],
-      },
-      {
-        apiGroups: ['perses.dev'],
-        resources: ['perses/finalizers'],
-        verbs: ['update'],
-      },
-      {
-        apiGroups: ['perses.dev'],
-        resources: ['perses/status'],
-        verbs: ['get', 'patch', 'update'],
-      },
-      {
-        apiGroups: ['perses.dev'],
-        resources: ['persesdashboards'],
-        verbs: ['create', 'delete', 'get', 'list', 'patch', 'update', 'watch'],
-      },
-      {
-        apiGroups: ['perses.dev'],
-        resources: ['persesdashboards/finalizers'],
-        verbs: ['update'],
-      },
-      {
-        apiGroups: ['perses.dev'],
-        resources: ['persesdashboards/status'],
-        verbs: ['get', 'patch', 'update'],
-      },
-      {
-        apiGroups: ['perses.dev'],
-        resources: ['persesdatasources'],
-        verbs: ['create', 'delete', 'get', 'list', 'patch', 'update', 'watch'],
-      },
-      {
-        apiGroups: ['perses.dev'],
-        resources: ['persesdatasources/finalizers'],
-        verbs: ['update'],
-      },
-      {
-        apiGroups: ['perses.dev'],
-        resources: ['persesdatasources/status'],
-        verbs: ['get', 'patch', 'update'],
-      },
+    roleRef+: {
+      name: po.config.name,
+    },
+    subjects: [
+        role_binding_gen.subjects[0] {
+            name: po.config.name,
+        }
     ],
   },
 
-  clusterRoleBinding: {
-    apiVersion: 'rbac.authorization.k8s.io/v1',
-    kind: 'ClusterRoleBinding',
-    metadata: {
+  role: role_gen {
+    metadata+: {
+      name: po.config.name,
+      labels: po.config.commonLabels + {
+        'app.kubernetes.io/component': 'rbac',
+      },
+    },
+  },
+
+  serviceMonitor: service_monitor_gen {
+    metadata+: {
       name: po.config.name,
       labels: po.config.commonLabels,
-    },
-    roleRef: {
-      apiGroup: 'rbac.authorization.k8s.io',
-      kind: 'ClusterRole',
-      name: po.config.name,
-    },
-    subjects: [{
-      kind: 'ServiceAccount',
-      name: po.config.name,
       namespace: po.config.namespace,
-    }],
+    },
+    spec+: {
+      selector: {
+        matchLabels: po.config.selectorLabels,
+      },
+    },
   },
 }
