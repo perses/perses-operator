@@ -25,7 +25,7 @@ The Perses server instances are namespace-scoped, the operator will deploy a Per
 #### Specification
 
 ```yaml
-apiVersion: perses.dev/v1alpha1
+apiVersion: perses.dev/v1alpha2
 kind: Perses
 metadata:
   name: perses-sample
@@ -110,7 +110,7 @@ The PersesDatasource configurations are namespace-scoped.
 #### Specification
 
 ```yaml
-apiVersion: perses.dev/v1alpha1
+apiVersion: perses.dev/v1alpha2
 kind: PersesDatasource
 metadata:
   name: prometheus-trough-proxy
@@ -142,7 +142,7 @@ spec:
 ```
 
 ```yaml
-apiVersion: perses.dev/v1alpha1
+apiVersion: perses.dev/v1alpha2
 kind: PersesDatasource
 metadata:
   name: prometheus
@@ -164,56 +164,57 @@ The PersesDashboard configurations are namespace-scoped.
 #### Specification
 
 ```yaml
-apiVersion: perses.dev/v1alpha1
+apiVersion: perses.dev/v1alpha2
 kind: PersesDashboard
 metadata:
   name: kubernetes-overview
   namespace: monitoring
 spec: # The complete spec of a Perses dashboard: https://perses.dev/perses/docs/api/dashboard/
-  display:
-    name: "Kubernetes Overview"
-    description: "Overview of Kubernetes cluster metrics"
-  variables:
-    - kind: ListVariable
-      spec:
-        name: job
-        allowMultiple: false
-        allowAllValue: false
-        plugin:
-          kind: PrometheusLabelValuesVariable
+  config:
+      display:
+        name: "Kubernetes Overview"
+        description: "Overview of Kubernetes cluster metrics"
+      variables:
+        - kind: ListVariable
           spec:
-            labelName: job
-  panels:
-    defaultTimeSeriesChart:
-      kind: Panel
-      spec:
-        display:
-          name: Default Time Series Panel
-        plugin:
-          kind: TimeSeriesChart
-          spec: {}
-        queries:
-          - kind: TimeSeriesQuery
-            spec:
-              plugin:
-                kind: PrometheusTimeSeriesQuery
+            name: job
+            allowMultiple: false
+            allowAllValue: false
+            plugin:
+              kind: PrometheusLabelValuesVariable
+              spec:
+                labelName: job
+      panels:
+        defaultTimeSeriesChart:
+          kind: Panel
+          spec:
+            display:
+              name: Default Time Series Panel
+            plugin:
+              kind: TimeSeriesChart
+              spec: {}
+            queries:
+              - kind: TimeSeriesQuery
                 spec:
-                  query: up
-  layouts:
-    - kind: Grid
-      spec:
-        display:
-          title: Row 1
-          collapse:
-            open: true
-        items:
-          - x: 0
-            y: 0
-            width: 2
-            height: 3
-            content:
-              "$ref": "#/spec/panels/defaultTimeSeriesChart"
-  duration: 1h
+                  plugin:
+                    kind: PrometheusTimeSeriesQuery
+                    spec:
+                      query: up
+      layouts:
+        - kind: Grid
+          spec:
+            display:
+              title: Row 1
+              collapse:
+                open: true
+            items:
+              - x: 0
+                y: 0
+                width: 2
+                height: 3
+                content:
+                  "$ref": "#/spec/panels/defaultTimeSeriesChart"
+      duration: 1h
   
 ```
 
@@ -233,7 +234,7 @@ kind: Namespace
 metadata:
   name: monitoring
 ---
-apiVersion: perses.dev/v1alpha1
+apiVersion: perses.dev/v1alpha2
 kind: Perses
 metadata:
   name: perses
@@ -255,7 +256,7 @@ spec:
 
 ```yaml
 # Create a Prometheus datasource
-apiVersion: perses.dev/v1alpha1
+apiVersion: perses.dev/v1alpha2
 kind: PersesDatasource
 metadata:
   name: prometheus-main
@@ -271,7 +272,7 @@ spec:
         directUrl: "https://prometheus.demo.prometheus.io"
 ---
 # Create a dashboard
-apiVersion: perses.dev/v1alpha1
+apiVersion: perses.dev/v1alpha2
 kind: PersesDashboard
 metadata:
   name: perses-dashboard-sample

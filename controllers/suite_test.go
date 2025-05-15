@@ -32,9 +32,10 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/perses/perses-operator/api/v1alpha1"
 	persesController "github.com/perses/perses-operator/controllers/perses"
 
-	"github.com/perses/perses-operator/api/v1alpha1"
+	"github.com/perses/perses-operator/api/v1alpha2"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -71,6 +72,9 @@ var _ = BeforeSuite(func() {
 	Expect(cfg).NotTo(BeNil())
 
 	err = v1alpha1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+
+	err = v1alpha2.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme

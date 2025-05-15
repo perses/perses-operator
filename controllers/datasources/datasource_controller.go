@@ -23,7 +23,7 @@ import (
 	"os"
 	"time"
 
-	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 	persescommon "github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
 	v1 "github.com/perses/perses/pkg/client/api/v1"
@@ -42,7 +42,7 @@ const secretNameSuffix = "-secret"
 var dlog = logger.WithField("module", "datasource_controller")
 
 func (r *PersesDatasourceReconciler) reconcileDatasourcesInAllInstances(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	datasource := &persesv1alpha1.PersesDatasource{}
+	datasource := &persesv1alpha2.PersesDatasource{}
 
 	if r, err := r.getLatestPersesDatasource(ctx, req, datasource); subreconciler.ShouldHaltOrRequeue(r, err) {
 		return r, err
@@ -53,7 +53,7 @@ func (r *PersesDatasourceReconciler) reconcileDatasourcesInAllInstances(ctx cont
 		return subreconciler.RequeueWithError(err)
 	}
 
-	persesInstances := &persesv1alpha1.PersesList{}
+	persesInstances := &persesv1alpha2.PersesList{}
 	opts := &client.ListOptions{
 		LabelSelector: labelSelector,
 	}
@@ -78,7 +78,7 @@ func (r *PersesDatasourceReconciler) reconcileDatasourcesInAllInstances(ctx cont
 	return subreconciler.ContinueReconciling()
 }
 
-func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, perses persesv1alpha1.Perses, datasource *persesv1alpha1.PersesDatasource) (*ctrl.Result, error) {
+func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, perses persesv1alpha2.Perses, datasource *persesv1alpha2.PersesDatasource) (*ctrl.Result, error) {
 	persesClient, err := r.ClientFactory.CreateClient(ctx, r.Client, perses)
 
 	if err != nil {
@@ -167,7 +167,7 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 
 // creates/updates a Perses Secret with configuration,
 // retrieving cert/key data from Secrets, ConfigMaps, or files specified in the PersesDatasource.
-func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, persesClient v1.ClientInterface, datasource *persesv1alpha1.PersesDatasource) (*ctrl.Result, error) {
+func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, persesClient v1.ClientInterface, datasource *persesv1alpha2.PersesDatasource) (*ctrl.Result, error) {
 	namespace := datasource.Namespace
 	datasourceName := datasource.Name
 	secretName := datasourceName + secretNameSuffix
@@ -189,7 +189,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 		basicAuthConfig := &secret.BasicAuth{}
 		basicAuthConfig.Username = basicAuth.Username
 
-		if basicAuth.Type == persesv1alpha1.SecretSourceTypeSecret || tls.UserCert.Type == persesv1alpha1.SecretSourceTypeConfigMap { //nolint: staticcheck
+		if basicAuth.Type == persesv1alpha2.SecretSourceTypeSecret || tls.UserCert.Type == persesv1alpha2.SecretSourceTypeConfigMap { //nolint: staticcheck
 			passwordData, err := persescommon.GetBasicAuthData(ctx, r.Client, namespace, datasourceName, basicAuth)
 
 			if err != nil {
@@ -202,7 +202,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 			}
 
 			basicAuthConfig.Password = passwordData
-		} else if basicAuth.Type == persesv1alpha1.SecretSourceTypeFile {
+		} else if basicAuth.Type == persesv1alpha2.SecretSourceTypeFile {
 			basicAuthConfig.PasswordFile = basicAuth.PasswordPath
 		}
 
@@ -221,7 +221,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 		}
 
 		oAuthConfig.TokenURL = oauth.TokenURL
-		if oauth.Type == persesv1alpha1.SecretSourceTypeSecret || oauth.Type == persesv1alpha1.SecretSourceTypeConfigMap { //nolint: staticcheck
+		if oauth.Type == persesv1alpha2.SecretSourceTypeSecret || oauth.Type == persesv1alpha2.SecretSourceTypeConfigMap { //nolint: staticcheck
 			clientIDData, clientSecretData, err := persescommon.GetOAuthData(ctx, r.Client, namespace, datasourceName, oauth)
 
 			if err != nil {
@@ -235,7 +235,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 
 			oAuthConfig.ClientID = clientIDData
 			oAuthConfig.ClientSecret = clientSecretData
-		} else if oauth.Type == persesv1alpha1.SecretSourceTypeFile {
+		} else if oauth.Type == persesv1alpha2.SecretSourceTypeFile {
 			// the clientID is a Hidden field in perses API,
 			// but doesn't expose it as a file field for it, so we need to read it and use the value
 			clientID, err := os.ReadFile(oauth.ClientIDPath)
@@ -255,7 +255,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 		}
 
 		if tls.CaCert != nil {
-			if tls.CaCert.Type == persesv1alpha1.SecretSourceTypeSecret || tls.CaCert.Type == persesv1alpha1.SecretSourceTypeConfigMap { //nolint: staticcheck
+			if tls.CaCert.Type == persesv1alpha2.SecretSourceTypeSecret || tls.CaCert.Type == persesv1alpha2.SecretSourceTypeConfigMap { //nolint: staticcheck
 				caData, _, err := persescommon.GetTLSCertData(ctx, r.Client, namespace, datasourceName, tls.CaCert)
 
 				if err != nil {
@@ -268,13 +268,13 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 				}
 
 				tlsConfig.CA = caData
-			} else if tls.CaCert.Type == persesv1alpha1.SecretSourceTypeFile {
+			} else if tls.CaCert.Type == persesv1alpha2.SecretSourceTypeFile {
 				tlsConfig.CAFile = tls.CaCert.CertPath
 			}
 		}
 
 		if tls.UserCert != nil {
-			if tls.UserCert.Type == persesv1alpha1.SecretSourceTypeSecret || tls.UserCert.Type == persesv1alpha1.SecretSourceTypeConfigMap { //nolint: staticcheck
+			if tls.UserCert.Type == persesv1alpha2.SecretSourceTypeSecret || tls.UserCert.Type == persesv1alpha2.SecretSourceTypeConfigMap { //nolint: staticcheck
 				certData, keyData, err := persescommon.GetTLSCertData(ctx, r.Client, namespace, datasourceName, tls.UserCert)
 
 				if err != nil {
@@ -288,7 +288,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 
 				tlsConfig.Cert = certData
 				tlsConfig.Key = keyData
-			} else if tls.UserCert.Type == persesv1alpha1.SecretSourceTypeFile {
+			} else if tls.UserCert.Type == persesv1alpha2.SecretSourceTypeFile {
 				tlsConfig.CertFile = tls.UserCert.CertPath
 
 				if len(tls.UserCert.PrivateKeyPath) > 0 {
@@ -332,7 +332,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 }
 
 func (r *PersesDatasourceReconciler) deleteDatasourceInAllInstances(ctx context.Context, datasourceNamespace string, datasourceName string) (*ctrl.Result, error) {
-	persesInstances := &persesv1alpha1.PersesList{}
+	persesInstances := &persesv1alpha2.PersesList{}
 	var opts []client.ListOption
 	err := r.List(ctx, persesInstances, opts...)
 	if err != nil {
@@ -354,7 +354,7 @@ func (r *PersesDatasourceReconciler) deleteDatasourceInAllInstances(ctx context.
 	return subreconciler.DoNotRequeue()
 }
 
-func (r *PersesDatasourceReconciler) deleteDatasource(ctx context.Context, perses persesv1alpha1.Perses, datasourceNamespace string, datasourceName string) (*ctrl.Result, error) {
+func (r *PersesDatasourceReconciler) deleteDatasource(ctx context.Context, perses persesv1alpha2.Perses, datasourceNamespace string, datasourceName string) (*ctrl.Result, error) {
 	persesClient, err := r.ClientFactory.CreateClient(ctx, r.Client, perses)
 
 	if err != nil {

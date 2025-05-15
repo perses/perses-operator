@@ -5,7 +5,7 @@ metadata:
     alm-examples: |-
       [
         {
-          "apiVersion": "perses.dev/v1alpha1",
+          "apiVersion": "perses.dev/v1alpha2",
           "kind": "Perses",
           "metadata": {
             "labels": {
@@ -44,7 +44,7 @@ metadata:
           }
         },
         {
-          "apiVersion": "perses.dev/v1alpha1",
+          "apiVersion": "perses.dev/v1alpha2",
           "kind": "PersesDashboard",
           "metadata": {
             "labels": {
@@ -949,7 +949,7 @@ metadata:
           }
         },
         {
-          "apiVersion": "perses.dev/v1alpha1",
+          "apiVersion": "perses.dev/v1alpha2",
           "kind": "PersesDatasource",
           "metadata": {
             "labels": {
@@ -998,6 +998,17 @@ spec:
       - displayName: Conditions
         path: conditions
       version: v1alpha1
+    - description: A Perses Dashboard
+      displayName: Perses Dashboard
+      kind: PersesDashboard
+      name: persesdashboards.perses.dev
+      specDescriptors:
+      - displayName: Spec
+        path: spec
+      statusDescriptors:
+      - displayName: Conditions
+        path: conditions
+      version: v1alpha2
     - description: A Perses Datasource
       displayName: Perses Datasource
       kind: PersesDatasource
@@ -1009,6 +1020,67 @@ spec:
       - displayName: Conditions
         path: conditions
       version: v1alpha1
+    - description: A Perses Datasource
+      displayName: Perses Datasource
+      kind: PersesDatasource
+      name: persesdatasources.perses.dev
+      specDescriptors:
+      - displayName: Spec
+        path: spec
+      statusDescriptors:
+      - displayName: Conditions
+        path: conditions
+      version: v1alpha2
+    - description: Perses is the Schema for the perses API
+      displayName: Perses
+      kind: Perses
+      name: perses.perses.dev
+      specDescriptors:
+      - displayName: Affinity
+        path: affinity
+      - description: Args extra arguments to pass to perses
+        displayName: Args
+        path: args
+      - description: Perses client configuration
+        displayName: Client
+        path: client
+      - displayName: Config
+        path: config
+      - displayName: Container Port
+        path: containerPort
+      - description: Image specifies the container image that should be used for the
+          Perses deployment.
+        displayName: Image
+        path: image
+      - displayName: Liveness Probe
+        path: livenessProbe
+      - displayName: Metadata
+        path: metadata
+      - displayName: Node Selector
+        path: nodeSelector
+      - displayName: Readiness Probe
+        path: readinessProbe
+      - displayName: Replicas
+        path: replicas
+      - description: service specifies the service configuration for the perses instance
+        displayName: Service
+        path: service
+      - displayName: Annotations
+        path: service.annotations
+      - displayName: Name
+        path: service.name
+      - description: Storage configuration used by the StatefulSet
+        displayName: Storage
+        path: storage
+      - description: tls specifies the tls configuration for the perses instance
+        displayName: TLS
+        path: tls
+      - displayName: Tolerations
+        path: tolerations
+      statusDescriptors:
+      - displayName: Conditions
+        path: conditions
+      version: v1alpha2
     - description: Perses is the Schema for the perses API
       displayName: Perses
       kind: Perses
