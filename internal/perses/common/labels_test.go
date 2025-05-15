@@ -36,61 +36,26 @@ func TestLabels(t *testing.T) {
 var _ = Describe("LabelsForPerses", func() {
 	DescribeTable("when creating labels for Perses components",
 		func(persesImageFromFlag string, componentName string, perses *v1alpha1.Perses, verifyFunc func(labels map[string]string)) {
-			labels, err := LabelsForPerses(persesImageFromFlag, componentName, perses)
+			labels, err := LabelsForPerses(componentName, perses)
 			Expect(err).NotTo(HaveOccurred())
 			verifyFunc(labels)
 		},
-		Entry("Label from image tag generated with SHA is trimmed to 63 characters",
+		Entry("Long name is trimmed to 63 characters",
 			"",
-			"perses-server",
+			strings.Repeat("a", 100),
 			&v1alpha1.Perses{
 				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-perses",
+					Name: strings.Repeat("a", 100),
 				},
 				Spec: v1alpha1.PersesSpec{
-					Image: "perses/perses:a1fcbd459a52ac54b731edc4ed54b3daa28fb6c94563ca0e41bc01891db159cb",
+					Image: "perses/perses:latest",
 				},
 			},
 			func(labels map[string]string) {
-				versionLabel, exists := labels["app.kubernetes.io/version"]
+				nameLabel, exists := labels["app.kubernetes.io/name"]
 				Expect(exists).To(BeTrue())
-				Expect(versionLabel).To(HaveLen(63))
-				Expect(versionLabel).To(Equal("a1fcbd459a52ac54b731edc4ed54b3daa28fb6c94563ca0e41bc01891db159c"))
-			},
-		),
-		Entry("Long image tag is trimmed to 63 characters",
-			"",
-			"perses-server",
-			&v1alpha1.Perses{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-perses",
-				},
-				Spec: v1alpha1.PersesSpec{
-					Image: "perses/perses:" + strings.Repeat("a", 100),
-				},
-			},
-			func(labels map[string]string) {
-				versionLabel, exists := labels["app.kubernetes.io/version"]
-				Expect(exists).To(BeTrue())
-				Expect(versionLabel).To(HaveLen(63))
-				Expect(versionLabel).To(Equal(strings.Repeat("a", 63)))
-			},
-		),
-		Entry("Sanitizes image tags with special characters",
-			"",
-			"perses-server",
-			&v1alpha1.Perses{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-perses",
-				},
-				Spec: v1alpha1.PersesSpec{
-					Image: "perses/perses:v1.2.3/beta with:special/chars",
-				},
-			},
-			func(labels map[string]string) {
-				versionLabel, exists := labels["app.kubernetes.io/version"]
-				Expect(exists).To(BeTrue())
-				Expect(versionLabel).To(Equal("v1.2.3-beta-with-special-chars"))
+				Expect(nameLabel).To(HaveLen(63))
+				Expect(nameLabel).To(Equal(strings.Repeat("a", 63)))
 			},
 		),
 		Entry("Custom labels from metadata are preserved",
