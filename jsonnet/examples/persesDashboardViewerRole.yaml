@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/instance: persesdashboard-viewer-role
     app.kubernetes.io/name: perses-operator
     app.kubernetes.io/part-of: perses-operator
-    app.kubernetes.io/version: 0.1.10
+    app.kubernetes.io/version: v0.1.10
   name: persesdashboard-viewer-role
 rules:
 - apiGroups:

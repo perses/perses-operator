@@ -145,7 +145,7 @@ manifests: controller-gen gojsontoyaml ## Generate WebhookConfiguration, Cluster
 	    out_file="$$(pwd)/jsonnet/generated/$${filename}.json"; \
 	    $(GOJSONTOYAML_BINARY) -yamltojson < "$$file" | jq > "$$out_file"; \
 	  done' sh {} +
-	find config/manager -name '*.yaml' ! -name 'kustomization.yaml' -exec sh -c '\
+	find config/manager -name '*.yaml' ! -name 'kustomization.yaml' ! -name 'namespace.yaml' -exec sh -c '\
 	  for file do \
 	    filename=$$(basename "$$file" .yaml); \
 	    out_file="$$(pwd)/jsonnet/generated/$${filename}.json"; \

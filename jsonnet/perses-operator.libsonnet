@@ -1,11 +1,9 @@
-local v = importstr '../VERSION';
-
 local defaults = {
   local defaults = self,
   name: 'perses-operator',
   namespace: 'perses-dev',
-  version: std.strReplace(v, '\n', ''),
-  image: 'persesdev/perses-operator:v' + defaults.version,
+  version: error 'must provide version',
+  image: 'persesdev/perses-operator:' + defaults.version,
   resources: {
     limits: { cpu: '500m', memory: '128Mi' },
     requests: { cpu: '10m', memory: '64Mi' },
