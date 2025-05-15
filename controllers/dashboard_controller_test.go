@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 	dashboardcontroller "github.com/perses/perses-operator/controllers/dashboards"
 	internal "github.com/perses/perses-operator/internal/perses"
 	"github.com/perses/perses-operator/internal/perses/common"
@@ -93,10 +94,10 @@ var _ = Describe("Dashboard controller", func() {
 
 		It("should successfully reconcile a custom resource dashboard for Perses", func() {
 			By("Creating the custom resource for the Kind Perses")
-			perses := &persesv1alpha1.Perses{}
+			perses := &persesv1alpha2.Perses{}
 			err := k8sClient.Get(ctx, persesNamespaceName, perses)
 			if err != nil && errors.IsNotFound(err) {
-				perses := &persesv1alpha1.Perses{
+				perses := &persesv1alpha2.Perses{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      PersesName,
 						Namespace: PersesNamespace,
@@ -104,7 +105,202 @@ var _ = Describe("Dashboard controller", func() {
 							"instance": "perses-1",
 						},
 					},
-					Spec: persesv1alpha1.PersesSpec{
+					Spec: persesv1alpha2.PersesSpec{
+						ContainerPort: 8080,
+					},
+				}
+
+				err = k8sClient.Create(ctx, perses)
+				Expect(err).To(Not(HaveOccurred()))
+			}
+
+			By("Creating the custom resource for the Kind PersesDashboard")
+			dashboard := &persesv1alpha2.PersesDashboard{}
+			err = k8sClient.Get(ctx, dashboardNamespaceName, dashboard)
+			if err != nil && errors.IsNotFound(err) {
+				perses := &persesv1alpha2.PersesDashboard{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      DashboardName,
+						Namespace: PersesNamespace,
+					},
+					Spec: persesv1alpha2.PersesDashboardSpec{
+						InstanceSelector: &metav1.LabelSelector{
+							MatchLabels: map[string]string{},
+						},
+						Config: persesv1alpha2.Dashboard{
+							DashboardSpec: newDashboard.Spec,
+						},
+					},
+				}
+
+				err = k8sClient.Create(ctx, perses)
+				Expect(err).To(Not(HaveOccurred()))
+			}
+
+			By("Checking if the custom resource was successfully created")
+			Eventually(func() error {
+				found := &persesv1alpha2.PersesDashboard{}
+				return k8sClient.Get(ctx, dashboardNamespaceName, found)
+			}, time.Minute, time.Second).Should(Succeed())
+
+			// Mock the Perses API to assert that Is creating a new dashboard when reconciling
+			mockPersesClient := new(internal.MockClient)
+			mockDashboard := new(internal.MockDashboard)
+
+			mockPersesClient.On("Dashboard", PersesNamespace).Return(mockDashboard)
+			getDashboard := mockDashboard.On("Get", DashboardName).Return(&persesv1.Dashboard{}, perseshttp.RequestNotFoundError)
+			mockDashboard.On("Create", newDashboard).Return(&persesv1.Dashboard{}, nil)
+
+			By("Reconciling the custom resource created")
+			dashboardReconciler := &dashboardcontroller.PersesDashboardReconciler{
+				Client:        k8sClient,
+				Scheme:        k8sClient.Scheme(),
+				ClientFactory: common.NewWithClient(mockPersesClient),
+			}
+
+			_, err = dashboardReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: dashboardNamespaceName,
+			})
+
+			Expect(err).To(Not(HaveOccurred()))
+
+			// The dashboard was created in the Perses API
+			getDashboard.Unset()
+			mockDashboard.On("Get", DashboardName).Return(&persesv1.Dashboard{}, nil)
+
+			By("Checking if the Perses API was called to create a dashboard")
+			Eventually(func() error {
+				if !mockDashboard.AssertExpectations(GinkgoT()) {
+					return fmt.Errorf("The Perses API was not called to create a dashboard")
+				}
+				return nil
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Checking the latest Status Condition added to the Perses dashboard instance")
+			Eventually(func() error {
+				dashboardWithStatus := &persesv1alpha2.PersesDashboard{}
+				err = k8sClient.Get(ctx, dashboardNamespaceName, dashboardWithStatus)
+
+				if len(dashboardWithStatus.Status.Conditions) == 0 {
+					return fmt.Errorf("No status condition was added to the perses dashboard instance")
+				} else {
+					latestStatusCondition := dashboardWithStatus.Status.Conditions[len(dashboardWithStatus.Status.Conditions)-1]
+					expectedLatestStatusCondition := metav1.Condition{Type: common.TypeAvailablePerses,
+						Status: metav1.ConditionTrue, Reason: "Reconciling",
+						Message: fmt.Sprintf("Dashboard (%s) created successfully", dashboardWithStatus.Name)}
+					if latestStatusCondition.Message != expectedLatestStatusCondition.Message && latestStatusCondition.Reason != expectedLatestStatusCondition.Reason && latestStatusCondition.Status != expectedLatestStatusCondition.Status && latestStatusCondition.Type != expectedLatestStatusCondition.Type {
+						return fmt.Errorf("The latest status condition added to the perses dashboard instance is not as expected, got: %v", expectedLatestStatusCondition)
+					}
+				}
+
+				return err
+			}, time.Minute, time.Second).Should(Succeed())
+
+			mockDashboard.On("Delete", DashboardName).Return(nil)
+
+			dashboardToDelete := &persesv1alpha2.PersesDashboard{}
+			err = k8sClient.Get(ctx, dashboardNamespaceName, dashboardToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Deleting the custom resource")
+			err = k8sClient.Delete(ctx, dashboardToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+
+			_, err = dashboardReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: dashboardNamespaceName,
+			})
+
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Checking if the Perses API was called to delete a dashboard")
+			Eventually(func() error {
+				if !mockDashboard.AssertExpectations(GinkgoT()) {
+					return fmt.Errorf("The Perses API was not called to create a dashboard")
+				}
+				return nil
+			}, time.Minute, time.Second).Should(Succeed())
+		})
+	})
+	Context("Dashboard conversion controller test", func() {
+		const PersesName = "perses-for-conversion-dashboard"
+		const PersesNamespace = "perses-conversion-dashboard-test"
+		const DashboardName = "my-custom-conversion-dashboard"
+
+		ctx := context.Background()
+
+		namespace := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      PersesNamespace,
+				Namespace: PersesNamespace,
+			},
+		}
+
+		persesNamespaceName := types.NamespacedName{Name: PersesName, Namespace: PersesNamespace}
+		dashboardNamespaceName := types.NamespacedName{Name: DashboardName, Namespace: PersesNamespace}
+
+		persesImage := "perses-dev.io/perses:test"
+
+		newDashboard := &persesv1.Dashboard{
+			Kind: "Dashboard",
+			Metadata: persesv1.ProjectMetadata{
+				Metadata: persesv1.Metadata{
+					Name: DashboardName,
+				},
+			},
+			Spec: persesv1.DashboardSpec{
+				Display: &persescommon.Display{
+					Name: DashboardName,
+				},
+				Layouts: []persesdashboard.Layout{},
+				Panels: map[string]*persesv1.Panel{
+					"panel1": {
+						Kind: "Panel",
+						Spec: persesv1.PanelSpec{
+							Display: persesv1.PanelDisplay{
+								Name: "test-panel",
+							},
+							Plugin: persescommon.Plugin{
+								Kind: "PrometheusPlugin",
+								Spec: map[string]interface{}{},
+							},
+						},
+					},
+				},
+			},
+		}
+
+		BeforeEach(func() {
+			By("Creating the Namespace to perform the tests")
+			err := k8sClient.Create(ctx, namespace)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Setting the Image ENV VAR which stores the Operand image")
+			err = os.Setenv("PERSES_IMAGE", persesImage)
+			Expect(err).To(Not(HaveOccurred()))
+		})
+
+		AfterEach(func() {
+			By("Deleting the Namespace to perform the tests")
+			_ = k8sClient.Delete(ctx, namespace)
+
+			By("Removing the Image ENV VAR which stores the Operand image")
+			_ = os.Unsetenv("PERSES_IMAGE")
+		})
+
+		It("should successfully reconcile a custom resource dashboard for Perses", func() {
+			By("Creating the custom resource for the Kind Perses")
+			perses := &persesv1alpha2.Perses{}
+			err := k8sClient.Get(ctx, persesNamespaceName, perses)
+			if err != nil && errors.IsNotFound(err) {
+				perses := &persesv1alpha2.Perses{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      PersesName,
+						Namespace: PersesNamespace,
+						Labels: map[string]string{
+							"instance": "perses-1",
+						},
+					},
+					Spec: persesv1alpha2.PersesSpec{
 						ContainerPort: 8080,
 					},
 				}
@@ -117,16 +313,16 @@ var _ = Describe("Dashboard controller", func() {
 			dashboard := &persesv1alpha1.PersesDashboard{}
 			err = k8sClient.Get(ctx, dashboardNamespaceName, dashboard)
 			if err != nil && errors.IsNotFound(err) {
-				perses := &persesv1alpha1.PersesDashboard{
+				perses := &persesv1alpha2.PersesDashboard{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      DashboardName,
 						Namespace: PersesNamespace,
 					},
-					Spec: persesv1alpha1.PersesDashboardSpec{
+					Spec: persesv1alpha2.PersesDashboardSpec{
 						InstanceSelector: &metav1.LabelSelector{
 							MatchLabels: map[string]string{},
 						},
-						Config: persesv1alpha1.Dashboard{
+						Config: persesv1alpha2.Dashboard{
 							DashboardSpec: newDashboard.Spec,
 						},
 					},
@@ -136,10 +332,16 @@ var _ = Describe("Dashboard controller", func() {
 				Expect(err).To(Not(HaveOccurred()))
 			}
 
-			By("Checking if the custom resource was successfully created")
+			By("Checking if the custom resource was successfully converted")
 			Eventually(func() error {
-				found := &persesv1alpha1.PersesDashboard{}
-				return k8sClient.Get(ctx, dashboardNamespaceName, found)
+				found := &persesv1alpha2.PersesDashboard{}
+				if err := k8sClient.Get(ctx, dashboardNamespaceName, found); err != nil {
+					return err
+				}
+				if found.Spec.Config.DashboardSpec.Panels == nil {
+					return fmt.Errorf("The dashboard was not converted")
+				}
+				return nil
 			}, time.Minute, time.Second).Should(Succeed())
 
 			// Mock the Perses API to assert that Is creating a new dashboard when reconciling

@@ -3,4 +3,7 @@ resources:
   - perses.dev_v1alpha1_perses.yaml
   - perses.dev_v1alpha1_persesdashboard.yaml
   - perses.dev_v1alpha1_persesdatasource.yaml
+  - perses.dev_v1alpha2_perses.yaml
+  - perses.dev_v1alpha2_persesdashboard.yaml
+  - perses.dev_v1alpha2_persesdatasource.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

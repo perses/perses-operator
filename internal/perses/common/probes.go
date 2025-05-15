@@ -1,12 +1,12 @@
 package common
 
 import (
-	"github.com/perses/perses-operator/api/v1alpha1"
+	"github.com/perses/perses-operator/api/v1alpha2"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func GetProbes(perses *v1alpha1.Perses) (*v1.Probe, *v1.Probe) {
+func GetProbes(perses *v1alpha2.Perses) (*v1.Probe, *v1.Probe) {
 	var livenessProbe, readinessProbe *v1.Probe
 
 	if perses.Spec.LivenessProbe != nil {

@@ -16,7 +16,9 @@ limitations under the License.
 
 package common
 
-import "github.com/perses/perses-operator/api/v1alpha1"
+import (
+	"github.com/perses/perses-operator/api/v1alpha2"
+)
 
 const (
 	PersesFinalizer     = "perses.dev/finalizer"
@@ -45,14 +47,14 @@ const (
 )
 
 // isTLSEnabled checks if TLS is enabled in the Perses configuration
-func isTLSEnabled(perses *v1alpha1.Perses) bool {
+func isTLSEnabled(perses *v1alpha2.Perses) bool {
 	return perses != nil &&
 		perses.Spec.TLS != nil &&
 		perses.Spec.TLS.Enable
 }
 
 // hasTLSConfiguration checks if valid TLS configuration is present
-func hasTLSConfiguration(perses *v1alpha1.Perses) bool {
+func hasTLSConfiguration(perses *v1alpha2.Perses) bool {
 	return isTLSEnabled(perses) &&
 		perses.Spec.TLS.UserCert != nil &&
 		perses.Spec.TLS.UserCert.CertPath != "" &&
@@ -60,7 +62,7 @@ func hasTLSConfiguration(perses *v1alpha1.Perses) bool {
 }
 
 // isClientTLSEnabled checks if TLS is enabled in the Perses client configuration
-func isClientTLSEnabled(perses *v1alpha1.Perses) bool {
+func isClientTLSEnabled(perses *v1alpha2.Perses) bool {
 	return perses != nil &&
 		perses.Spec.Client != nil &&
 		perses.Spec.Client.TLS != nil &&
