@@ -1,18 +1,19 @@
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: RoleBinding
 metadata:
   labels:
-    app.kubernetes.io/component: controller
+    app.kubernetes.io/component: rbac
     app.kubernetes.io/created-by: perses-operator
+    app.kubernetes.io/instance: leader-election-rolebinding
     app.kubernetes.io/name: perses-operator
     app.kubernetes.io/part-of: perses-operator
     app.kubernetes.io/version: 0.1.10
-  name: perses-operator
+  name: perses-operator-leader-election-rolebinding
   namespace: perses-dev
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: perses-operator
+  kind: Role
+  name: perses-operator-leader-election-role
 subjects:
 - kind: ServiceAccount
   name: perses-operator

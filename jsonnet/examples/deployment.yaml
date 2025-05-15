@@ -45,7 +45,7 @@ spec:
       containers:
       - args:
         - --leader-elect
-        image: persesdev/perses-operator:v1.0.0
+        image: persesdev/perses-operator:v0.1.10
         imagePullPolicy: Always
         livenessProbe:
           httpGet:

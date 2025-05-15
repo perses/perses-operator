@@ -131,32 +131,33 @@ checkunused:
 ##@ Development
 
 .PHONY: manifests
-manifests: controller-gen gojsontoyaml ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: controller-gen gojsontoyaml ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects. Also generates json, for jsonnet lib.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd:ignoreUnexportedFields=true webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 	find config/crd/bases -name '*.yaml' ! -name 'kustomization.yaml' -exec sh -c '\
 	  for file do \
 	    filename=$$(basename "$$file" .yaml); \
-	    out_file="$$(pwd)/jsonnet/$${filename}-crd.json"; \
-	    gojsontoyaml -yamltojson < "$$file" | jq > "$$out_file"; \
+	    out_file="$$(pwd)/jsonnet/generated/$${filename}-crd.json"; \
+	    $(GOJSONTOYAML_BINARY) -yamltojson < "$$file" | jq > "$$out_file"; \
 	  done' sh {} +
 	find config/rbac -name '*.yaml' ! -name 'kustomization.yaml' -exec sh -c '\
 	  for file do \
 	    filename=$$(basename "$$file" .yaml); \
-	    out_file="$$(pwd)/jsonnet/$${filename}.json"; \
-	    gojsontoyaml -yamltojson < "$$file" | jq > "$$out_file"; \
+	    out_file="$$(pwd)/jsonnet/generated/$${filename}.json"; \
+	    $(GOJSONTOYAML_BINARY) -yamltojson < "$$file" | jq > "$$out_file"; \
 	  done' sh {} +
 	find config/manager -name '*.yaml' ! -name 'kustomization.yaml' -exec sh -c '\
 	  for file do \
 	    filename=$$(basename "$$file" .yaml); \
-	    out_file="$$(pwd)/jsonnet/$${filename}.json"; \
-	    gojsontoyaml -yamltojson < "$$file" | jq > "$$out_file"; \
+	    out_file="$$(pwd)/jsonnet/generated/$${filename}.json"; \
+	    $(GOJSONTOYAML_BINARY) -yamltojson < "$$file" | jq > "$$out_file"; \
 	  done' sh {} +
 	find config/prometheus -name '*.yaml' ! -name 'kustomization.yaml' -exec sh -c '\
 	  for file do \
 	    filename=$$(basename "$$file" .yaml); \
-	    out_file="$$(pwd)/jsonnet/$${filename}.json"; \
-	    gojsontoyaml -yamltojson < "$$file" | jq > "$$out_file"; \
+	    out_file="$$(pwd)/jsonnet/generated/$${filename}.json"; \
+	    $(GOJSONTOYAML_BINARY) -yamltojson < "$$file" | jq > "$$out_file"; \
 	  done' sh {} +
+	$(MAKE) jsonnet-resources
 
 .PHONY: jsonnet-resources
 jsonnet-resources: jsonnet gojsontoyaml
@@ -165,12 +166,19 @@ jsonnet-resources: jsonnet gojsontoyaml
 	$(JSONNET_BINARY) -m jsonnet/examples jsonnet/example.jsonnet | $(XARGS) -I{} sh -c 'cat {} | $(GOJSONTOYAML_BINARY) > {}.yaml' -- {}
 	find jsonnet/examples -type f -not -name "*.*" -delete
 
+JSONNET_SRC = $(shell find . -type f -not -path './*vendor_jsonnet/*' \( -name '*.libsonnet' -o -name '*.jsonnet' \))
+
+.PHONY: jsonnet-format
+jsonnet-format: $(JSONNET_SRC) jsonnetfmt
+	@echo ">>>>> Running format"
+	$(JSONNETFMT_BINARY) -n 2 --max-blank-lines 2 --string-style s --comment-style s -i $(JSONNET_SRC)
+
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
 
 .PHONY: fmt
-fmt: ## Run go fmt against code.
+fmt: jsonnet-format ## Run go fmt against code.
 	go fmt ./...
 
 .PHONY: vet
@@ -181,8 +189,13 @@ vet: ## Run go vet against code.
 test: manifests generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)"  go test $(shell go list ./...) -v -ginkgo.v -coverprofile cover.out
 
+.PHONY: lint-jsonnet
+lint-jsonnet: $(JSONNETLINT_BINARY)
+	@echo ">>>>> Running linter"
+	echo ${JSONNET_SRC} | $(XARGS) -n 1 -- $(JSONNETLINT_BINARY)
+
 .PHONY: lint
-lint: ## Run linting.
+lint: lint-jsonnet ## Run linting.
 	golangci-lint run
 
 ##@ Build
@@ -267,12 +280,16 @@ CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 GOJSONTOYAML_BINARY ?= $(LOCALBIN)/gojsontoyaml
 ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
 JSONNET_BINARY ?= $(LOCALBIN)/jsonnet
+JSONNETFMT_BINARY ?= $(LOCALBIN)/jsonnetfmt
+JSONNETLINT_BINARY ?= $(LOCALBIN)/jsonnet-lint
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
 CONTROLLER_TOOLS_VERSION ?= v0.16.0
 GOJSONTOYAML_VERSION ?= v0.1.0
-JSONNET_VERSION ?= v0.19.1
+JSONNET_VERSION ?= v0.21.0
+JSONNETFMT_VERSION ?= v0.21.0
+JSONNETLINT_VERSION ?= v0.21.0
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
@@ -300,6 +317,18 @@ jsonnet: $(JSONNET_BINARY) ## Download jsonnet locally if necessary. If wrong ve
 $(JSONNET_BINARY): $(LOCALBIN)
 	test -s $(LOCALBIN)/jsonnet && $(LOCALBIN)/jsonnet --version | grep -q $(JSONNET_VERSION) || \
 	GOBIN=$(LOCALBIN) go install github.com/google/go-jsonnet/cmd/jsonnet@$(JSONNET_VERSION)
+
+.PHONY: jsonnetfmt
+jsonnetfmt: $(JSONNETFMT_BINARY) ## Download jsonnetfmt locally if necessary. If wrong version is installed, it will be overwritten.
+$(JSONNETFMT_BINARY): $(LOCALBIN)
+	test -s $(LOCALBIN)/jsonnetfmt && $(LOCALBIN)/jsonnetfmt --version | grep -q $(JSONNETFMT_VERSION) || \
+	GOBIN=$(LOCALBIN) go install github.com/google/go-jsonnet/cmd/jsonnetfmt@$(JSONNETFMT_VERSION)
+
+.PHONY: jsonnet-lint
+jsonnet-lint: $(JSONNETLINT_BINARY) ## Download jsonnetlint locally if necessary. If wrong version is installed, it will be overwritten.
+$(JSONNETLINT_BINARY): $(LOCALBIN)
+	test -s $(LOCALBIN)/jsonnet-lint && $(LOCALBIN)/jsonnet-lint --version | grep -q $(JSONNETLINT_VERSION) || \
+	GOBIN=$(LOCALBIN) go install github.com/google/go-jsonnet/cmd/jsonnet-lint@$(JSONNETLINT_VERSION)
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
