@@ -19,6 +19,7 @@ package perses
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	logger "github.com/sirupsen/logrus"
 	corev1 "k8s.io/api/core/v1"
@@ -31,9 +32,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"maps"
-
-	"github.com/perses/perses-operator/api/v1alpha1"
+	"github.com/perses/perses-operator/api/v1alpha2"
 	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
 )
@@ -41,7 +40,7 @@ import (
 var slog = logger.WithField("module", "service_controller")
 
 func (r *PersesReconciler) reconcileService(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	perses := &v1alpha1.Perses{}
+	perses := &v1alpha2.Perses{}
 
 	if result, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(result, err) {
 		return result, err
@@ -103,7 +102,7 @@ func (r *PersesReconciler) reconcileService(ctx context.Context, req ctrl.Reques
 }
 
 func (r *PersesReconciler) createPersesService(
-	perses *v1alpha1.Perses) (*corev1.Service, error) {
+	perses *v1alpha2.Perses) (*corev1.Service, error) {
 	ls, err := common.LabelsForPerses(r.Config.PersesImage, perses.Name, perses)
 
 	if err != nil {

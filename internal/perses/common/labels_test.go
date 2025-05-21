@@ -20,8 +20,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/perses/perses-operator/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/perses/perses-operator/api/v1alpha2"
 
 	. "github.com/onsi/ginkgo/v2"
 
@@ -35,7 +36,7 @@ func TestLabels(t *testing.T) {
 
 var _ = Describe("LabelsForPerses", func() {
 	DescribeTable("when creating labels for Perses components",
-		func(persesImageFromFlag string, componentName string, perses *v1alpha1.Perses, verifyFunc func(labels map[string]string)) {
+		func(persesImageFromFlag string, componentName string, perses *v1alpha2.Perses, verifyFunc func(labels map[string]string)) {
 			labels, err := LabelsForPerses(persesImageFromFlag, componentName, perses)
 			Expect(err).NotTo(HaveOccurred())
 			verifyFunc(labels)
@@ -43,11 +44,11 @@ var _ = Describe("LabelsForPerses", func() {
 		Entry("Label from image tag generated with SHA is trimmed to 63 characters",
 			"",
 			"perses-server",
-			&v1alpha1.Perses{
+			&v1alpha2.Perses{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-perses",
 				},
-				Spec: v1alpha1.PersesSpec{
+				Spec: v1alpha2.PersesSpec{
 					Image: "perses/perses:a1fcbd459a52ac54b731edc4ed54b3daa28fb6c94563ca0e41bc01891db159cb",
 				},
 			},
@@ -61,11 +62,11 @@ var _ = Describe("LabelsForPerses", func() {
 		Entry("Long image tag is trimmed to 63 characters",
 			"",
 			"perses-server",
-			&v1alpha1.Perses{
+			&v1alpha2.Perses{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-perses",
 				},
-				Spec: v1alpha1.PersesSpec{
+				Spec: v1alpha2.PersesSpec{
 					Image: "perses/perses:" + strings.Repeat("a", 100),
 				},
 			},
@@ -79,11 +80,11 @@ var _ = Describe("LabelsForPerses", func() {
 		Entry("Sanitizes image tags with special characters",
 			"",
 			"perses-server",
-			&v1alpha1.Perses{
+			&v1alpha2.Perses{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-perses",
 				},
-				Spec: v1alpha1.PersesSpec{
+				Spec: v1alpha2.PersesSpec{
 					Image: "perses/perses:v1.2.3/beta with:special/chars",
 				},
 			},
@@ -96,13 +97,13 @@ var _ = Describe("LabelsForPerses", func() {
 		Entry("Custom labels from metadata are preserved",
 			"",
 			"perses-server",
-			&v1alpha1.Perses{
+			&v1alpha2.Perses{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-perses",
 				},
-				Spec: v1alpha1.PersesSpec{
+				Spec: v1alpha2.PersesSpec{
 					Image: "perses/perses:latest",
-					Metadata: &v1alpha1.Metadata{
+					Metadata: &v1alpha2.Metadata{
 						Labels: map[string]string{
 							"custom-label": "custom-value",
 						},

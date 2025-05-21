@@ -32,7 +32,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/perses/perses-operator/api/v1alpha1"
+	"github.com/perses/perses-operator/api/v1alpha2"
 	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
 )
@@ -40,7 +40,7 @@ import (
 var dlog = logger.WithField("module", "deployment_controller")
 
 func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	perses := &v1alpha1.Perses{}
+	perses := &v1alpha2.Perses{}
 
 	if result, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(result, err) {
 		return result, err
@@ -117,7 +117,7 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 }
 
 func (r *PersesReconciler) createPersesDeployment(
-	perses *v1alpha1.Perses) (*appsv1.Deployment, error) {
+	perses *v1alpha2.Perses) (*appsv1.Deployment, error) {
 
 	ls, err := common.LabelsForPerses(r.Config.PersesImage, perses.Name, perses)
 	if err != nil {
