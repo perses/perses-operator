@@ -119,7 +119,7 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 func (r *PersesReconciler) createPersesDeployment(
 	perses *v1alpha2.Perses) (*appsv1.Deployment, error) {
 
-	ls, err := common.LabelsForPerses(r.Config.PersesImage, perses.Name, perses)
+	ls, err := common.LabelsForPerses(perses.Name, perses)
 	if err != nil {
 		return nil, err
 	}
