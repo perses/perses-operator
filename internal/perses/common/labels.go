@@ -51,27 +51,12 @@ func sanitizeLabel(label string) string {
 	return sanitized
 }
 
-func LabelsForPerses(persesImageFromFlags string, name string, perses *v1alpha2.Perses) (map[string]string, error) {
+func LabelsForPerses(name string, perses *v1alpha2.Perses) (map[string]string, error) {
 	instanceName := perses.Name
-	image, err := ImageForPerses(perses, persesImageFromFlags)
-
-	if err != nil {
-		return nil, fmt.Errorf("unable to get the image for perses: %s", err)
-	}
-
-	imageTag := "latest"
-
-	if strings.Contains(image, ":") {
-		parts := strings.SplitN(image, ":", 2)
-		if len(parts) > 1 {
-			imageTag = parts[1]
-		}
-	}
 
 	persesLabels := map[string]string{
-		"app.kubernetes.io/name":       name,
-		"app.kubernetes.io/instance":   instanceName,
-		"app.kubernetes.io/version":    sanitizeLabel(imageTag),
+		"app.kubernetes.io/name":       sanitizeLabel(name),
+		"app.kubernetes.io/instance":   sanitizeLabel(instanceName),
 		"app.kubernetes.io/part-of":    "perses-operator",
 		"app.kubernetes.io/created-by": "controller-manager",
 		"app.kubernetes.io/managed-by": "perses-operator",

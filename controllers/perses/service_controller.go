@@ -103,7 +103,7 @@ func (r *PersesReconciler) reconcileService(ctx context.Context, req ctrl.Reques
 
 func (r *PersesReconciler) createPersesService(
 	perses *v1alpha2.Perses) (*corev1.Service, error) {
-	ls, err := common.LabelsForPerses(r.Config.PersesImage, perses.Name, perses)
+	ls, err := common.LabelsForPerses(perses.Name, perses)
 
 	if err != nil {
 		return nil, err

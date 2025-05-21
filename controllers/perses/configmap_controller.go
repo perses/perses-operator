@@ -103,7 +103,7 @@ func (r *PersesReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Requ
 
 func (r *PersesReconciler) createPersesConfigMap(perses *v1alpha2.Perses) (*corev1.ConfigMap, error) {
 	configName := common.GetConfigName(perses.Name)
-	ls, err := common.LabelsForPerses(r.Config.PersesImage, configName, perses)
+	ls, err := common.LabelsForPerses(configName, perses)
 
 	if err != nil {
 		return nil, err
