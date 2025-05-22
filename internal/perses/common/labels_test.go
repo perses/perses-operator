@@ -37,8 +37,7 @@ func TestLabels(t *testing.T) {
 var _ = Describe("LabelsForPerses", func() {
 	DescribeTable("when creating labels for Perses components",
 		func(persesImageFromFlag string, componentName string, perses *v1alpha2.Perses, verifyFunc func(labels map[string]string)) {
-			labels, err := LabelsForPerses(componentName, perses)
-			Expect(err).NotTo(HaveOccurred())
+			labels := LabelsForPerses(componentName, perses)
 			verifyFunc(labels)
 		},
 		Entry("Long name is trimmed to 63 characters",

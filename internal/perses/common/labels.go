@@ -51,7 +51,7 @@ func sanitizeLabel(label string) string {
 	return sanitized
 }
 
-func LabelsForPerses(name string, perses *v1alpha2.Perses) (map[string]string, error) {
+func LabelsForPerses(name string, perses *v1alpha2.Perses) map[string]string {
 	instanceName := perses.Name
 
 	persesLabels := map[string]string{
@@ -71,7 +71,7 @@ func LabelsForPerses(name string, perses *v1alpha2.Perses) (map[string]string, e
 		}
 	}
 
-	return persesLabels, nil
+	return persesLabels
 
 }
 
