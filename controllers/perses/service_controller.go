@@ -91,7 +91,7 @@ func (r *PersesReconciler) reconcileService(ctx context.Context, req ctrl.Reques
 		return subreconciler.RequeueWithError(err)
 	}
 
-	if !equality.Semantic.DeepEqual(found, svc) {
+	if serviceNeedsUpdate(found, svc, perses.Name, perses) {
 		if err = r.Update(ctx, svc); err != nil {
 			slog.Error(err, "Failed to update Service")
 			return subreconciler.RequeueWithError(err)
@@ -99,6 +99,37 @@ func (r *PersesReconciler) reconcileService(ctx context.Context, req ctrl.Reques
 	}
 
 	return subreconciler.ContinueReconciling()
+}
+
+func serviceNeedsUpdate(existing, updated *corev1.Service, name string, perses *v1alpha2.Perses) bool {
+	if existing == nil && updated == nil {
+		return false
+	}
+	if existing == nil || updated == nil {
+		return true
+	}
+	if existing.Name != updated.Name || existing.Namespace != updated.Namespace {
+		return true
+	}
+	if !equality.Semantic.DeepEqual(existing.Spec.Type, updated.Spec.Type) ||
+		!equality.Semantic.DeepEqual(existing.Spec.Ports, updated.Spec.Ports) ||
+		!equality.Semantic.DeepEqual(existing.Annotations, updated.Annotations) {
+		return true
+	}
+
+	// check for differences only in the labels that are set by the operator
+	labels := common.LabelsForPerses(name, perses)
+
+	for k := range labels {
+		if existing.Labels[k] != updated.Labels[k] {
+			return true
+		}
+		if existing.Spec.Selector[k] != updated.Spec.Selector[k] {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (r *PersesReconciler) createPersesService(
