@@ -120,10 +120,7 @@ func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Re
 func (r *PersesReconciler) createPersesStatefulSet(
 	perses *v1alpha2.Perses) (*appsv1.StatefulSet, error) {
 
-	ls, err := common.LabelsForPerses(perses.Name, perses)
-	if err != nil {
-		return nil, err
-	}
+	ls := common.LabelsForPerses(perses.Name, perses)
 
 	annotations := map[string]string{}
 	if perses.Spec.Metadata != nil && perses.Spec.Metadata.Annotations != nil {
