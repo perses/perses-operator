@@ -1,11 +1,6 @@
 apiVersion: perses.dev/v1alpha2
 kind: PersesDashboard
 metadata:
-  labels:
-    app.kubernetes.io/name: perses-dashboard
-    app.kubernetes.io/instance: perses-dashboard-sample
-    app.kubernetes.io/part-of: perses-operator
-    app.kubernetes.io/created-by: perses-operator
   name: perses-dashboard-sample
   namespace: perses-dev
 spec:
@@ -82,7 +77,7 @@ spec:
         kind: Panel
         spec:
           display:
-            name: "~130 Series"
+            name: '~130 Series'
             description: This is a line chart
           plugin:
             kind: TimeSeriesChart
@@ -209,9 +204,9 @@ spec:
               thresholds:
                 steps:
                   - value: 0.4
-                    name: "Alert: Warning condition example"
+                    name: 'Alert: Warning condition example'
                   - value: 0.75
-                    name: "Alert: Critical condition example"
+                    name: 'Alert: Critical condition example'
           queries:
             - kind: TimeSeriesQuery
               spec:
@@ -246,7 +241,7 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    seriesNameFormat: "{{mode}} mode - {{job}} {{instance}}"
+                    seriesNameFormat: '{{mode}} mode - {{job}} {{instance}}'
                     query: avg without (cpu)(rate(node_cpu_seconds_total{job='$job',instance=~'$instance',mode!="nice",mode!="steal",mode!="irq"}[$interval]))
       cpuGauge:
         kind: Panel
@@ -270,7 +265,7 @@ spec:
                 plugin:
                   kind: PrometheusTimeSeriesQuery
                   spec:
-                    seriesNameFormat: "{{mode}} mode - {{job}} {{instance}}"
+                    seriesNameFormat: '{{mode}} mode - {{job}} {{instance}}'
                     query: avg without (cpu)(rate(node_cpu_seconds_total{job='$job',instance=~'$instance',mode!="nice",mode!="steal",mode!="irq"}[$interval]))
       statSm:
         kind: Panel
@@ -372,7 +367,7 @@ spec:
                 decimalPlaces: 2
                 shortValues: true
               sparkline:
-                color: "#e65013"
+                color: '#e65013'
                 width: 1.5
           queries:
             - kind: TimeSeriesQuery
@@ -449,9 +444,9 @@ spec:
               thresholds:
                 steps:
                   - value: 0.5
-                    name: "Alert: Warning condition example"
+                    name: 'Alert: Warning condition example'
                   - value: 0.75
-                    name: "Alert: Critical condition example"
+                    name: 'Alert: Critical condition example'
           queries:
             - kind: TimeSeriesQuery
               spec:
@@ -491,41 +486,41 @@ spec:
               open: true
           items:
             - x: 0
-              "y": 0
+              'y': 0
               width: 2
               height: 3
               content:
-                "$ref": "#/spec/panels/statRAM"
+                '$ref': '#/spec/panels/statRAM'
             - x: 0
-              "y": 4
+              'y': 4
               width: 2
               height: 3
               content:
-                "$ref": "#/spec/panels/statTotalRAM"
+                '$ref': '#/spec/panels/statTotalRAM'
             - x: 2
-              "y": 0
+              'y': 0
               width: 4
               height: 6
               content:
-                "$ref": "#/spec/panels/statMd"
+                '$ref': '#/spec/panels/statMd'
             - x: 6
-              "y": 0
+              'y': 0
               width: 10
               height: 6
               content:
-                "$ref": "#/spec/panels/statLg"
+                '$ref': '#/spec/panels/statLg'
             - x: 16
-              "y": 0
+              'y': 0
               width: 4
               height: 6
               content:
-                "$ref": "#/spec/panels/gaugeFormatTest"
+                '$ref': '#/spec/panels/gaugeFormatTest'
             - x: 20
-              "y": 0
+              'y': 0
               width: 4
               height: 6
               content:
-                "$ref": "#/spec/panels/gaugeRAM"
+                '$ref': '#/spec/panels/gaugeRAM'
       - kind: Grid
         spec:
           display:
@@ -534,17 +529,17 @@ spec:
               open: true
           items:
             - x: 0
-              "y": 0
+              'y': 0
               width: 12
               height: 6
               content:
-                "$ref": "#/spec/panels/legendEx"
+                '$ref': '#/spec/panels/legendEx'
             - x: 12
-              "y": 0
+              'y': 0
               width: 12
               height: 6
               content:
-                "$ref": "#/spec/panels/basicEx"
+                '$ref': '#/spec/panels/basicEx'
       - kind: Grid
         spec:
           display:
@@ -553,20 +548,20 @@ spec:
               open: false
           items:
             - x: 0
-              "y": 0
+              'y': 0
               width: 24
               height: 6
               content:
-                "$ref": "#/spec/panels/cpuGauge"
+                '$ref': '#/spec/panels/cpuGauge'
             - x: 0
-              "y": 6
+              'y': 6
               width: 12
               height: 8
               content:
-                "$ref": "#/spec/panels/cpuLine"
+                '$ref': '#/spec/panels/cpuLine'
             - x: 12
-              "y": 0
+              'y': 0
               width: 12
               height: 8
               content:
-                "$ref": "#/spec/panels/defaultTimeSeriesChart"
+                '$ref': '#/spec/panels/defaultTimeSeriesChart'

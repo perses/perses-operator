@@ -1,11 +1,6 @@
 apiVersion: perses.dev/v1alpha1
 kind: PersesDatasource
 metadata:
-  labels:
-    app.kubernetes.io/name: perses-datasource
-    app.kubernetes.io/instance: perses-prometheus-datasource
-    app.kubernetes.io/part-of: perses-operator
-    app.kubernetes.io/created-by: perses-operator
   name: perses-datasource-sample
   namespace: perses-dev
 spec:
@@ -14,9 +9,9 @@ spec:
       app.kubernetes.io/instance: perses-sample
   config:
     display:
-      name: "Default Datasource"
+      name: 'Default Datasource'
     default: true
     plugin:
-      kind: "PrometheusDatasource"
+      kind: 'PrometheusDatasource'
       spec:
-        directUrl: "https://prometheus.demo.prometheus.io"
+        directUrl: 'https://prometheus.demo.prometheus.io'

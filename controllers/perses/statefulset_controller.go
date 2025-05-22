@@ -107,7 +107,7 @@ func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Re
 		return subreconciler.RequeueWithError(err)
 	}
 
-	if !equality.Semantic.DeepEqual(found, sts) {
+	if !equality.Semantic.DeepEqual(found.Spec, sts.Spec) {
 		if err = r.Update(ctx, sts); err != nil {
 			stlog.Error(err, "Failed to update StatefulSet")
 			return subreconciler.RequeueWithError(err)
