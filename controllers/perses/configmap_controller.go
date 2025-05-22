@@ -91,7 +91,7 @@ func (r *PersesReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Requ
 		return subreconciler.RequeueWithError(err)
 	}
 
-	if needsUpdate(found, cm, configName, perses) {
+	if configMapNeedsUpdate(found, cm, configName, perses) {
 		if err := r.Update(ctx, cm); err != nil {
 			cmlog.Error(err, "Failed to update ConfigMap")
 			return subreconciler.RequeueWithError(err)
@@ -101,7 +101,7 @@ func (r *PersesReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Requ
 	return subreconciler.ContinueReconciling()
 }
 
-func needsUpdate(existing, updated *corev1.ConfigMap, name string, perses *v1alpha2.Perses) bool {
+func configMapNeedsUpdate(existing, updated *corev1.ConfigMap, name string, perses *v1alpha2.Perses) bool {
 	if existing == nil && updated == nil {
 		return false
 	}
@@ -111,10 +111,8 @@ func needsUpdate(existing, updated *corev1.ConfigMap, name string, perses *v1alp
 	if existing.Name != updated.Name || existing.Namespace != updated.Namespace {
 		return true
 	}
-	if !equality.Semantic.DeepEqual(existing.Data, updated.Data) {
-		return true
-	}
-	if !equality.Semantic.DeepEqual(existing.Annotations, updated.Annotations) {
+	if !equality.Semantic.DeepEqual(existing.Data, updated.Data) ||
+		!equality.Semantic.DeepEqual(existing.Annotations, updated.Annotations) {
 		return true
 	}
 
