@@ -30,7 +30,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
-	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -68,7 +67,7 @@ func (r *PersesDatasourceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	return subreconciler.Evaluate(subreconciler.DoNotRequeue())
 }
 
-func (r *PersesDatasourceReconciler) getLatestPersesDatasource(ctx context.Context, req ctrl.Request, datasource *persesv1alpha2.PersesDatasource) (*ctrl.Result, error) {
+func (r *PersesDatasourceReconciler) getLatestPersesDatasource(ctx context.Context, req ctrl.Request, datasource *persesv1alpha1.PersesDatasource) (*ctrl.Result, error) {
 	if err := r.Get(ctx, req.NamespacedName, datasource); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("perses datasource resource not found. Ignoring since object must be deleted")
@@ -99,7 +98,7 @@ func (r *PersesDatasourceReconciler) handleDelete(ctx context.Context, req ctrl.
 }
 
 func (r *PersesDatasourceReconciler) setStatusToUnknown(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	datasource := &persesv1alpha2.PersesDatasource{}
+	datasource := &persesv1alpha1.PersesDatasource{}
 
 	if r, err := r.getLatestPersesDatasource(ctx, req, datasource); subreconciler.ShouldHaltOrRequeue(r, err) {
 		return r, err
@@ -117,7 +116,7 @@ func (r *PersesDatasourceReconciler) setStatusToUnknown(ctx context.Context, req
 }
 
 func (r *PersesDatasourceReconciler) updateStatus(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	datasource := &persesv1alpha2.PersesDatasource{}
+	datasource := &persesv1alpha1.PersesDatasource{}
 
 	if r, err := r.getLatestPersesDatasource(ctx, req, datasource); subreconciler.ShouldHaltOrRequeue(r, err) {
 		return r, err

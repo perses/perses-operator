@@ -1,5 +1,5 @@
 /*
-Copyright 2025 The Perses Authors.
+Copyright 2023 The Perses Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,12 +21,13 @@ import (
 	"flag"
 	"os"
 
-	"k8s.io/apimachinery/pkg/runtime"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -34,7 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
-	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 	dashboardcontroller "github.com/perses/perses-operator/controllers/dashboards"
 	datasourcecontroller "github.com/perses/perses-operator/controllers/datasources"
 	persescontroller "github.com/perses/perses-operator/controllers/perses"
@@ -51,7 +51,6 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(persesv1alpha1.AddToScheme(scheme))
-	utilruntime.Must(persesv1alpha2.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -62,11 +61,9 @@ func main() {
 	var persesImage string
 	var enableHTTP2 bool
 	var persesServerURL string
-	var webhookPort int
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8082", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.IntVar(&webhookPort, "webhook-port", 9443, "The port the webhook server binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -95,7 +92,7 @@ func main() {
 			TLSOpts:     []func(*tls.Config){disableHTTP2},
 		},
 		WebhookServer: webhook.NewServer(webhook.Options{
-			Port:    webhookPort,
+			Port:    9443,
 			TLSOpts: []func(*tls.Config){disableHTTP2},
 		}),
 		HealthProbeBindAddress: probeAddr,
@@ -146,23 +143,6 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PersesDatasource")
 		os.Exit(1)
-	}
-
-	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err = (&persesv1alpha1.Perses{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Perses")
-			os.Exit(1)
-		}
-
-		if err = (&persesv1alpha1.PersesDatasource{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "PersesDatasource")
-			os.Exit(1)
-		}
-
-		if err = (&persesv1alpha1.PersesDashboard{}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "PersesDashboard")
-			os.Exit(1)
-		}
 	}
 	//+kubebuilder:scaffold:builder
 
