@@ -37,7 +37,7 @@ var dlog = logger.WithField("module", "dashboard_controller")
 func (r *PersesDashboardReconciler) reconcileDashboardInAllInstances(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
 	persesInstances := &persesv1alpha1.PersesList{}
 	var opts []client.ListOption
-	err := r.Client.List(ctx, persesInstances, opts...)
+	err := r.List(ctx, persesInstances, opts...)
 	if err != nil {
 		dlog.WithError(err).Error("Failed to get perses instances")
 		return subreconciler.RequeueWithDelayAndError(time.Minute, err)

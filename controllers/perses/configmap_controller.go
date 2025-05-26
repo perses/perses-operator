@@ -127,7 +127,7 @@ func configMapNeedsUpdate(existing, updated *corev1.ConfigMap, name string, pers
 	return false
 }
 
-func (r *PersesReconciler) createPersesConfigMap(perses *v1alpha2.Perses) (*corev1.ConfigMap, error) {
+func (r *PersesReconciler) createPersesConfigMap(perses *v1alpha1.Perses) (*corev1.ConfigMap, error) {
 	configName := common.GetConfigName(perses.Name)
 	ls := common.LabelsForPerses(configName, perses)
 

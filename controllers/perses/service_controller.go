@@ -102,7 +102,7 @@ func (r *PersesReconciler) reconcileService(ctx context.Context, req ctrl.Reques
 	return subreconciler.ContinueReconciling()
 }
 
-func serviceNeedsUpdate(existing, updated *corev1.Service, name string, perses *v1alpha2.Perses) bool {
+func serviceNeedsUpdate(existing, updated *corev1.Service, name string, perses *v1alpha1.Perses) bool {
 	if existing == nil && updated == nil {
 		return false
 	}

@@ -39,14 +39,92 @@
               },
               "spec": {
                 "properties": {
-                  "config": {
-                    "properties": {
-                      "datasources": {
-                        "additionalProperties": {
+                  "datasources": {
+                    "additionalProperties": {
+                      "properties": {
+                        "default": {
+                          "type": "boolean"
+                        },
+                        "display": {
                           "properties": {
-                            "default": {
-                              "type": "boolean"
+                            "description": {
+                              "type": "string"
                             },
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "type": "object"
+                        },
+                        "plugin": {
+                          "description": "Plugin will contain the datasource configuration.\nThe data typed is available in Cue.",
+                          "properties": {
+                            "kind": {
+                              "type": "string"
+                            },
+                            "spec": {
+                              "x-kubernetes-preserve-unknown-fields": true
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "spec"
+                          ],
+                          "type": "object"
+                        }
+                      },
+                      "required": [
+                        "default",
+                        "plugin"
+                      ],
+                      "type": "object"
+                    },
+                    "description": "Datasources is an optional list of datasource definition.",
+                    "type": "object"
+                  },
+                  "display": {
+                    "properties": {
+                      "description": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      }
+                    },
+                    "type": "object"
+                  },
+                  "duration": {
+                    "description": "Duration is the default time range to use when getting data to fill the dashboard",
+                    "format": "duration",
+                    "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
+                    "type": "string"
+                  },
+                  "layouts": {
+                    "items": {
+                      "properties": {
+                        "kind": {
+                          "type": "string"
+                        },
+                        "spec": {
+                          "x-kubernetes-preserve-unknown-fields": true
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "spec"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "panels": {
+                    "additionalProperties": {
+                      "properties": {
+                        "kind": {
+                          "type": "string"
+                        },
+                        "spec": {
+                          "properties": {
                             "display": {
                               "properties": {
                                 "description": {
@@ -56,10 +134,38 @@
                                   "type": "string"
                                 }
                               },
+                              "required": [
+                                "name"
+                              ],
                               "type": "object"
                             },
+                            "links": {
+                              "items": {
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "renderVariables": {
+                                    "type": "boolean"
+                                  },
+                                  "targetBlank": {
+                                    "type": "boolean"
+                                  },
+                                  "tooltip": {
+                                    "type": "string"
+                                  },
+                                  "url": {
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "url"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
+                            },
                             "plugin": {
-                              "description": "Plugin will contain the datasource configuration.\nThe data typed is available in Cue.",
                               "properties": {
                                 "kind": {
                                   "type": "string"
@@ -73,250 +179,91 @@
                                 "spec"
                               ],
                               "type": "object"
-                            }
-                          },
-                          "required": [
-                            "default",
-                            "plugin"
-                          ],
-                          "type": "object"
-                        },
-                        "description": "Datasources is an optional list of datasource definition.",
-                        "type": "object"
-                      },
-                      "display": {
-                        "properties": {
-                          "description": {
-                            "type": "string"
-                          },
-                          "name": {
-                            "type": "string"
-                          }
-                        },
-                        "type": "object"
-                      },
-                      "duration": {
-                        "description": "Duration is the default time range to use when getting data to fill the dashboard",
-                        "format": "duration",
-                        "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
-                        "type": "string"
-                      },
-                      "layouts": {
-                        "items": {
-                          "properties": {
-                            "kind": {
-                              "type": "string"
                             },
-                            "spec": {
-                              "x-kubernetes-preserve-unknown-fields": true
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "spec"
-                          ],
-                          "type": "object"
-                        },
-                        "type": "array"
-                      },
-                      "panels": {
-                        "additionalProperties": {
-                          "properties": {
-                            "kind": {
-                              "type": "string"
-                            },
-                            "spec": {
-                              "properties": {
-                                "display": {
-                                  "properties": {
-                                    "description": {
-                                      "type": "string"
-                                    },
-                                    "name": {
-                                      "type": "string"
-                                    }
+                            "queries": {
+                              "items": {
+                                "properties": {
+                                  "kind": {
+                                    "type": "string"
                                   },
-                                  "required": [
-                                    "name"
-                                  ],
-                                  "type": "object"
-                                },
-                                "links": {
-                                  "items": {
+                                  "spec": {
                                     "properties": {
-                                      "name": {
-                                        "type": "string"
-                                      },
-                                      "renderVariables": {
-                                        "type": "boolean"
-                                      },
-                                      "targetBlank": {
-                                        "type": "boolean"
-                                      },
-                                      "tooltip": {
-                                        "type": "string"
-                                      },
-                                      "url": {
-                                        "type": "string"
-                                      }
-                                    },
-                                    "required": [
-                                      "url"
-                                    ],
-                                    "type": "object"
-                                  },
-                                  "type": "array"
-                                },
-                                "plugin": {
-                                  "properties": {
-                                    "kind": {
-                                      "type": "string"
-                                    },
-                                    "spec": {
-                                      "x-kubernetes-preserve-unknown-fields": true
-                                    }
-                                  },
-                                  "required": [
-                                    "kind",
-                                    "spec"
-                                  ],
-                                  "type": "object"
-                                },
-                                "queries": {
-                                  "items": {
-                                    "properties": {
-                                      "kind": {
-                                        "type": "string"
-                                      },
-                                      "spec": {
+                                      "plugin": {
                                         "properties": {
-                                          "plugin": {
-                                            "properties": {
-                                              "kind": {
-                                                "type": "string"
-                                              },
-                                              "spec": {
-                                                "x-kubernetes-preserve-unknown-fields": true
-                                              }
-                                            },
-                                            "required": [
-                                              "kind",
-                                              "spec"
-                                            ],
-                                            "type": "object"
+                                          "kind": {
+                                            "type": "string"
+                                          },
+                                          "spec": {
+                                            "x-kubernetes-preserve-unknown-fields": true
                                           }
                                         },
                                         "required": [
-                                          "plugin"
+                                          "kind",
+                                          "spec"
                                         ],
                                         "type": "object"
                                       }
                                     },
                                     "required": [
-                                      "kind",
-                                      "spec"
+                                      "plugin"
                                     ],
                                     "type": "object"
-                                  },
-                                  "type": "array"
-                                }
+                                  }
+                                },
+                                "required": [
+                                  "kind",
+                                  "spec"
+                                ],
+                                "type": "object"
                               },
-                              "required": [
-                                "display",
-                                "plugin"
-                              ],
-                              "type": "object"
+                              "type": "array"
                             }
                           },
                           "required": [
-                            "kind",
-                            "spec"
+                            "display",
+                            "plugin"
                           ],
                           "type": "object"
-                        },
-                        "type": "object"
+                        }
                       },
-                      "refreshInterval": {
-                        "description": "RefreshInterval is the default refresh interval to use when landing on the dashboard",
-                        "format": "duration",
-                        "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
-                        "type": "string"
-                      },
-                      "variables": {
-                        "items": {
-                          "properties": {
-                            "kind": {
-                              "description": "Kind is the type of the variable. Depending on the value of Kind, it will change the content of Spec.",
-                              "type": "string"
-                            },
-                            "spec": {
-                              "x-kubernetes-preserve-unknown-fields": true
-                            }
-                          },
-                          "required": [
-                            "kind",
-                            "spec"
-                          ],
-                          "type": "object"
-                        },
-                        "type": "array"
-                      }
+                      "required": [
+                        "kind",
+                        "spec"
+                      ],
+                      "type": "object"
                     },
-                    "required": [
-                      "duration",
-                      "layouts",
-                      "panels"
-                    ],
                     "type": "object"
                   },
-                  "instanceSelector": {
-                    "description": "A label selector is a label query over a set of resources. The result of matchLabels and\nmatchExpressions are ANDed. An empty label selector matches all objects. A null\nlabel selector matches no objects.",
-                    "properties": {
-                      "matchExpressions": {
-                        "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
-                        "items": {
-                          "description": "A label selector requirement is a selector that contains values, a key, and an operator that\nrelates the key and values.",
-                          "properties": {
-                            "key": {
-                              "description": "key is the label key that the selector applies to.",
-                              "type": "string"
-                            },
-                            "operator": {
-                              "description": "operator represents a key's relationship to a set of values.\nValid operators are In, NotIn, Exists and DoesNotExist.",
-                              "type": "string"
-                            },
-                            "values": {
-                              "description": "values is an array of string values. If the operator is In or NotIn,\nthe values array must be non-empty. If the operator is Exists or DoesNotExist,\nthe values array must be empty. This array is replaced during a strategic\nmerge patch.",
-                              "items": {
-                                "type": "string"
-                              },
-                              "type": "array",
-                              "x-kubernetes-list-type": "atomic"
-                            }
-                          },
-                          "required": [
-                            "key",
-                            "operator"
-                          ],
-                          "type": "object"
-                        },
-                        "type": "array",
-                        "x-kubernetes-list-type": "atomic"
-                      },
-                      "matchLabels": {
-                        "additionalProperties": {
+                  "refreshInterval": {
+                    "description": "RefreshInterval is the default refresh interval to use when landing on the dashboard",
+                    "format": "duration",
+                    "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
+                    "type": "string"
+                  },
+                  "variables": {
+                    "items": {
+                      "properties": {
+                        "kind": {
+                          "description": "Kind is the type of the variable. Depending on the value of Kind, it will change the content of Spec.",
                           "type": "string"
                         },
-                        "description": "matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels\nmap is equivalent to an element of matchExpressions, whose key field is \"key\", the\noperator is \"In\", and the values array contains only \"value\". The requirements are ANDed.",
-                        "type": "object"
-                      }
+                        "spec": {
+                          "x-kubernetes-preserve-unknown-fields": true
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "spec"
+                      ],
+                      "type": "object"
                     },
-                    "type": "object",
-                    "x-kubernetes-map-type": "atomic"
+                    "type": "array"
                   }
                 },
                 "required": [
-                  "config"
+                  "duration",
+                  "layouts",
+                  "panels"
                 ],
                 "type": "object"
               },
