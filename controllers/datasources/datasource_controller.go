@@ -32,7 +32,6 @@ import (
 	"github.com/perses/perses/pkg/model/api/v1/common"
 	"github.com/perses/perses/pkg/model/api/v1/secret"
 	logger "github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -42,23 +41,9 @@ const secretNameSuffix = "-secret"
 var dlog = logger.WithField("module", "datasource_controller")
 
 func (r *PersesDatasourceReconciler) reconcileDatasourcesInAllInstances(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	datasource := &persesv1alpha1.PersesDatasource{}
-
-	if r, err := r.getLatestPersesDatasource(ctx, req, datasource); subreconciler.ShouldHaltOrRequeue(r, err) {
-		return r, err
-	}
-
-	labelSelector, err := metav1.LabelSelectorAsSelector(datasource.Spec.InstanceSelector)
-	if err != nil {
-		return subreconciler.RequeueWithError(err)
-	}
-
 	persesInstances := &persesv1alpha1.PersesList{}
-	opts := &client.ListOptions{
-		LabelSelector: labelSelector,
-	}
-
-	err = r.List(ctx, persesInstances, opts)
+	var opts []client.ListOption
+	err := r.Client.List(ctx, persesInstances, opts...)
 	if err != nil {
 		dlog.WithError(err).Error("Failed to get perses instances")
 		return subreconciler.RequeueWithDelayAndError(time.Minute, err)
@@ -67,6 +52,12 @@ func (r *PersesDatasourceReconciler) reconcileDatasourcesInAllInstances(ctx cont
 	if len(persesInstances.Items) == 0 {
 		dlog.Info("No Perses instances found, requeue in 1 minute")
 		return subreconciler.RequeueWithDelay(time.Minute)
+	}
+
+	datasource := &persesv1alpha1.PersesDatasource{}
+
+	if r, err := r.getLatestPersesDatasource(ctx, req, datasource); subreconciler.ShouldHaltOrRequeue(r, err) {
+		return r, err
 	}
 
 	for _, persesInstance := range persesInstances.Items {

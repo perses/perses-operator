@@ -25,7 +25,6 @@ import (
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	"github.com/perses/perses/pkg/model/api/v1/common"
 	logger "github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -36,23 +35,9 @@ import (
 var dlog = logger.WithField("module", "dashboard_controller")
 
 func (r *PersesDashboardReconciler) reconcileDashboardInAllInstances(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	dashboard := &persesv1alpha1.PersesDashboard{}
-
-	if r, err := r.getLatestPersesDashboard(ctx, req, dashboard); subreconciler.ShouldHaltOrRequeue(r, err) {
-		return r, err
-	}
-
-	labelSelector, err := metav1.LabelSelectorAsSelector(dashboard.Spec.InstanceSelector)
-	if err != nil {
-		return subreconciler.RequeueWithError(err)
-	}
-
 	persesInstances := &persesv1alpha1.PersesList{}
-	opts := &client.ListOptions{
-		LabelSelector: labelSelector,
-	}
-
-	err = r.List(ctx, persesInstances, opts)
+	var opts []client.ListOption
+	err := r.Client.List(ctx, persesInstances, opts...)
 	if err != nil {
 		dlog.WithError(err).Error("Failed to get perses instances")
 		return subreconciler.RequeueWithDelayAndError(time.Minute, err)
@@ -61,6 +46,12 @@ func (r *PersesDashboardReconciler) reconcileDashboardInAllInstances(ctx context
 	if len(persesInstances.Items) == 0 {
 		dlog.Info("No Perses instances found, retrying in 1 minute")
 		return subreconciler.RequeueWithDelay(time.Minute)
+	}
+
+	dashboard := &persesv1alpha1.PersesDashboard{}
+
+	if r, err := r.getLatestPersesDashboard(ctx, req, dashboard); subreconciler.ShouldHaltOrRequeue(r, err) {
+		return r, err
 	}
 
 	for _, persesInstance := range persesInstances.Items {
@@ -117,7 +108,7 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 				Name: dashboard.Name,
 			},
 		},
-		Spec: dashboard.Spec.Config.DashboardSpec,
+		Spec: dashboard.Spec.DashboardSpec,
 	}
 
 	if err != nil {

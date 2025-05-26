@@ -4,9 +4,6 @@ metadata:
   name: perses-datasource-sample
   namespace: perses-dev
 spec:
-  instanceSelector:
-    matchLabels:
-      app.kubernetes.io/instance: perses-sample
   config:
     display:
       name: 'Default Datasource'
