@@ -66,3 +66,10 @@ func isClientTLSEnabled(perses *v1alpha1.Perses) bool {
 		perses.Spec.Client.TLS != nil &&
 		perses.Spec.Client.TLS.Enable
 }
+
+func isKubernetesAuthEnabled(perses *v1alpha1.Perses) bool {
+	return perses != nil &&
+		perses.Spec.Client != nil &&
+		perses.Spec.Client.KubernetesAuth != nil &&
+		perses.Spec.Client.KubernetesAuth.Enable
+}

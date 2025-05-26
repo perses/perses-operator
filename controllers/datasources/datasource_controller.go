@@ -74,7 +74,7 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 
 	if err != nil {
 		dlog.WithError(err).Error("Failed to create perses rest client")
-		return subreconciler.RequeueWithError(err)
+		return subreconciler.RequeueWithDelayAndError(time.Minute, err)
 	}
 
 	_, err = persesClient.Project().Get(datasource.Namespace)
@@ -180,7 +180,8 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 		basicAuthConfig := &secret.BasicAuth{}
 		basicAuthConfig.Username = basicAuth.Username
 
-		if basicAuth.Type == persesv1alpha1.SecretSourceTypeSecret || tls.UserCert.Type == persesv1alpha1.SecretSourceTypeConfigMap { //nolint: staticcheck
+		switch basicAuth.Type {
+		case persesv1alpha1.SecretSourceTypeSecret, persesv1alpha1.SecretSourceTypeConfigMap:
 			passwordData, err := persescommon.GetBasicAuthData(ctx, r.Client, namespace, datasourceName, basicAuth)
 
 			if err != nil {
@@ -193,7 +194,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 			}
 
 			basicAuthConfig.Password = passwordData
-		} else if basicAuth.Type == persesv1alpha1.SecretSourceTypeFile {
+		case persesv1alpha1.SecretSourceTypeFile:
 			basicAuthConfig.PasswordFile = basicAuth.PasswordPath
 		}
 
@@ -212,7 +213,8 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 		}
 
 		oAuthConfig.TokenURL = oauth.TokenURL
-		if oauth.Type == persesv1alpha1.SecretSourceTypeSecret || oauth.Type == persesv1alpha1.SecretSourceTypeConfigMap { //nolint: staticcheck
+		switch oauth.Type {
+		case persesv1alpha1.SecretSourceTypeSecret, persesv1alpha1.SecretSourceTypeConfigMap:
 			clientIDData, clientSecretData, err := persescommon.GetOAuthData(ctx, r.Client, namespace, datasourceName, oauth)
 
 			if err != nil {
@@ -226,7 +228,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 
 			oAuthConfig.ClientID = clientIDData
 			oAuthConfig.ClientSecret = clientSecretData
-		} else if oauth.Type == persesv1alpha1.SecretSourceTypeFile {
+		case persesv1alpha1.SecretSourceTypeFile:
 			// the clientID is a Hidden field in perses API,
 			// but doesn't expose it as a file field for it, so we need to read it and use the value
 			clientID, err := os.ReadFile(oauth.ClientIDPath)
@@ -246,7 +248,8 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 		}
 
 		if tls.CaCert != nil {
-			if tls.CaCert.Type == persesv1alpha1.SecretSourceTypeSecret || tls.CaCert.Type == persesv1alpha1.SecretSourceTypeConfigMap { //nolint: staticcheck
+			switch tls.CaCert.Type {
+			case persesv1alpha1.SecretSourceTypeSecret, persesv1alpha1.SecretSourceTypeConfigMap:
 				caData, _, err := persescommon.GetTLSCertData(ctx, r.Client, namespace, datasourceName, tls.CaCert)
 
 				if err != nil {
@@ -259,13 +262,14 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 				}
 
 				tlsConfig.CA = caData
-			} else if tls.CaCert.Type == persesv1alpha1.SecretSourceTypeFile {
+			case persesv1alpha1.SecretSourceTypeFile:
 				tlsConfig.CAFile = tls.CaCert.CertPath
 			}
 		}
 
 		if tls.UserCert != nil {
-			if tls.UserCert.Type == persesv1alpha1.SecretSourceTypeSecret || tls.UserCert.Type == persesv1alpha1.SecretSourceTypeConfigMap { //nolint: staticcheck
+			switch tls.UserCert.Type {
+			case persesv1alpha1.SecretSourceTypeSecret, persesv1alpha1.SecretSourceTypeConfigMap:
 				certData, keyData, err := persescommon.GetTLSCertData(ctx, r.Client, namespace, datasourceName, tls.UserCert)
 
 				if err != nil {
@@ -279,7 +283,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 
 				tlsConfig.Cert = certData
 				tlsConfig.Key = keyData
-			} else if tls.UserCert.Type == persesv1alpha1.SecretSourceTypeFile {
+			case persesv1alpha1.SecretSourceTypeFile:
 				tlsConfig.CertFile = tls.UserCert.CertPath
 
 				if len(tls.UserCert.PrivateKeyPath) > 0 {
@@ -350,7 +354,7 @@ func (r *PersesDatasourceReconciler) deleteDatasource(ctx context.Context, perse
 
 	if err != nil {
 		dlog.WithError(err).Error("Failed to create perses rest client")
-		return subreconciler.RequeueWithError(err)
+		return subreconciler.RequeueWithDelayAndError(time.Minute, err)
 	}
 
 	_, err = persesClient.Project().Get(datasourceNamespace)

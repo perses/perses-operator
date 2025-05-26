@@ -95,15 +95,24 @@ type PersesService struct {
 }
 
 type Client struct {
-	// BasicAuth basic auth config for datasource client
+	// BasicAuth basic auth config for perses client
 	// +optional
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty"`
-	// OAuth configuration for datasource client
+	// OAuth configuration for perses client
 	// +optional
 	OAuth *OAuth `json:"oauth,omitempty"`
 	// TLS the equivalent to the tls_config for perses client
 	// +optional
 	TLS *TLS `json:"tls,omitempty"`
+
+	// KubernetesAuth configuration for perses client
+	// +optional
+	KubernetesAuth *KubernetesAuth `json:"kubernetesAuth,omitempty"`
+}
+
+type KubernetesAuth struct {
+	// Enable kubernetes auth for perses client
+	Enable bool `json:"enable"`
 }
 
 type BasicAuth struct {

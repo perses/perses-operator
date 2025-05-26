@@ -43,7 +43,7 @@ spec:
               client:
                 properties:
                   basicAuth:
-                    description: BasicAuth basic auth config for datasource client
+                    description: BasicAuth basic auth config for perses client
                     properties:
                       name:
                         description: Name of basic auth k8s resource (when type is
@@ -71,8 +71,17 @@ spec:
                     - type
                     - username
                     type: object
+                  kubernetesAuth:
+                    description: KubernetesAuth configuration for perses client
+                    properties:
+                      enable:
+                        description: Enable kubernetes auth for perses client
+                        type: boolean
+                    required:
+                    - enable
+                    type: object
                   oauth:
-                    description: OAuth configuration for datasource client
+                    description: OAuth configuration for perses client
                     properties:
                       authStyle:
                         description: |-
