@@ -135,7 +135,7 @@ func (r *PersesReconciler) createPersesStatefulSet(
 
 	livenessProbe, readinessProbe := common.GetProbes(perses)
 
-	dep := &appsv1.StatefulSet{
+	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        perses.Name,
 			Namespace:   perses.Namespace,
@@ -208,10 +208,14 @@ func (r *PersesReconciler) createPersesStatefulSet(
 		},
 	}
 
+	if perses.Spec.ServiceAccountName != "" {
+		sts.Spec.Template.Spec.ServiceAccountName = perses.Spec.ServiceAccountName
+	}
+
 	// Set the ownerRef for the StatefulSet
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
-	if err := ctrl.SetControllerReference(perses, dep, r.Scheme); err != nil {
+	if err := ctrl.SetControllerReference(perses, sts, r.Scheme); err != nil {
 		return nil, err
 	}
-	return dep, nil
+	return sts, nil
 }

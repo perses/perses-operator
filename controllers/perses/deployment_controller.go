@@ -202,6 +202,10 @@ func (r *PersesReconciler) createPersesDeployment(
 		},
 	}
 
+	if perses.Spec.ServiceAccountName != "" {
+		dep.Spec.Template.Spec.ServiceAccountName = perses.Spec.ServiceAccountName
+	}
+
 	// Set the ownerRef for the Deployment
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
 	if err := ctrl.SetControllerReference(perses, dep, r.Scheme); err != nil {
