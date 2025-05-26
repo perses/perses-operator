@@ -72,6 +72,11 @@ type PersesSpec struct {
 	// +optional
 	// Storage configuration used by the StatefulSet
 	Storage *StorageConfiguration `json:"storage,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	// ServiceAccountName is the name of the service account to use for the perses deployment or statefulset.
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
 
 // Metadata to add to deployed pods

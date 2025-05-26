@@ -2408,6 +2408,10 @@
                     },
                     "type": "object"
                   },
+                  "serviceAccountName": {
+                    "description": "ServiceAccountName is the name of the service account to use for the perses deployment or statefulset.",
+                    "type": "string"
+                  },
                   "storage": {
                     "default": {
                       "size": "1Gi"

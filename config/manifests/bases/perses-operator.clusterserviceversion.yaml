@@ -1047,6 +1047,10 @@ spec:
         path: service.annotations
       - displayName: Name
         path: service.name
+      - description: ServiceAccountName is the name of the service account to use
+          for the perses deployment or statefulset.
+        displayName: Service Account Name
+        path: serviceAccountName
       - description: Storage configuration used by the StatefulSet
         displayName: Storage
         path: storage
