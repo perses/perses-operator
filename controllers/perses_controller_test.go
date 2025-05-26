@@ -8,6 +8,9 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	persescontroller "github.com/perses/perses-operator/controllers/perses"
+	"github.com/perses/perses-operator/internal/perses/common"
 	persesconfig "github.com/perses/perses/pkg/model/api/config"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -15,10 +18,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha1"
-	persescontroller "github.com/perses/perses-operator/controllers/perses"
-	"github.com/perses/perses-operator/internal/perses/common"
 )
 
 var _ = Describe("Perses controller", func() {
@@ -59,17 +58,17 @@ var _ = Describe("Perses controller", func() {
 
 		It("should successfully reconcile a custom resource for Perses", func() {
 			By("Creating the custom resource for the Kind Perses")
-			perses := &persesv1alpha2.Perses{}
+			perses := &persesv1alpha1.Perses{}
 			err := k8sClient.Get(ctx, typeNamespaceName, perses)
 			if err != nil && errors.IsNotFound(err) {
 				replicas := int32(2)
-				perses := &persesv1alpha2.Perses{
+				perses := &persesv1alpha1.Perses{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      PersesName,
 						Namespace: namespace.Name,
 					},
-					Spec: persesv1alpha2.PersesSpec{
-						Metadata: &persesv1alpha2.Metadata{
+					Spec: persesv1alpha1.PersesSpec{
+						Metadata: &persesv1alpha1.Metadata{
 							Annotations: map[string]string{
 								"testing": "true",
 							},
@@ -80,13 +79,13 @@ var _ = Describe("Perses controller", func() {
 						Replicas:      &replicas,
 						ContainerPort: 8080,
 						Image:         persesImage,
-						Service: &persesv1alpha2.PersesService{
+						Service: &persesv1alpha1.PersesService{
 							Name: persesServiceName,
 							Annotations: map[string]string{
 								"custom-annotation": "true",
 							},
 						},
-						Config: persesv1alpha2.PersesConfig{
+						Config: persesv1alpha1.PersesConfig{
 							Config: persesconfig.Config{
 								Database: persesconfig.Database{
 									File: &persesconfig.File{
@@ -104,7 +103,7 @@ var _ = Describe("Perses controller", func() {
 
 			By("Checking if the custom resource was successfully created")
 			Eventually(func() error {
-				found := &persesv1alpha2.Perses{}
+				found := &persesv1alpha1.Perses{}
 				return k8sClient.Get(ctx, typeNamespaceName, found)
 			}, time.Minute, time.Second).Should(Succeed())
 
@@ -210,7 +209,7 @@ var _ = Describe("Perses controller", func() {
 				return nil
 			}, time.Minute, time.Second).Should(Succeed())
 
-			persesToDelete := &persesv1alpha2.Perses{}
+			persesToDelete := &persesv1alpha1.Perses{}
 			err = k8sClient.Get(ctx, typeNamespaceName, persesToDelete)
 			Expect(err).To(Not(HaveOccurred()))
 

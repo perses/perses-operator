@@ -8,6 +8,10 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	datasourcecontroller "github.com/perses/perses-operator/controllers/datasources"
+	internal "github.com/perses/perses-operator/internal/perses"
+	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	persescommon "github.com/perses/perses/pkg/model/api/v1/common"
@@ -16,11 +20,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
-	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
-	datasourcecontroller "github.com/perses/perses-operator/controllers/datasources"
-	internal "github.com/perses/perses-operator/internal/perses"
-	"github.com/perses/perses-operator/internal/perses/common"
 )
 
 var _ = Describe("Datasource controller", func() {
@@ -93,15 +92,15 @@ var _ = Describe("Datasource controller", func() {
 
 		It("should successfully reconcile a custom resource datasource for Perses", func() {
 			By("Creating the custom resource for the Kind Perses")
-			perses := &persesv1alpha2.Perses{}
+			perses := &persesv1alpha1.Perses{}
 			err := k8sClient.Get(ctx, persesNamespaceName, perses)
 			if err != nil && errors.IsNotFound(err) {
-				perses := &persesv1alpha2.Perses{
+				perses := &persesv1alpha1.Perses{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      PersesName,
 						Namespace: PersesNamespace,
 					},
-					Spec: persesv1alpha2.PersesSpec{
+					Spec: persesv1alpha1.PersesSpec{
 						ContainerPort: 8080,
 					},
 				}
@@ -111,16 +110,16 @@ var _ = Describe("Datasource controller", func() {
 			}
 
 			By("Creating the custom resource for the Kind PersesDatasource")
-			datasource := &persesv1alpha2.PersesDatasource{}
+			datasource := &persesv1alpha1.PersesDatasource{}
 			err = k8sClient.Get(ctx, datasourceNamespaceName, datasource)
 			if err != nil && errors.IsNotFound(err) {
-				perses := &persesv1alpha2.PersesDatasource{
+				perses := &persesv1alpha1.PersesDatasource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      DatasourceName,
 						Namespace: PersesNamespace,
 					},
-					Spec: persesv1alpha2.DatasourceSpec{
-						Config: persesv1alpha2.Datasource{
+					Spec: persesv1alpha1.DatasourceSpec{
+						Config: persesv1alpha1.Datasource{
 							DatasourceSpec: newDatasource.Spec,
 						},
 					},
@@ -132,7 +131,7 @@ var _ = Describe("Datasource controller", func() {
 
 			By("Checking if the custom resource was successfully created")
 			Eventually(func() error {
-				found := &persesv1alpha2.PersesDatasource{}
+				found := &persesv1alpha1.PersesDatasource{}
 				return k8sClient.Get(ctx, datasourceNamespaceName, found)
 			}, time.Minute, time.Second).Should(Succeed())
 
@@ -174,7 +173,7 @@ var _ = Describe("Datasource controller", func() {
 
 			By("Checking the latest Status Condition added to the Perses datasource instance")
 			Eventually(func() error {
-				datasourceWithStatus := &persesv1alpha2.PersesDatasource{}
+				datasourceWithStatus := &persesv1alpha1.PersesDatasource{}
 				err = k8sClient.Get(ctx, datasourceNamespaceName, datasourceWithStatus)
 
 				if len(datasourceWithStatus.Status.Conditions) == 0 {
@@ -195,7 +194,7 @@ var _ = Describe("Datasource controller", func() {
 			mockDatasource.On("Delete", DatasourceName).Return(nil)
 			mockSecret.On("Delete", PersesSecretName).Return(nil)
 
-			datasourceToDelete := &persesv1alpha2.PersesDatasource{}
+			datasourceToDelete := &persesv1alpha1.PersesDatasource{}
 			err = k8sClient.Get(ctx, datasourceNamespaceName, datasourceToDelete)
 			Expect(err).To(Not(HaveOccurred()))
 

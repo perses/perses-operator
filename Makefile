@@ -174,13 +174,8 @@ jsonnet-format: $(JSONNET_SRC) jsonnetfmt
 	$(JSONNETFMT_BINARY) -n 2 --max-blank-lines 2 --string-style s --comment-style s -i $(JSONNET_SRC)
 
 .PHONY: generate
-generate: controller-gen conversion-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
-	$(CONVERSION_GEN) \
-		--output-file=zz_generated.conversion.go \
-		--go-header-file=./hack/boilerplate.go.txt \
-		--skip-unsafe=true \
-		./api/v1alpha1
 
 .PHONY: fmt
 fmt: jsonnet-format ## Run go fmt against code.
@@ -287,7 +282,6 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
 JSONNET_BINARY ?= $(LOCALBIN)/jsonnet
 JSONNETFMT_BINARY ?= $(LOCALBIN)/jsonnetfmt
 JSONNETLINT_BINARY ?= $(LOCALBIN)/jsonnet-lint
-CONVERSION_GEN := $(LOCALBIN)/conversion-gen
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
@@ -296,8 +290,6 @@ GOJSONTOYAML_VERSION ?= v0.1.0
 JSONNET_VERSION ?= v0.21.0
 JSONNETFMT_VERSION ?= v0.21.0
 JSONNETLINT_VERSION ?= v0.21.0
-CONVERSION_GEN_VERSION ?= v0.33.0
-
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
@@ -337,11 +329,6 @@ jsonnet-lint: $(JSONNETLINT_BINARY) ## Download jsonnetlint locally if necessary
 $(JSONNETLINT_BINARY): $(LOCALBIN)
 	test -s $(LOCALBIN)/jsonnet-lint && $(LOCALBIN)/jsonnet-lint --version | grep -q $(JSONNETLINT_VERSION) || \
 	GOBIN=$(LOCALBIN) go install github.com/google/go-jsonnet/cmd/jsonnet-lint@$(JSONNETLINT_VERSION)
-
-.PHONY: conversion-gen
-conversion-gen: $(CONVERSION_GEN) ## Download conversion-gen locally if necessary. If wrong version is installed, it will be overwritten.
-$(CONVERSION_GEN): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install k8s.io/code-generator/cmd/conversion-gen@$(CONVERSION_GEN_VERSION)
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.

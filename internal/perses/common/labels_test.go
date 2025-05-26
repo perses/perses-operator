@@ -20,9 +20,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/perses/perses-operator/api/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/perses/perses-operator/api/v1alpha2"
 
 	. "github.com/onsi/ginkgo/v2"
 
@@ -36,16 +35,16 @@ func TestLabels(t *testing.T) {
 
 var _ = Describe("LabelsForPerses", func() {
 	DescribeTable("when creating labels for Perses components",
-		func(persesImageFromFlag string, componentName string, perses *v1alpha2.Perses, verifyFunc func(labels map[string]string)) {
+		func(persesImageFromFlag string, componentName string, perses *v1alpha1.Perses, verifyFunc func(labels map[string]string)) {
 			labels := LabelsForPerses(componentName, perses)
 			verifyFunc(labels)
 		},
 		Entry("Long name is trimmed to 63 characters",
 			"",
 			strings.Repeat("a", 100),
-			&v1alpha2.Perses{
+			&v1alpha1.Perses{
 				ObjectMeta: metav1.ObjectMeta{Name: strings.Repeat("a", 100)},
-				Spec:       v1alpha2.PersesSpec{Image: "perses/perses:latest"},
+				Spec:       v1alpha1.PersesSpec{Image: "perses/perses:latest"},
 			},
 			func(labels map[string]string) {
 				nameLabel, exists := labels["app.kubernetes.io/name"]
@@ -57,13 +56,13 @@ var _ = Describe("LabelsForPerses", func() {
 		Entry("Custom labels from metadata are preserved",
 			"",
 			"perses-server",
-			&v1alpha2.Perses{
+			&v1alpha1.Perses{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "test-perses",
 				},
-				Spec: v1alpha2.PersesSpec{
+				Spec: v1alpha1.PersesSpec{
 					Image: "perses/perses:latest",
-					Metadata: &v1alpha2.Metadata{
+					Metadata: &v1alpha1.Metadata{
 						Labels: map[string]string{
 							"custom-label": "custom-value",
 						},

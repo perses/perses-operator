@@ -16,7 +16,7 @@ resources:
     namespaced: true
   controller: true
   domain: perses.dev
-  group:
+  group: 
   kind: Perses
   path: github.com/perses/perses-operator/api/v1alpha1
   version: v1alpha1
