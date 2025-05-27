@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/created-by: perses-operator
     app.kubernetes.io/name: perses-operator
     app.kubernetes.io/part-of: perses-operator
-    app.kubernetes.io/version: v0.1.10
+    app.kubernetes.io/version: v0.1.11
   name: perses-operator
   namespace: perses-dev
 spec:
