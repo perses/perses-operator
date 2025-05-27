@@ -68,7 +68,7 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 
 	if err != nil {
 		dlog.WithError(err).Error("Failed to create perses rest client")
-		return subreconciler.RequeueWithError(err)
+		return subreconciler.RequeueWithDelayAndError(time.Minute, err)
 	}
 
 	_, err = persesClient.Project().Get(dashboard.Namespace)
@@ -168,7 +168,7 @@ func (r *PersesDashboardReconciler) deleteDashboard(ctx context.Context, perses 
 
 	if err != nil {
 		dlog.WithError(err).Error("Failed to create perses rest client")
-		return subreconciler.RequeueWithError(err)
+		return subreconciler.RequeueWithDelayAndError(time.Minute, err)
 	}
 
 	_, err = persesClient.Project().Get(dashboardNamespace)
