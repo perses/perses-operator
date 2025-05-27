@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -108,7 +107,7 @@ func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Re
 		return subreconciler.RequeueWithError(err)
 	}
 
-	if !equality.Semantic.DeepEqual(found, sts) {
+	if !equality.Semantic.DeepEqual(found.Spec, sts.Spec) {
 		if err = r.Update(ctx, sts); err != nil {
 			stlog.Error(err, "Failed to update StatefulSet")
 			return subreconciler.RequeueWithError(err)
@@ -121,10 +120,7 @@ func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Re
 func (r *PersesReconciler) createPersesStatefulSet(
 	perses *v1alpha1.Perses) (*appsv1.StatefulSet, error) {
 
-	ls, err := common.LabelsForPerses(r.Config.PersesImage, perses.Name, perses)
-	if err != nil {
-		return nil, err
-	}
+	ls := common.LabelsForPerses(perses.Name, perses)
 
 	annotations := map[string]string{}
 	if perses.Spec.Metadata != nil && perses.Spec.Metadata.Annotations != nil {
@@ -139,7 +135,7 @@ func (r *PersesReconciler) createPersesStatefulSet(
 
 	livenessProbe, readinessProbe := common.GetProbes(perses)
 
-	dep := &appsv1.StatefulSet{
+	sts := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        perses.Name,
 			Namespace:   perses.Namespace,
@@ -197,12 +193,13 @@ func (r *PersesReconciler) createPersesStatefulSet(
 						Name: common.StorageVolumeName,
 					},
 					Spec: corev1.PersistentVolumeClaimSpec{
+						StorageClassName: perses.Spec.Storage.StorageClass,
 						AccessModes: []corev1.PersistentVolumeAccessMode{
 							corev1.ReadWriteOnce,
 						},
 						Resources: corev1.VolumeResourceRequirements{
 							Requests: corev1.ResourceList{
-								corev1.ResourceStorage: resource.MustParse("1Gi"),
+								corev1.ResourceStorage: perses.Spec.Storage.Size,
 							},
 						},
 					},
@@ -211,10 +208,14 @@ func (r *PersesReconciler) createPersesStatefulSet(
 		},
 	}
 
+	if perses.Spec.ServiceAccountName != "" {
+		sts.Spec.Template.Spec.ServiceAccountName = perses.Spec.ServiceAccountName
+	}
+
 	// Set the ownerRef for the StatefulSet
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
-	if err := ctrl.SetControllerReference(perses, dep, r.Scheme); err != nil {
+	if err := ctrl.SetControllerReference(perses, sts, r.Scheme); err != nil {
 		return nil, err
 	}
-	return dep, nil
+	return sts, nil
 }

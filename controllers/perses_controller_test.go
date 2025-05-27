@@ -76,9 +76,10 @@ var _ = Describe("Perses controller", func() {
 								"instance": PersesName,
 							},
 						},
-						Replicas:      &replicas,
-						ContainerPort: 8080,
-						Image:         persesImage,
+						ServiceAccountName: "perses-service-account",
+						Replicas:           &replicas,
+						ContainerPort:      8080,
+						Image:              persesImage,
 						Service: &persesv1alpha1.PersesService{
 							Name: persesServiceName,
 							Annotations: map[string]string{
@@ -179,6 +180,9 @@ var _ = Describe("Perses controller", func() {
 					}
 					if len(found.Spec.Template.Spec.Containers[0].Args) < 1 && found.Spec.Template.Spec.Containers[0].Args[0] != "--config=/etc/perses/config/config.yaml" {
 						return fmt.Errorf("The config path used in the StatefulSet is not the one defined in the custom resource")
+					}
+					if found.Spec.Template.Spec.ServiceAccountName != "perses-service-account" {
+						return fmt.Errorf("The service account used in the StatefulSet is not the one defined in the custom resource")
 					}
 					if value, ok := found.ObjectMeta.Annotations["testing"]; ok {
 						if value != "true" {

@@ -90,7 +90,7 @@ func (r *PersesDashboardReconciler) handleDelete(ctx context.Context, req ctrl.R
 
 		log.Infof("perses dashboard resource not found. Deleting '%s' in '%s'", req.Name, req.Namespace)
 
-		return r.deleteDashboardInAllInstances(ctx, req, req.NamespacedName.Namespace, req.NamespacedName.Name)
+		return r.deleteDashboardInAllInstances(ctx, req, req.Namespace, req.Name)
 	}
 
 	return subreconciler.ContinueReconciling()

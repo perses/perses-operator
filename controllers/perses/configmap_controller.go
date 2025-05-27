@@ -91,7 +91,7 @@ func (r *PersesReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Requ
 		return subreconciler.RequeueWithError(err)
 	}
 
-	if !equality.Semantic.DeepEqual(found, cm) {
+	if configMapNeedsUpdate(found, cm, configName, perses) {
 		if err := r.Update(ctx, cm); err != nil {
 			cmlog.Error(err, "Failed to update ConfigMap")
 			return subreconciler.RequeueWithError(err)
@@ -101,13 +101,35 @@ func (r *PersesReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Requ
 	return subreconciler.ContinueReconciling()
 }
 
+func configMapNeedsUpdate(existing, updated *corev1.ConfigMap, name string, perses *v1alpha1.Perses) bool {
+	if existing == nil && updated == nil {
+		return false
+	}
+	if existing == nil || updated == nil {
+		return true
+	}
+	if existing.Name != updated.Name || existing.Namespace != updated.Namespace {
+		return true
+	}
+	if !equality.Semantic.DeepEqual(existing.Data, updated.Data) ||
+		!equality.Semantic.DeepEqual(existing.Annotations, updated.Annotations) {
+		return true
+	}
+
+	// check for differences only in the labels that are set by the operator
+	labels := common.LabelsForPerses(name, perses)
+	for k := range labels {
+		if existing.Labels[k] != updated.Labels[k] {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (r *PersesReconciler) createPersesConfigMap(perses *v1alpha1.Perses) (*corev1.ConfigMap, error) {
 	configName := common.GetConfigName(perses.Name)
-	ls, err := common.LabelsForPerses(r.Config.PersesImage, configName, perses)
-
-	if err != nil {
-		return nil, err
-	}
+	ls := common.LabelsForPerses(configName, perses)
 
 	annotations := map[string]string{}
 	if perses.Spec.Metadata != nil && perses.Spec.Metadata.Annotations != nil {

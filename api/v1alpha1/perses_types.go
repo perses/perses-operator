@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -66,6 +67,16 @@ type PersesSpec struct {
 	// +optional
 	// tls specifies the tls configuration for the perses instance
 	TLS *TLS `json:"tls,omitempty"`
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +kubebuilder:default:={size: "1Gi"}
+	// +optional
+	// Storage configuration used by the StatefulSet
+	Storage *StorageConfiguration `json:"storage,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	// ServiceAccountName is the name of the service account to use for the perses deployment or statefulset.
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
 }
 
 // Metadata to add to deployed pods
@@ -84,9 +95,56 @@ type PersesService struct {
 }
 
 type Client struct {
+	// BasicAuth basic auth config for perses client
+	// +optional
+	BasicAuth *BasicAuth `json:"basicAuth,omitempty"`
+	// OAuth configuration for perses client
+	// +optional
+	OAuth *OAuth `json:"oauth,omitempty"`
 	// TLS the equivalent to the tls_config for perses client
 	// +optional
 	TLS *TLS `json:"tls,omitempty"`
+
+	// KubernetesAuth configuration for perses client
+	// +optional
+	KubernetesAuth *KubernetesAuth `json:"kubernetesAuth,omitempty"`
+}
+
+type KubernetesAuth struct {
+	// Enable kubernetes auth for perses client
+	Enable bool `json:"enable"`
+}
+
+type BasicAuth struct {
+	SecretSource `json:",inline"`
+	// Username for basic auth
+	Username string `json:"username"`
+	// Path to password
+	PasswordPath string `json:"password_path"`
+}
+
+type OAuth struct {
+	SecretSource `json:",inline"`
+	// Path to client id
+	// +optional
+	ClientIDPath string `json:"clientIDPath"`
+	// Path to client secret
+	// +optional
+	ClientSecretPath string `json:"clientSecretPath"`
+	// TokenURL is the resource server's token endpoint
+	// URL. This is a constant specific to each server.
+	TokenURL string `json:"tokenURL"`
+	// +optional
+	// Scope specifies optional requested permissions.
+	Scopes []string `json:"scopes,omitempty"`
+	// +optional
+	// EndpointParams specifies additional parameters for requests to the token endpoint.
+	EndpointParams map[string][]string `json:"endpointParams,omitempty"`
+	// +optional
+	// AuthStyle optionally specifies how the endpoint wants the
+	// client ID & client secret sent. The zero value means to
+	// auto-detect.
+	AuthStyle int `json:"authStyle,omitempty"`
 }
 
 type TLS struct {
@@ -103,27 +161,47 @@ type TLS struct {
 	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
 }
 
-// CertificateType types of certificate sources in k8s
-type CertificateType string
+// SecretSourceType types of secret sources in k8s
+type SecretSourceType string
 
 const (
-	CertificateTypeSecret    CertificateType = "secret"
-	CertificateTypeConfigMap CertificateType = "configmap"
-	CertificateTypeFile      CertificateType = "file"
+	SecretSourceTypeSecret    SecretSourceType = "secret"
+	SecretSourceTypeConfigMap SecretSourceType = "configmap"
+	SecretSourceTypeFile      SecretSourceType = "file"
 )
 
-type Certificate struct {
+// SecretSource configuration for a perses secret source
+type SecretSource struct {
 	// +kubebuilder:validation:Enum:={"secret", "configmap", "file"}
-	// Type source type of certificate
-	Type CertificateType `json:"type"`
-	// Name of certificate k8s resource (when type is secret or configmap)
+	// Type source type of secret
+	Type SecretSourceType `json:"type"`
+	// Name of basic auth k8s resource (when type is secret or configmap)
 	// +optional
 	Name string `json:"name,omitempty"`
+	// Namsespace of certificate k8s resource (when type is secret or configmap)
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
+type Certificate struct {
+	SecretSource `json:",inline"`
 	// Path to Certificate
 	CertPath string `json:"certPath"`
 	// Path to Private key certificate
 	// +optional
 	PrivateKeyPath string `json:"privateKeyPath,omitempty"`
+}
+
+// StorageConfiguration is the configuration used to create and reconcile PVCs
+type StorageConfiguration struct {
+	// StorageClass to use for PVCs.
+	// If not specified, will use the default storage class
+	// +optional
+	StorageClass *string `json:"storageClass,omitempty"`
+	// Size of the storage.
+	// cannot be decreased.
+	// +optional
+	Size resource.Quantity `json:"size,omitempty"`
 }
 
 // PersesStatus defines the observed state of Perses
@@ -134,6 +212,7 @@ type PersesStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:resource:shortName=per
 
 // Perses is the Schema for the perses API
 type Perses struct {

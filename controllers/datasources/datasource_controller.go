@@ -20,10 +20,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
-	"github.com/perses/perses-operator/api/v1alpha1"
 	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	persescommon "github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
 	v1 "github.com/perses/perses/pkg/client/api/v1"
 	"github.com/perses/perses/pkg/client/perseshttp"
@@ -31,8 +32,6 @@ import (
 	"github.com/perses/perses/pkg/model/api/v1/common"
 	"github.com/perses/perses/pkg/model/api/v1/secret"
 	logger "github.com/sirupsen/logrus"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -44,7 +43,7 @@ var dlog = logger.WithField("module", "datasource_controller")
 func (r *PersesDatasourceReconciler) reconcileDatasourcesInAllInstances(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
 	persesInstances := &persesv1alpha1.PersesList{}
 	var opts []client.ListOption
-	err := r.Client.List(ctx, persesInstances, opts...)
+	err := r.List(ctx, persesInstances, opts...)
 	if err != nil {
 		dlog.WithError(err).Error("Failed to get perses instances")
 		return subreconciler.RequeueWithDelayAndError(time.Minute, err)
@@ -71,11 +70,11 @@ func (r *PersesDatasourceReconciler) reconcileDatasourcesInAllInstances(ctx cont
 }
 
 func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, perses persesv1alpha1.Perses, datasource *persesv1alpha1.PersesDatasource) (*ctrl.Result, error) {
-	persesClient, err := r.ClientFactory.CreateClient(perses)
+	persesClient, err := r.ClientFactory.CreateClient(ctx, r.Client, perses)
 
 	if err != nil {
 		dlog.WithError(err).Error("Failed to create perses rest client")
-		return subreconciler.RequeueWithError(err)
+		return subreconciler.RequeueWithDelayAndError(time.Minute, err)
 	}
 
 	_, err = persesClient.Project().Get(datasource.Namespace)
@@ -106,9 +105,9 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 		}
 	}
 
-	// create a secret holding the TLS configuration so the datasource can reference it
-	if datasource.Spec.Client != nil && datasource.Spec.Client.TLS != nil && datasource.Spec.Client.TLS.Enable {
-		_, err := r.syncPersesSecretForTLS(ctx, persesClient, datasource)
+	// create a secret holding the secret configuration so the datasource can reference it
+	if persescommon.HasSecretConfig(datasource.Spec.Client) {
+		_, err := r.syncPersesSecret(ctx, persesClient, datasource)
 
 		if err != nil {
 			dlog.WithError(err).Errorf("Failed to create datasource secret: %s", datasource.Name)
@@ -157,103 +156,15 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 	return subreconciler.ContinueReconciling()
 }
 
-func (r *PersesDatasourceReconciler) getCertData(ctx context.Context, namespace string, datasourceName string, cert *v1alpha1.Certificate) (string, string, error) {
-	var certData string
-	var keyData string
-
-	if cert.Type == v1alpha1.CertificateTypeConfigMap || cert.Type == v1alpha1.CertificateTypeSecret {
-		if len(cert.Name) == 0 {
-			return "", "", fmt.Errorf("No name found for datasource tls certificate: %s with type: %s", cert.CertPath, cert.Type)
-		}
-
-		switch cert.Type {
-		case v1alpha1.CertificateTypeSecret:
-			secret := &corev1.Secret{}
-
-			err := r.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: cert.Name}, secret)
-
-			if err != nil {
-				return "", "", err
-			}
-
-			certData = string(secret.Data[cert.CertPath])
-			keyData = string(secret.Data[cert.PrivateKeyPath])
-		case v1alpha1.CertificateTypeConfigMap:
-			cm := &corev1.ConfigMap{}
-			err := r.Client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: cert.Name}, cm)
-
-			if err != nil {
-				return "", "", err
-			}
-
-			certData = string(cm.Data[cert.CertPath])
-			keyData = string(cm.Data[cert.PrivateKeyPath])
-		}
-
-		if certData == "" {
-			return "", "", fmt.Errorf("No data found for certificate: %s in namespace: %s for datasource: %s", cert.CertPath, namespace, datasourceName)
-		}
-
-		return certData, keyData, nil
-	}
-
-	return "", "", nil
-}
-
-// creates/updates a Perses Secret with TLS configuration,
+// creates/updates a Perses Secret with configuration,
 // retrieving cert/key data from Secrets, ConfigMaps, or files specified in the PersesDatasource.
-func (r *PersesDatasourceReconciler) syncPersesSecretForTLS(ctx context.Context, persesClient v1.ClientInterface, datasource *persesv1alpha1.PersesDatasource) (*ctrl.Result, error) {
+func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, persesClient v1.ClientInterface, datasource *persesv1alpha1.PersesDatasource) (*ctrl.Result, error) {
 	namespace := datasource.Namespace
 	datasourceName := datasource.Name
 	secretName := datasourceName + secretNameSuffix
+	basicAuth := datasource.Spec.Client.BasicAuth
+	oauth := datasource.Spec.Client.OAuth
 	tls := datasource.Spec.Client.TLS
-
-	tlsConfig := secret.TLSConfig{
-		InsecureSkipVerify: tls.InsecureSkipVerify,
-	}
-
-	if tls.CaCert != nil {
-		if tls.CaCert.Type == v1alpha1.CertificateTypeSecret || tls.CaCert.Type == v1alpha1.CertificateTypeConfigMap {
-			caData, _, err := r.getCertData(ctx, namespace, datasourceName, tls.CaCert)
-
-			if err != nil {
-				dlog.WithFields(logger.Fields{
-					"datasource": datasourceName,
-					"namespace":  namespace,
-					"error":      err,
-				}).Error("Failed to get CA data for datasource")
-				return subreconciler.RequeueWithError(err)
-			}
-
-			tlsConfig.CA = caData
-		} else if tls.CaCert.Type == v1alpha1.CertificateTypeFile {
-			tlsConfig.CAFile = tls.CaCert.CertPath
-		}
-	}
-
-	if tls.UserCert != nil {
-		if tls.UserCert.Type == v1alpha1.CertificateTypeSecret || tls.UserCert.Type == v1alpha1.CertificateTypeConfigMap {
-			certData, keyData, err := r.getCertData(ctx, namespace, datasourceName, tls.UserCert)
-
-			if err != nil {
-				dlog.WithFields(logger.Fields{
-					"datasource": datasourceName,
-					"namespace":  namespace,
-					"error":      err,
-				}).Error("Failed to get user certifitate data for datasource")
-				return subreconciler.RequeueWithError(err)
-			}
-
-			tlsConfig.Cert = certData
-			tlsConfig.Key = keyData
-		} else if tls.UserCert.Type == v1alpha1.CertificateTypeFile {
-			tlsConfig.CertFile = tls.UserCert.CertPath
-
-			if len(tls.UserCert.PrivateKeyPath) > 0 {
-				tlsConfig.KeyFile = tls.UserCert.PrivateKeyPath
-			}
-		}
-	}
 
 	secretWithName := &persesv1.Secret{
 		Kind: persesv1.KindSecret,
@@ -262,9 +173,126 @@ func (r *PersesDatasourceReconciler) syncPersesSecretForTLS(ctx context.Context,
 				Name: secretName,
 			},
 		},
-		Spec: persesv1.SecretSpec{
-			TLSConfig: &tlsConfig,
-		},
+		Spec: persesv1.SecretSpec{},
+	}
+
+	if basicAuth != nil {
+		basicAuthConfig := &secret.BasicAuth{}
+		basicAuthConfig.Username = basicAuth.Username
+
+		switch basicAuth.Type {
+		case persesv1alpha1.SecretSourceTypeSecret, persesv1alpha1.SecretSourceTypeConfigMap:
+			passwordData, err := persescommon.GetBasicAuthData(ctx, r.Client, namespace, datasourceName, basicAuth)
+
+			if err != nil {
+				dlog.WithFields(logger.Fields{
+					"datasource": datasourceName,
+					"namespace":  namespace,
+					"error":      err,
+				}).Error("Failed to get user basic auth password data for datasource")
+				return subreconciler.RequeueWithError(err)
+			}
+
+			basicAuthConfig.Password = passwordData
+		case persesv1alpha1.SecretSourceTypeFile:
+			basicAuthConfig.PasswordFile = basicAuth.PasswordPath
+		}
+
+		secretWithName.Spec.BasicAuth = basicAuthConfig
+	}
+
+	if oauth != nil {
+		oAuthConfig := &secret.OAuth{
+			TokenURL:       oauth.TokenURL,
+			Scopes:         oauth.Scopes,
+			EndpointParams: oauth.EndpointParams,
+		}
+
+		if oauth.AuthStyle != 0 {
+			oAuthConfig.AuthStyle = oauth.AuthStyle
+		}
+
+		oAuthConfig.TokenURL = oauth.TokenURL
+		switch oauth.Type {
+		case persesv1alpha1.SecretSourceTypeSecret, persesv1alpha1.SecretSourceTypeConfigMap:
+			clientIDData, clientSecretData, err := persescommon.GetOAuthData(ctx, r.Client, namespace, datasourceName, oauth)
+
+			if err != nil {
+				dlog.WithFields(logger.Fields{
+					"datasource": datasourceName,
+					"namespace":  namespace,
+					"error":      err,
+				}).Error("Failed to get user oauth data for datasource")
+				return subreconciler.RequeueWithError(err)
+			}
+
+			oAuthConfig.ClientID = clientIDData
+			oAuthConfig.ClientSecret = clientSecretData
+		case persesv1alpha1.SecretSourceTypeFile:
+			// the clientID is a Hidden field in perses API,
+			// but doesn't expose it as a file field for it, so we need to read it and use the value
+			clientID, err := os.ReadFile(oauth.ClientIDPath)
+			if err != nil {
+				return subreconciler.RequeueWithError(fmt.Errorf("failed to read the OAuth client ID file: %s", oauth.ClientIDPath))
+			}
+			oAuthConfig.ClientID = string(clientID)
+			oAuthConfig.ClientSecretFile = oauth.ClientSecretPath
+		}
+
+		secretWithName.Spec.OAuth = oAuthConfig
+	}
+
+	if tls != nil {
+		tlsConfig := &secret.TLSConfig{
+			InsecureSkipVerify: tls.InsecureSkipVerify,
+		}
+
+		if tls.CaCert != nil {
+			switch tls.CaCert.Type {
+			case persesv1alpha1.SecretSourceTypeSecret, persesv1alpha1.SecretSourceTypeConfigMap:
+				caData, _, err := persescommon.GetTLSCertData(ctx, r.Client, namespace, datasourceName, tls.CaCert)
+
+				if err != nil {
+					dlog.WithFields(logger.Fields{
+						"datasource": datasourceName,
+						"namespace":  namespace,
+						"error":      err,
+					}).Error("Failed to get CA data for datasource")
+					return subreconciler.RequeueWithError(err)
+				}
+
+				tlsConfig.CA = caData
+			case persesv1alpha1.SecretSourceTypeFile:
+				tlsConfig.CAFile = tls.CaCert.CertPath
+			}
+		}
+
+		if tls.UserCert != nil {
+			switch tls.UserCert.Type {
+			case persesv1alpha1.SecretSourceTypeSecret, persesv1alpha1.SecretSourceTypeConfigMap:
+				certData, keyData, err := persescommon.GetTLSCertData(ctx, r.Client, namespace, datasourceName, tls.UserCert)
+
+				if err != nil {
+					dlog.WithFields(logger.Fields{
+						"datasource": datasourceName,
+						"namespace":  namespace,
+						"error":      err,
+					}).Error("Failed to get user certifitate data for datasource")
+					return subreconciler.RequeueWithError(err)
+				}
+
+				tlsConfig.Cert = certData
+				tlsConfig.Key = keyData
+			case persesv1alpha1.SecretSourceTypeFile:
+				tlsConfig.CertFile = tls.UserCert.CertPath
+
+				if len(tls.UserCert.PrivateKeyPath) > 0 {
+					tlsConfig.KeyFile = tls.UserCert.PrivateKeyPath
+				}
+			}
+		}
+
+		secretWithName.Spec.TLSConfig = tlsConfig
 	}
 
 	_, err := persesClient.Secret(namespace).Get(secretName)
@@ -301,7 +329,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecretForTLS(ctx context.Context,
 func (r *PersesDatasourceReconciler) deleteDatasourceInAllInstances(ctx context.Context, datasourceNamespace string, datasourceName string) (*ctrl.Result, error) {
 	persesInstances := &persesv1alpha1.PersesList{}
 	var opts []client.ListOption
-	err := r.Client.List(ctx, persesInstances, opts...)
+	err := r.List(ctx, persesInstances, opts...)
 	if err != nil {
 		dlog.WithError(err).Error("Failed to get perses instances")
 		return subreconciler.RequeueWithError(err)
@@ -313,7 +341,7 @@ func (r *PersesDatasourceReconciler) deleteDatasourceInAllInstances(ctx context.
 	}
 
 	for _, persesInstance := range persesInstances.Items {
-		if r, err := r.deleteDatasource(persesInstance, datasourceNamespace, datasourceName); subreconciler.ShouldHaltOrRequeue(r, err) {
+		if r, err := r.deleteDatasource(ctx, persesInstance, datasourceNamespace, datasourceName); subreconciler.ShouldHaltOrRequeue(r, err) {
 			return r, err
 		}
 	}
@@ -321,12 +349,12 @@ func (r *PersesDatasourceReconciler) deleteDatasourceInAllInstances(ctx context.
 	return subreconciler.DoNotRequeue()
 }
 
-func (r *PersesDatasourceReconciler) deleteDatasource(perses persesv1alpha1.Perses, datasourceNamespace string, datasourceName string) (*ctrl.Result, error) {
-	persesClient, err := r.ClientFactory.CreateClient(perses)
+func (r *PersesDatasourceReconciler) deleteDatasource(ctx context.Context, perses persesv1alpha1.Perses, datasourceNamespace string, datasourceName string) (*ctrl.Result, error) {
+	persesClient, err := r.ClientFactory.CreateClient(ctx, r.Client, perses)
 
 	if err != nil {
 		dlog.WithError(err).Error("Failed to create perses rest client")
-		return subreconciler.RequeueWithError(err)
+		return subreconciler.RequeueWithDelayAndError(time.Minute, err)
 	}
 
 	_, err = persesClient.Project().Get(datasourceNamespace)

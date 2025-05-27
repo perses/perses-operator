@@ -119,10 +119,7 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 func (r *PersesReconciler) createPersesDeployment(
 	perses *v1alpha1.Perses) (*appsv1.Deployment, error) {
 
-	ls, err := common.LabelsForPerses(r.Config.PersesImage, perses.Name, perses)
-	if err != nil {
-		return nil, err
-	}
+	ls := common.LabelsForPerses(perses.Name, perses)
 
 	annotations := map[string]string{}
 	if perses.Spec.Metadata != nil && perses.Spec.Metadata.Annotations != nil {
@@ -203,6 +200,10 @@ func (r *PersesReconciler) createPersesDeployment(
 				},
 			},
 		},
+	}
+
+	if perses.Spec.ServiceAccountName != "" {
+		dep.Spec.Template.Spec.ServiceAccountName = perses.Spec.ServiceAccountName
 	}
 
 	// Set the ownerRef for the Deployment

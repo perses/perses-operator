@@ -91,7 +91,7 @@ func (r *PersesDatasourceReconciler) handleDelete(ctx context.Context, req ctrl.
 
 		log.Infof("perses datasource resource not found. Deleting '%s' in '%s'", req.Name, req.Namespace)
 
-		return r.deleteDatasourceInAllInstances(ctx, req.NamespacedName.Namespace, req.NamespacedName.Name)
+		return r.deleteDatasourceInAllInstances(ctx, req.Namespace, req.Name)
 	}
 
 	return subreconciler.ContinueReconciling()

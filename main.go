@@ -1,5 +1,5 @@
 /*
-Copyright 2023 The Perses Authors.
+Copyright 2025 The Perses Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&persesImage, "perses-default-base-image", "docker.io/persesdev/perses:v0.51.0-beta.0", "The default image used for the Perses Deployment or StatefulSet operands")
+	flag.StringVar(&persesImage, "perses-default-base-image", "docker.io/persesdev/perses:v0.50.3", "The default image used for the Perses Deployment or StatefulSet operands")
 	flag.StringVar(&persesServerURL, common.PersesServerURLFlag, "", "The Perses backend server URL")
 	flag.BoolVar(&enableHTTP2, "enable-http2", enableHTTP2, "If HTTP/2 should be enabled for the metrics and webhook servers.")
 	opts := zap.Options{
@@ -109,6 +109,7 @@ func main() {
 		// if you are doing or is intended to do any operation such as perform cleanups
 		// after the manager stops then its usage might be unsafe.
 		// LeaderElectionReleaseOnCancel: true,
+		PprofBindAddress: "127.0.0.1:8083",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
