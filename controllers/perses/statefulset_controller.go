@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -193,19 +194,30 @@ func (r *PersesReconciler) createPersesStatefulSet(
 						Name: common.StorageVolumeName,
 					},
 					Spec: corev1.PersistentVolumeClaimSpec{
-						StorageClassName: perses.Spec.Storage.StorageClass,
 						AccessModes: []corev1.PersistentVolumeAccessMode{
 							corev1.ReadWriteOnce,
 						},
 						Resources: corev1.VolumeResourceRequirements{
 							Requests: corev1.ResourceList{
-								corev1.ResourceStorage: perses.Spec.Storage.Size,
+								corev1.ResourceStorage: resource.MustParse("1Gi"),
 							},
 						},
 					},
 				},
 			},
 		},
+	}
+
+	if perses.Spec.Storage != nil {
+		if perses.Spec.Storage.StorageClass != nil && len(*perses.Spec.Storage.StorageClass) > 0 {
+			sts.Spec.VolumeClaimTemplates[0].Spec.StorageClassName = perses.Spec.Storage.StorageClass
+		}
+
+		if !perses.Spec.Storage.Size.IsZero() {
+			sts.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests = corev1.ResourceList{
+				corev1.ResourceStorage: perses.Spec.Storage.Size,
+			}
+		}
 	}
 
 	if perses.Spec.ServiceAccountName != "" {

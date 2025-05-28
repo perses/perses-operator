@@ -1,6 +1,6 @@
-FROM golang:1.23-alpine AS build-env
+FROM golang:1.24-alpine AS build-env
 
-RUN apk add --update --no-cache make bash mailcap
+RUN apk add --update --no-cache make bash mailcap jq
 
 WORKDIR /app
 COPY . .
