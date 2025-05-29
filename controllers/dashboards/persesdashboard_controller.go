@@ -73,7 +73,7 @@ func (r *PersesDashboardReconciler) getLatestPersesDashboard(ctx context.Context
 			return subreconciler.DoNotRequeue()
 		}
 		log.WithError(err).Error("Failed to get perses dashboard")
-		return subreconciler.RequeueWithDelayAndError(time.Second, err)
+		return subreconciler.RequeueWithError(err)
 	}
 
 	return subreconciler.ContinueReconciling()
@@ -107,7 +107,7 @@ func (r *PersesDashboardReconciler) setStatusToUnknown(ctx context.Context, req 
 		meta.SetStatusCondition(&dashboard.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses, Status: metav1.ConditionUnknown, Reason: "Reconciling", Message: "Starting reconciliation"})
 		if err := r.Status().Update(ctx, dashboard); err != nil {
 			log.WithError(err).Error("Failed to update Perses dashboard status")
-			return subreconciler.RequeueWithDelayAndError(time.Second*10, err)
+			return subreconciler.RequeueWithError(err)
 		}
 	}
 

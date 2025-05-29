@@ -23,9 +23,6 @@ import (
 	"os"
 	"time"
 
-	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
-	persescommon "github.com/perses/perses-operator/internal/perses/common"
-	"github.com/perses/perses-operator/internal/subreconciler"
 	v1 "github.com/perses/perses/pkg/client/api/v1"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
@@ -34,6 +31,10 @@ import (
 	logger "github.com/sirupsen/logrus"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	persescommon "github.com/perses/perses-operator/internal/perses/common"
+	"github.com/perses/perses-operator/internal/subreconciler"
 )
 
 const secretNameSuffix = "-secret"
@@ -46,7 +47,7 @@ func (r *PersesDatasourceReconciler) reconcileDatasourcesInAllInstances(ctx cont
 	err := r.List(ctx, persesInstances, opts...)
 	if err != nil {
 		dlog.WithError(err).Error("Failed to get perses instances")
-		return subreconciler.RequeueWithDelayAndError(time.Minute, err)
+		return subreconciler.RequeueWithError(err)
 	}
 
 	if len(persesInstances.Items) == 0 {
@@ -74,7 +75,7 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 
 	if err != nil {
 		dlog.WithError(err).Error("Failed to create perses rest client")
-		return subreconciler.RequeueWithDelayAndError(time.Minute, err)
+		return subreconciler.RequeueWithError(err)
 	}
 
 	_, err = persesClient.Project().Get(datasource.Namespace)
@@ -111,7 +112,7 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 
 		if err != nil {
 			dlog.WithError(err).Errorf("Failed to create datasource secret: %s", datasource.Name)
-			return subreconciler.RequeueWithDelayAndError(time.Minute, err)
+			return subreconciler.RequeueWithError(err)
 		}
 	}
 
@@ -133,7 +134,7 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 
 			if err != nil {
 				dlog.WithError(err).Errorf("Failed to create datasource: %s", datasource.Name)
-				return subreconciler.RequeueWithDelayAndError(time.Minute, err)
+				return subreconciler.RequeueWithError(err)
 			}
 
 			dlog.Infof("Datasource created: %s", datasource.Name)
@@ -147,7 +148,7 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 
 		if err != nil {
 			dlog.WithError(err).Errorf("Failed to update datasource: %s", datasource.Name)
-			return subreconciler.RequeueWithDelayAndError(time.Minute, err)
+			return subreconciler.RequeueWithError(err)
 		}
 
 		dlog.Infof("Datasource updated: %s", datasource.Name)
@@ -303,7 +304,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 
 			if err != nil {
 				dlog.WithError(err).Errorf("Failed to create secret: %s", secretName)
-				return subreconciler.RequeueWithDelayAndError(time.Minute, err)
+				return subreconciler.RequeueWithError(err)
 			}
 
 			dlog.Infof("Secret created: %s", secretName)
@@ -317,7 +318,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 
 		if err != nil {
 			dlog.WithError(err).Errorf("Failed to update secret: %s", secretName)
-			return subreconciler.RequeueWithDelayAndError(time.Minute, err)
+			return subreconciler.RequeueWithError(err)
 		}
 
 		dlog.Infof("Secret updated: %s", secretName)
@@ -354,7 +355,7 @@ func (r *PersesDatasourceReconciler) deleteDatasource(ctx context.Context, perse
 
 	if err != nil {
 		dlog.WithError(err).Error("Failed to create perses rest client")
-		return subreconciler.RequeueWithDelayAndError(time.Minute, err)
+		return subreconciler.RequeueWithError(err)
 	}
 
 	_, err = persesClient.Project().Get(datasourceNamespace)

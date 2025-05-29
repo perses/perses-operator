@@ -47,15 +47,20 @@ func (r *PersesReconciler) reconcileService(ctx context.Context, req ctrl.Reques
 		return result, err
 	}
 
+	serviceName := perses.Name
+	if perses.Spec.Service != nil && len(perses.Spec.Service.Name) > 0 {
+		serviceName = perses.Spec.Service.Name
+	}
+
 	found := &corev1.Service{}
-	if err := r.Get(ctx, types.NamespacedName{Name: perses.Name, Namespace: perses.Namespace}, found); err != nil {
+	if err := r.Get(ctx, types.NamespacedName{Name: serviceName, Namespace: perses.Namespace}, found); err != nil {
 		if !apierrors.IsNotFound(err) {
 			log.WithError(err).Error("Failed to get Service")
 
 			return subreconciler.RequeueWithError(err)
 		}
 
-		ser, err2 := r.createPersesService(perses)
+		ser, err2 := r.createPersesService(serviceName, perses)
 		if err2 != nil {
 			slog.WithError(err2).Error("Failed to define new Service resource for perses")
 
@@ -80,7 +85,7 @@ func (r *PersesReconciler) reconcileService(ctx context.Context, req ctrl.Reques
 		return subreconciler.ContinueReconciling()
 	}
 
-	svc, err := r.createPersesService(perses)
+	svc, err := r.createPersesService(serviceName, perses)
 	if err != nil {
 		slog.WithError(err).Error("Failed to define new Service resource for perses")
 		return subreconciler.RequeueWithError(err)
@@ -134,6 +139,7 @@ func serviceNeedsUpdate(existing, updated *corev1.Service, name string, perses *
 }
 
 func (r *PersesReconciler) createPersesService(
+	serviceName string,
 	perses *v1alpha1.Perses) (*corev1.Service, error) {
 	ls := common.LabelsForPerses(perses.Name, perses)
 
@@ -144,12 +150,6 @@ func (r *PersesReconciler) createPersesService(
 
 	if perses.Spec.Service != nil && perses.Spec.Service.Annotations != nil {
 		maps.Copy(annotations, perses.Spec.Service.Annotations)
-	}
-
-	serviceName := perses.Name
-
-	if perses.Spec.Service != nil && len(perses.Spec.Service.Name) > 0 {
-		serviceName = perses.Spec.Service.Name
 	}
 
 	ser := &corev1.Service{
