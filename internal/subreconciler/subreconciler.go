@@ -43,7 +43,7 @@ func DoNotRequeue() (*reconcile.Result, error) { return &ctrl.Result{Requeue: fa
 
 // RequeueWithError returns a controller result pairing specifying to
 // requeue with an error message.
-func RequeueWithError(e error) (*reconcile.Result, error) { return &ctrl.Result{Requeue: true}, e }
+func RequeueWithError(e error) (*reconcile.Result, error) { return &ctrl.Result{}, e }
 
 // Requeue returns a controller result pairing specifying to
 // requeue with no error message implied. This returns no error.
@@ -52,13 +52,7 @@ func Requeue() (*reconcile.Result, error) { return &ctrl.Result{Requeue: true}, 
 // RequeueWithDelay returns a controller result pairing specifying to
 // requeue after a delay. This returns no error.
 func RequeueWithDelay(dur time.Duration) (*reconcile.Result, error) {
-	return &ctrl.Result{Requeue: true, RequeueAfter: dur}, nil
-}
-
-// RequeueWithDelayAndError returns a controller result pairing specifying to
-// requeue after a delay with an error message.
-func RequeueWithDelayAndError(dur time.Duration, e error) (*reconcile.Result, error) {
-	return &ctrl.Result{Requeue: true, RequeueAfter: dur}, e
+	return &ctrl.Result{RequeueAfter: dur}, nil
 }
 
 // ShouldRequeue returns true if the reconciler result indicates

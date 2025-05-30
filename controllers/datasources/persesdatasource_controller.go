@@ -19,11 +19,11 @@ package datasources
 import (
 	"context"
 	"fmt"
-	"time"
 
 	logger "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -32,7 +32,6 @@ import (
 	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
 	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // PersesDatasourceReconciler reconciles a PersesDatasource object
@@ -74,7 +73,7 @@ func (r *PersesDatasourceReconciler) getLatestPersesDatasource(ctx context.Conte
 			return subreconciler.DoNotRequeue()
 		}
 		log.WithError(err).Error("Failed to get perses datasource")
-		return subreconciler.RequeueWithDelayAndError(time.Second, err)
+		return subreconciler.RequeueWithError(err)
 	}
 
 	return subreconciler.ContinueReconciling()
@@ -108,7 +107,7 @@ func (r *PersesDatasourceReconciler) setStatusToUnknown(ctx context.Context, req
 		meta.SetStatusCondition(&datasource.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses, Status: metav1.ConditionUnknown, Reason: "Reconciling", Message: "Starting reconciliation"})
 		if err := r.Status().Update(ctx, datasource); err != nil {
 			log.WithError(err).Error("Failed to update Perses datasource status")
-			return subreconciler.RequeueWithDelayAndError(time.Second*10, err)
+			return subreconciler.RequeueWithError(err)
 		}
 	}
 

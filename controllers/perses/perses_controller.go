@@ -21,9 +21,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/perses/perses-operator/api/v1alpha1"
-	"github.com/perses/perses-operator/internal/perses/common"
-	"github.com/perses/perses-operator/internal/subreconciler"
 	logger "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -35,6 +32,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+
+	"github.com/perses/perses-operator/api/v1alpha1"
+	"github.com/perses/perses-operator/internal/perses/common"
+	"github.com/perses/perses-operator/internal/subreconciler"
 )
 
 type Config struct {
@@ -60,9 +61,9 @@ var log = logger.WithField("module", "perses_controller")
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
 func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	subreconcilersForPerses := []subreconciler.FnWithRequest{
+		r.handleDelete,
 		r.setStatusToUnknown,
 		r.addFinalizer,
-		r.handleDelete,
 		r.reconcileService,
 		r.reconcileConfigMap,
 		r.reconcileDeployment,
@@ -108,10 +109,16 @@ func (r *PersesReconciler) setStatusToUnknown(ctx context.Context, req ctrl.Requ
 	// Let's just set the status as Unknown when no status are available
 	if len(perses.Status.Conditions) == 0 {
 		meta.SetStatusCondition(&perses.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses, Status: metav1.ConditionUnknown, Reason: "Reconciling", Message: "Starting reconciliation"})
+
 		if err := r.Status().Update(ctx, perses); err != nil {
 			log.WithError(err).Error("Failed to update Perses status")
-			return subreconciler.RequeueWithDelayAndError(time.Second*10, err)
+			return subreconciler.RequeueWithError(err)
 		}
+
+		// requeue after adding unknown status to allow adding the finalizer to succeed
+		// see explanation on setting a status on creation here
+		// https://github.com/kubernetes-sigs/controller-runtime/blob/1dce6213f6c078f3170921b3a774304d066d5bd4/pkg/controller/controllerutil/controllerutil.go#L378
+		return subreconciler.Requeue()
 	}
 
 	return subreconciler.ContinueReconciling()
@@ -136,9 +143,18 @@ func (r *PersesReconciler) addFinalizer(ctx context.Context, req ctrl.Request) (
 			return subreconciler.RequeueWithDelay(time.Second * 10)
 		}
 
+		// Re-fetch the perses Custom Resource before update the status
+		// so that we have the latest state of the resource on the cluster and we will avoid
+		// raise the issue "the object has been modified, please apply
+		// your changes to the latest version and try again" which would re-trigger the reconciliation
+		if err := r.Get(ctx, req.NamespacedName, perses); err != nil {
+			log.WithError(err).Error("Failed to re-fetch perses")
+			return subreconciler.RequeueWithError(err)
+		}
+
 		if err := r.Update(ctx, perses); err != nil {
 			log.WithError(err).Error("Failed to update custom resource to add finalizer")
-			return subreconciler.RequeueWithDelayAndError(time.Second*10, err)
+			return subreconciler.RequeueWithError(err)
 		}
 	}
 
@@ -168,7 +184,7 @@ func (r *PersesReconciler) handleDelete(ctx context.Context, req ctrl.Request) (
 
 			if err := r.Status().Update(ctx, perses); err != nil {
 				log.WithError(err).Error("Failed to update Perses status")
-				return subreconciler.RequeueWithDelayAndError(time.Second*10, err)
+				return subreconciler.RequeueWithError(err)
 			}
 
 			// Perform all operations required before remove the finalizer and allow
@@ -194,7 +210,7 @@ func (r *PersesReconciler) handleDelete(ctx context.Context, req ctrl.Request) (
 
 			if err := r.Status().Update(ctx, perses); err != nil {
 				log.WithError(err).Error("Failed to update Perses status")
-				return subreconciler.RequeueWithDelayAndError(time.Second*10, err)
+				return subreconciler.RequeueWithError(err)
 			}
 
 			log.Info("Removing Finalizer for Perses after successfully perform the operations")
