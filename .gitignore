@@ -28,6 +28,9 @@ Dockerfile.cross
 
 /dist
 
+#add exception for helm
+!/dist/chart/
+
 .goreleaser.yaml
 
 /.github/perses-ci/
