@@ -67,7 +67,7 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&persesImage, "perses-default-base-image", "docker.io/persesdev/perses:v0.50.3", "The default image used for the Perses Deployment or StatefulSet operands")
+	flag.StringVar(&persesImage, "perses-default-base-image", "docker.io/persesdev/perses:v0.51.0", "The default image used for the Perses Deployment or StatefulSet operands")
 	flag.StringVar(&persesServerURL, common.PersesServerURLFlag, "", "The Perses backend server URL")
 	flag.BoolVar(&enableHTTP2, "enable-http2", enableHTTP2, "If HTTP/2 should be enabled for the metrics and webhook servers.")
 	opts := zap.Options{
