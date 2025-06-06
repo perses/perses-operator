@@ -54,7 +54,11 @@ const persesNamespace = "perses-test"
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecs(t, "Controller Suite")
+	suiteCfg, reporterCfg := GinkgoConfiguration()
+	// turns on verbosity for Ginkgo
+	reporterCfg.Verbose = true
+
+	RunSpecs(t, "Controller Suite", suiteCfg, reporterCfg)
 }
 
 var _ = BeforeSuite(func() {
