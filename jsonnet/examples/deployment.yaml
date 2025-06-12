@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/created-by: perses-operator
     app.kubernetes.io/name: perses-operator
     app.kubernetes.io/part-of: perses-operator
-    app.kubernetes.io/version: v0.1.12
+    app.kubernetes.io/version: v0.2.0
   name: perses-operator
   namespace: perses-dev
 spec:
@@ -26,7 +26,7 @@ spec:
         app.kubernetes.io/created-by: perses-operator
         app.kubernetes.io/name: perses-operator
         app.kubernetes.io/part-of: perses-operator
-        app.kubernetes.io/version: v0.1.12
+        app.kubernetes.io/version: v0.2.0
     spec:
       affinity:
         nodeAffinity:
@@ -45,7 +45,7 @@ spec:
       containers:
       - args:
         - --leader-elect
-        image: persesdev/perses-operator:v0.1.12
+        image: persesdev/perses-operator:v0.2.0
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
