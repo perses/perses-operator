@@ -1,3 +1,12 @@
+## 0.2.0 / 2025-06-12
+
+We've temporarily rolled back a CRD version upgrade due to certificate issues, but we're actively working on a conversion webhook for the next major release. This will enable seamless upgrades for both dashboard and Perses configurations. Currently, manual adjustments are needed for Perses 0.51, but the conversion webhook will mature our operator to Level 2 capabilities, automating these processes in the future.
+
+- [BREAKINGCHANGE] bump perses version to v0.51.0 (#165)
+- [ENHANCEMENT] Enable Ginkgo verbose mode in the test suite instead (#164)
+- [BUGFIX] Add Perses test for storage size and reduce reconciliation errors (#160)
+- [DOC] add release docs and scripts
+
 ## 0.1.12 / 2025-06-06
 
 - [FEATURE] allow manager to pass k8s token from service account
