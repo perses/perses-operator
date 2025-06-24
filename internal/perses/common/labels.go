@@ -21,7 +21,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/perses/perses-operator/api/v1alpha1"
+	"github.com/perses/perses-operator/api/v1alpha2"
 	"k8s.io/apimachinery/pkg/util/validation"
 )
 
@@ -50,7 +50,7 @@ func sanitizeLabel(label string) string {
 	return sanitized
 }
 
-func LabelsForPerses(name string, perses *v1alpha1.Perses) map[string]string {
+func LabelsForPerses(name string, perses *v1alpha2.Perses) map[string]string {
 	instanceName := perses.Name
 
 	persesLabels := map[string]string{
@@ -76,7 +76,7 @@ func LabelsForPerses(name string, perses *v1alpha1.Perses) map[string]string {
 
 // imageForPerses gets the Operand image which is managed by this controller
 // from the image field in the CR or PERSES_IMAGE environment variable defined in the config/manager/manager.yaml
-func ImageForPerses(perses *v1alpha1.Perses, persesImageFromFlags string) (string, error) {
+func ImageForPerses(perses *v1alpha2.Perses, persesImageFromFlags string) (string, error) {
 	image := os.Getenv("PERSES_IMAGE")
 
 	if persesImageFromFlags != "" {

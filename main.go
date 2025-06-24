@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 	dashboardcontroller "github.com/perses/perses-operator/controllers/dashboards"
 	datasourcecontroller "github.com/perses/perses-operator/controllers/datasources"
 	persescontroller "github.com/perses/perses-operator/controllers/perses"
@@ -51,6 +52,8 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(persesv1alpha1.AddToScheme(scheme))
+
+	utilruntime.Must(persesv1alpha2.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -61,9 +64,13 @@ func main() {
 	var persesImage string
 	var enableHTTP2 bool
 	var persesServerURL string
+	var webhookPort int
+	var certDir string
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8082", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	flag.IntVar(&webhookPort, "webhook-port", 9443, "The port the webhook server binds to.")
+	flag.StringVar(&certDir, "webhook-cert-dir", "/tmp/k8s-webhook-server/serving-certs", "The directory where webhook TLS certificates are stored.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
@@ -92,7 +99,8 @@ func main() {
 			TLSOpts:     []func(*tls.Config){disableHTTP2},
 		},
 		WebhookServer: webhook.NewServer(webhook.Options{
-			Port:    9443,
+			Port:    webhookPort,
+			CertDir: certDir,
 			TLSOpts: []func(*tls.Config){disableHTTP2},
 		}),
 		HealthProbeBindAddress: probeAddr,
@@ -142,6 +150,21 @@ func main() {
 		ClientFactory: common.NewWithConfig(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PersesDatasource")
+		os.Exit(1)
+	}
+
+	if err = (&persesv1alpha1.Perses{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "Perses")
+		os.Exit(1)
+	}
+
+	if err = (&persesv1alpha1.PersesDatasource{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "PersesDatasource")
+		os.Exit(1)
+	}
+
+	if err = (&persesv1alpha1.PersesDashboard{}).SetupWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create webhook", "webhook", "PersesDashboard")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder

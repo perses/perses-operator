@@ -13,13 +13,13 @@ import (
 	"github.com/perses/perses/pkg/model/api/v1/common"
 	"github.com/perses/perses/pkg/model/api/v1/secret"
 
-	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 )
 
 const tokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 
 type PersesClientFactory interface {
-	CreateClient(ctx context.Context, client client.Client, perses persesv1alpha1.Perses) (v1.ClientInterface, error)
+	CreateClient(ctx context.Context, client client.Client, perses persesv1alpha2.Perses) (v1.ClientInterface, error)
 }
 
 type PersesClientFactoryWithConfig struct{}
@@ -28,7 +28,7 @@ func NewWithConfig() PersesClientFactory {
 	return &PersesClientFactoryWithConfig{}
 }
 
-func (f *PersesClientFactoryWithConfig) CreateClient(ctx context.Context, client client.Client, perses persesv1alpha1.Perses) (v1.ClientInterface, error) {
+func (f *PersesClientFactoryWithConfig) CreateClient(ctx context.Context, client client.Client, perses persesv1alpha2.Perses) (v1.ClientInterface, error) {
 	var urlStr string
 
 	var httpProtocol = "http"
@@ -76,7 +76,7 @@ func (f *PersesClientFactoryWithConfig) CreateClient(ctx context.Context, client
 
 		if tls.CaCert != nil {
 			switch tls.CaCert.Type {
-			case persesv1alpha1.SecretSourceTypeSecret, persesv1alpha1.SecretSourceTypeConfigMap:
+			case persesv1alpha2.SecretSourceTypeSecret, persesv1alpha2.SecretSourceTypeConfigMap:
 				caData, _, err := GetTLSCertData(ctx, client, perses.Namespace, perses.Name, tls.CaCert)
 
 				if err != nil {
@@ -84,14 +84,14 @@ func (f *PersesClientFactoryWithConfig) CreateClient(ctx context.Context, client
 				}
 
 				tlsConfig.CA = caData
-			case persesv1alpha1.SecretSourceTypeFile:
+			case persesv1alpha2.SecretSourceTypeFile:
 				tlsConfig.CAFile = tls.CaCert.CertPath
 			}
 		}
 
 		if tls.UserCert != nil {
 			switch tls.UserCert.Type {
-			case persesv1alpha1.SecretSourceTypeSecret, persesv1alpha1.SecretSourceTypeConfigMap:
+			case persesv1alpha2.SecretSourceTypeSecret, persesv1alpha2.SecretSourceTypeConfigMap:
 				cert, key, err := GetTLSCertData(ctx, client, perses.Namespace, perses.Name, tls.UserCert)
 
 				if err != nil {
@@ -100,7 +100,7 @@ func (f *PersesClientFactoryWithConfig) CreateClient(ctx context.Context, client
 
 				tlsConfig.Cert = cert
 				tlsConfig.Key = key
-			case persesv1alpha1.SecretSourceTypeFile:
+			case persesv1alpha2.SecretSourceTypeFile:
 				tlsConfig.CertFile = tls.UserCert.CertPath
 			}
 		}
@@ -126,6 +126,6 @@ func NewWithClient(client v1.ClientInterface) PersesClientFactory {
 	return &PersesClientFactoryWithClient{client: client}
 }
 
-func (f *PersesClientFactoryWithClient) CreateClient(_ context.Context, _ client.Client, _ persesv1alpha1.Perses) (v1.ClientInterface, error) {
+func (f *PersesClientFactoryWithClient) CreateClient(_ context.Context, _ client.Client, _ persesv1alpha2.Perses) (v1.ClientInterface, error) {
 	return f.client, nil
 }

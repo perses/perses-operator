@@ -31,7 +31,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/perses/perses-operator/api/v1alpha1"
+	"github.com/perses/perses-operator/api/v1alpha2"
 	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
 )
@@ -39,7 +39,7 @@ import (
 var cmlog = logger.WithField("module", "configmap_controller")
 
 func (r *PersesReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	perses := &v1alpha1.Perses{}
+	perses := &v1alpha2.Perses{}
 
 	if result, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(result, err) {
 		return result, err
@@ -101,7 +101,7 @@ func (r *PersesReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Requ
 	return subreconciler.ContinueReconciling()
 }
 
-func configMapNeedsUpdate(existing, updated *corev1.ConfigMap, name string, perses *v1alpha1.Perses) bool {
+func configMapNeedsUpdate(existing, updated *corev1.ConfigMap, name string, perses *v1alpha2.Perses) bool {
 	if existing == nil && updated == nil {
 		return false
 	}
@@ -127,7 +127,7 @@ func configMapNeedsUpdate(existing, updated *corev1.ConfigMap, name string, pers
 	return false
 }
 
-func (r *PersesReconciler) createPersesConfigMap(perses *v1alpha1.Perses) (*corev1.ConfigMap, error) {
+func (r *PersesReconciler) createPersesConfigMap(perses *v1alpha2.Perses) (*corev1.ConfigMap, error) {
 	configName := common.GetConfigName(perses.Name)
 	ls := common.LabelsForPerses(configName, perses)
 

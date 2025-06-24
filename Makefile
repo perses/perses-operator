@@ -76,7 +76,7 @@ endif
 
 # Set the Operator SDK version to use. By default, what is installed on the system is used.
 # This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
-OPERATOR_SDK_VERSION ?= v1.32.0
+OPERATOR_SDK_VERSION ?= v1.40.0
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.31.0
 # ENVTEST_VERSION refers to the version of the envtest binary.
@@ -175,8 +175,13 @@ jsonnet-format: $(JSONNET_SRC) jsonnetfmt
 	$(JSONNETFMT_BINARY) -n 2 --max-blank-lines 2 --string-style s --comment-style s -i $(JSONNET_SRC)
 
 .PHONY: generate
-generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
+generate: controller-gen conversion-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+	$(CONVERSION_GEN) \
+		--output-file=zz_generated.conversion.go \
+		--go-header-file=./hack/boilerplate.go.txt \
+		--skip-unsafe=true \
+		./api/v1alpha1
 
 .PHONY: fmt
 fmt: jsonnet-format ## Run go fmt against code.
@@ -205,8 +210,13 @@ lint: lint-jsonnet ## Run linting.
 build: manifests generate fmt vet ## Build manager binary.
 	go build -o bin/manager main.go
 
+# Generate local webhook certs and patch CRDs with CA Bundle
+.PHONY: generate-local-certs
+generate-local-certs: yq
+	./scripts/gen-certs.sh
+
 .PHONY: run
-run: manifests generate fmt vet ## Run a controller from your host.
+run: generate-local-certs manifests generate fmt vet ## Run a controller from your host.
 	go run ./main.go $(ARGS)
 
 # If you wish built the manager image targeting other platforms you can use the --platform flag.
@@ -264,6 +274,17 @@ deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
+## Deploy controller to the K8s cluster specified in ~/.kube/config.
+## This target generates the webhook certs locally and applies them to the cluster
+.PHONY: deploy-local
+deploy-local: generate-local-certs manifests kustomize
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	kubectl -n perses-operator-system create secret tls webhook-server-cert \
+    	--dry-run=client -o yaml \
+		--cert="/tmp/k8s-webhook-server/serving-certs/tls.crt" \
+		--key="/tmp/k8s-webhook-server/serving-certs/tls.key" > "config/local/certificate.yaml"
+	$(KUSTOMIZE) build config/local | kubectl apply -f -
+
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
@@ -283,6 +304,8 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
 JSONNET_BINARY ?= $(LOCALBIN)/jsonnet
 JSONNETFMT_BINARY ?= $(LOCALBIN)/jsonnetfmt
 JSONNETLINT_BINARY ?= $(LOCALBIN)/jsonnet-lint
+CONVERSION_GEN ?= $(LOCALBIN)/conversion-gen
+YQ ?= $(LOCALBIN)/yq
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
@@ -291,6 +314,9 @@ GOJSONTOYAML_VERSION ?= v0.1.0
 JSONNET_VERSION ?= v0.21.0
 JSONNETFMT_VERSION ?= v0.21.0
 JSONNETLINT_VERSION ?= v0.21.0
+CONVERSION_GEN_VERSION ?= v0.33.0
+YQ_VERSION ?= v4.45.4
+
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
@@ -331,6 +357,17 @@ $(JSONNETLINT_BINARY): $(LOCALBIN)
 	test -s $(LOCALBIN)/jsonnet-lint && $(LOCALBIN)/jsonnet-lint --version | grep -q $(JSONNETLINT_VERSION) || \
 	GOBIN=$(LOCALBIN) go install github.com/google/go-jsonnet/cmd/jsonnet-lint@$(JSONNETLINT_VERSION)
 
+.PHONY: conversion-gen
+conversion-gen: $(CONVERSION_GEN) ## Download conversion-gen locally if necessary. If wrong version is installed, it will be overwritten.
+$(CONVERSION_GEN): $(LOCALBIN)
+	GOBIN=$(LOCALBIN) go install k8s.io/code-generator/cmd/conversion-gen@$(CONVERSION_GEN_VERSION)
+
+.PHONY: yq
+yq: $(YQ) ## Download conversion-gen locally if necessary. If wrong version is installed, it will be overwritten.
+$(YQ): $(LOCALBIN)
+	test -s $(LOCALBIN)/yq && $(LOCALBIN)/yq version | grep -q $(YQ_VERSION) || \
+	GOBIN=$(LOCALBIN) go install github.com/mikefarah/yq/v4@$(YQ_VERSION)
+
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
 $(ENVTEST): $(LOCALBIN)
@@ -362,7 +399,7 @@ bundle: manifests kustomize operator-sdk ## Generate bundle manifests and metada
 
 .PHONY: bundle-check
 bundle-check: bundle
-	git diff --quiet --exit-code bundle config
+	git diff --exit-code bundle config
 
 .PHONY: bundle-build
 bundle-build: generate bundle ## Build the bundle image.

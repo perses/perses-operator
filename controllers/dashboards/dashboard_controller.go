@@ -28,14 +28,14 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 	"github.com/perses/perses-operator/internal/subreconciler"
 )
 
 var dlog = logger.WithField("module", "dashboard_controller")
 
 func (r *PersesDashboardReconciler) reconcileDashboardInAllInstances(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	persesInstances := &persesv1alpha1.PersesList{}
+	persesInstances := &persesv1alpha2.PersesList{}
 	var opts []client.ListOption
 	err := r.List(ctx, persesInstances, opts...)
 	if err != nil {
@@ -48,7 +48,7 @@ func (r *PersesDashboardReconciler) reconcileDashboardInAllInstances(ctx context
 		return subreconciler.RequeueWithDelay(time.Minute)
 	}
 
-	dashboard := &persesv1alpha1.PersesDashboard{}
+	dashboard := &persesv1alpha2.PersesDashboard{}
 
 	if r, err := r.getLatestPersesDashboard(ctx, req, dashboard); subreconciler.ShouldHaltOrRequeue(r, err) {
 		return r, err
@@ -63,7 +63,7 @@ func (r *PersesDashboardReconciler) reconcileDashboardInAllInstances(ctx context
 	return subreconciler.ContinueReconciling()
 }
 
-func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, perses persesv1alpha1.Perses, dashboard *persesv1alpha1.PersesDashboard) (*ctrl.Result, error) {
+func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, perses persesv1alpha2.Perses, dashboard *persesv1alpha2.PersesDashboard) (*ctrl.Result, error) {
 	persesClient, err := r.ClientFactory.CreateClient(ctx, r.Client, perses)
 
 	if err != nil {
@@ -108,7 +108,7 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 				Name: dashboard.Name,
 			},
 		},
-		Spec: dashboard.Spec.DashboardSpec,
+		Spec: dashboard.Spec.Config.DashboardSpec,
 	}
 
 	if err != nil {
@@ -141,7 +141,7 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 }
 
 func (r *PersesDashboardReconciler) deleteDashboardInAllInstances(ctx context.Context, _ ctrl.Request, dashbboardNamespace string, dashboardName string) (*ctrl.Result, error) {
-	persesInstances := &persesv1alpha1.PersesList{}
+	persesInstances := &persesv1alpha2.PersesList{}
 	var opts []client.ListOption
 	err := r.List(ctx, persesInstances, opts...)
 	if err != nil {
@@ -163,7 +163,7 @@ func (r *PersesDashboardReconciler) deleteDashboardInAllInstances(ctx context.Co
 	return subreconciler.DoNotRequeue()
 }
 
-func (r *PersesDashboardReconciler) deleteDashboard(ctx context.Context, perses persesv1alpha1.Perses, dashboardNamespace string, dashboardName string) (*ctrl.Result, error) {
+func (r *PersesDashboardReconciler) deleteDashboard(ctx context.Context, perses persesv1alpha2.Perses, dashboardNamespace string, dashboardName string) (*ctrl.Result, error) {
 	persesClient, err := r.ClientFactory.CreateClient(ctx, r.Client, perses)
 
 	if err != nil {
