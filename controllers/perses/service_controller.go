@@ -108,12 +108,6 @@ func (r *PersesReconciler) reconcileService(ctx context.Context, req ctrl.Reques
 }
 
 func serviceNeedsUpdate(existing, updated *corev1.Service, name string, perses *v1alpha1.Perses) bool {
-	if existing == nil && updated == nil {
-		return false
-	}
-	if existing == nil || updated == nil {
-		return true
-	}
 	if existing.Name != updated.Name || existing.Namespace != updated.Namespace {
 		return true
 	}
@@ -125,6 +119,11 @@ func serviceNeedsUpdate(existing, updated *corev1.Service, name string, perses *
 
 	// check for differences only in the labels that are set by the operator
 	labels := common.LabelsForPerses(name, perses)
+
+	// update the service if its selectors count do not match the labels count
+	if len(existing.Spec.Selector) != len(labels) {
+		return true
+	}
 
 	for k := range labels {
 		if existing.Labels[k] != updated.Labels[k] {
