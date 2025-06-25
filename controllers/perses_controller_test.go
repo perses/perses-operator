@@ -8,7 +8,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 	persescontroller "github.com/perses/perses-operator/controllers/perses"
 	"github.com/perses/perses-operator/internal/perses/common"
 	persesconfig "github.com/perses/perses/pkg/model/api/config"
@@ -46,17 +46,17 @@ var _ = Describe("Perses controller", func() {
 			configMapNamespaceName := types.NamespacedName{Name: common.GetConfigName(PersesName), Namespace: persesNamespace}
 
 			By("Creating the custom resource for the Kind Perses")
-			perses := &persesv1alpha1.Perses{}
+			perses := &persesv1alpha2.Perses{}
 			err := k8sClient.Get(ctx, typeNamespaceName, perses)
 			if err != nil && errors.IsNotFound(err) {
 				replicas := int32(2)
-				perses := &persesv1alpha1.Perses{
+				perses := &persesv1alpha2.Perses{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      PersesName,
 						Namespace: persesNamespace,
 					},
-					Spec: persesv1alpha1.PersesSpec{
-						Metadata: &persesv1alpha1.Metadata{
+					Spec: persesv1alpha2.PersesSpec{
+						Metadata: &persesv1alpha2.Metadata{
 							Annotations: map[string]string{
 								"testing": "true",
 							},
@@ -68,13 +68,13 @@ var _ = Describe("Perses controller", func() {
 						Replicas:           &replicas,
 						ContainerPort:      8080,
 						Image:              persesImage,
-						Service: &persesv1alpha1.PersesService{
+						Service: &persesv1alpha2.PersesService{
 							Name: persesServiceName,
 							Annotations: map[string]string{
 								"custom-annotation": "true",
 							},
 						},
-						Config: persesv1alpha1.PersesConfig{
+						Config: persesv1alpha2.PersesConfig{
 							Config: persesconfig.Config{
 								Database: persesconfig.Database{
 									File: &persesconfig.File{
@@ -92,7 +92,7 @@ var _ = Describe("Perses controller", func() {
 
 			By("Checking if the custom resource was successfully created")
 			Eventually(func() error {
-				found := &persesv1alpha1.Perses{}
+				found := &persesv1alpha2.Perses{}
 				return k8sClient.Get(ctx, typeNamespaceName, found)
 			}, time.Minute, time.Second).Should(Succeed())
 
@@ -204,7 +204,7 @@ var _ = Describe("Perses controller", func() {
 				return nil
 			}, time.Minute, time.Second).Should(Succeed())
 
-			persesToDelete := &persesv1alpha1.Perses{}
+			persesToDelete := &persesv1alpha2.Perses{}
 			err = k8sClient.Get(ctx, typeNamespaceName, persesToDelete)
 			Expect(err).To(Not(HaveOccurred()))
 
@@ -251,22 +251,22 @@ var _ = Describe("Perses controller", func() {
 			configMapNamespaceName := types.NamespacedName{Name: common.GetConfigName(PersesStorageName), Namespace: persesNamespace}
 
 			By("Creating the custom resource for the Kind Perses with storage")
-			perses := &persesv1alpha1.Perses{}
+			perses := &persesv1alpha2.Perses{}
 			err := k8sClient.Get(ctx, typeNamespaceName, perses)
 			if err != nil && errors.IsNotFound(err) {
-				perses := &persesv1alpha1.Perses{
+				perses := &persesv1alpha2.Perses{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      PersesStorageName,
 						Namespace: persesNamespace,
 					},
-					Spec: persesv1alpha1.PersesSpec{
-						Metadata: &persesv1alpha1.Metadata{
+					Spec: persesv1alpha2.PersesSpec{
+						Metadata: &persesv1alpha2.Metadata{
 							Labels: map[string]string{
 								"instance": PersesStorageName,
 							},
 						},
 						Image: persesImage,
-						Config: persesv1alpha1.PersesConfig{
+						Config: persesv1alpha2.PersesConfig{
 							Config: persesconfig.Config{
 								Database: persesconfig.Database{
 									File: &persesconfig.File{
@@ -275,7 +275,7 @@ var _ = Describe("Perses controller", func() {
 								},
 							},
 						},
-						Storage: &persesv1alpha1.StorageConfiguration{
+						Storage: &persesv1alpha2.StorageConfiguration{
 							Size: resource.MustParse("10Gi"),
 						},
 					},
@@ -287,7 +287,7 @@ var _ = Describe("Perses controller", func() {
 
 			By("Checking if the custom resource was successfully created")
 			Eventually(func() error {
-				found := &persesv1alpha1.Perses{}
+				found := &persesv1alpha2.Perses{}
 				return k8sClient.Get(ctx, typeNamespaceName, found)
 			}, time.Minute, time.Second).Should(Succeed())
 
@@ -341,7 +341,7 @@ var _ = Describe("Perses controller", func() {
 				return nil
 			}, time.Minute, time.Second).Should(Succeed())
 
-			persesToDelete := &persesv1alpha1.Perses{}
+			persesToDelete := &persesv1alpha2.Perses{}
 			err = k8sClient.Get(ctx, typeNamespaceName, persesToDelete)
 			Expect(err).To(Not(HaveOccurred()))
 

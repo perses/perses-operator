@@ -33,7 +33,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/perses/perses-operator/api/v1alpha1"
+	"github.com/perses/perses-operator/api/v1alpha2"
 	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
 )
@@ -41,7 +41,7 @@ import (
 var stlog = logger.WithField("module", "statefulset_controller")
 
 func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	perses := &v1alpha1.Perses{}
+	perses := &v1alpha2.Perses{}
 
 	if result, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(result, err) {
 		return result, err
@@ -119,7 +119,7 @@ func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Re
 }
 
 func (r *PersesReconciler) createPersesStatefulSet(
-	perses *v1alpha1.Perses) (*appsv1.StatefulSet, error) {
+	perses *v1alpha2.Perses) (*appsv1.StatefulSet, error) {
 
 	ls := common.LabelsForPerses(perses.Name, perses)
 

@@ -1,0 +1,21 @@
+# Adds namespace to all resources.
+namespace: perses-operator-system
+
+namePrefix: perses-operator-
+
+resources:
+  - ../crd/
+  - ../rbac
+  - ../manager
+  - ../webhook
+  - certificate.yaml
+
+patchesStrategicMerge:
+  - patches/manager_webhook_patch.yaml
+  - patches/webhook_in_perses.yaml
+  - patches/webhook_in_persesdashboards.yaml
+  - patches/webhook_in_persesdatasource.yaml
+
+# the following config is for teaching kustomize how to do kustomization for CRDs.
+configurations:
+  - kustomizeconfig.yaml

@@ -8,10 +8,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
-	dashboardcontroller "github.com/perses/perses-operator/controllers/dashboards"
-	internal "github.com/perses/perses-operator/internal/perses"
-	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	persescommon "github.com/perses/perses/pkg/model/api/v1/common"
@@ -21,6 +17,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
+	dashboardcontroller "github.com/perses/perses-operator/controllers/dashboards"
+	internal "github.com/perses/perses-operator/internal/perses"
+	"github.com/perses/perses-operator/internal/perses/common"
 )
 
 var _ = Describe("Dashboard controller", func() {
@@ -92,15 +93,15 @@ var _ = Describe("Dashboard controller", func() {
 
 		It("should successfully reconcile a custom resource dashboard for Perses", func() {
 			By("Creating the custom resource for the Kind Perses")
-			perses := &persesv1alpha1.Perses{}
+			perses := &persesv1alpha2.Perses{}
 			err := k8sClient.Get(ctx, persesNamespaceName, perses)
 			if err != nil && errors.IsNotFound(err) {
-				perses := &persesv1alpha1.Perses{
+				perses := &persesv1alpha2.Perses{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      PersesName,
 						Namespace: PersesNamespace,
 					},
-					Spec: persesv1alpha1.PersesSpec{
+					Spec: persesv1alpha2.PersesSpec{
 						ContainerPort: 8080,
 					},
 				}
@@ -110,16 +111,18 @@ var _ = Describe("Dashboard controller", func() {
 			}
 
 			By("Creating the custom resource for the Kind PersesDashboard")
-			dashboard := &persesv1alpha1.PersesDashboard{}
+			dashboard := &persesv1alpha2.PersesDashboard{}
 			err = k8sClient.Get(ctx, dashboardNamespaceName, dashboard)
 			if err != nil && errors.IsNotFound(err) {
-				perses := &persesv1alpha1.PersesDashboard{
+				perses := &persesv1alpha2.PersesDashboard{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      DashboardName,
 						Namespace: PersesNamespace,
 					},
-					Spec: persesv1alpha1.Dashboard{
-						DashboardSpec: newDashboard.Spec,
+					Spec: persesv1alpha2.PersesDashboardSpec{
+						Config: persesv1alpha2.Dashboard{
+							DashboardSpec: newDashboard.Spec,
+						},
 					},
 				}
 
@@ -129,7 +132,7 @@ var _ = Describe("Dashboard controller", func() {
 
 			By("Checking if the custom resource was successfully created")
 			Eventually(func() error {
-				found := &persesv1alpha1.PersesDashboard{}
+				found := &persesv1alpha2.PersesDashboard{}
 				return k8sClient.Get(ctx, dashboardNamespaceName, found)
 			}, time.Minute, time.Second).Should(Succeed())
 
@@ -168,7 +171,7 @@ var _ = Describe("Dashboard controller", func() {
 
 			By("Checking the latest Status Condition added to the Perses dashboard instance")
 			Eventually(func() error {
-				dashboardWithStatus := &persesv1alpha1.PersesDashboard{}
+				dashboardWithStatus := &persesv1alpha2.PersesDashboard{}
 				err = k8sClient.Get(ctx, dashboardNamespaceName, dashboardWithStatus)
 
 				if len(dashboardWithStatus.Status.Conditions) == 0 {
@@ -188,7 +191,7 @@ var _ = Describe("Dashboard controller", func() {
 
 			mockDashboard.On("Delete", DashboardName).Return(nil)
 
-			dashboardToDelete := &persesv1alpha1.PersesDashboard{}
+			dashboardToDelete := &persesv1alpha2.PersesDashboard{}
 			err = k8sClient.Get(ctx, dashboardNamespaceName, dashboardToDelete)
 			Expect(err).To(Not(HaveOccurred()))
 

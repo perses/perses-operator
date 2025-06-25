@@ -29,10 +29,11 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	persesv1alpha1 "github.com/perses/perses-operator/api/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // PersesDashboardReconciler reconciles a PersesDashboard object
@@ -66,7 +67,7 @@ func (r *PersesDashboardReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return subreconciler.Evaluate(subreconciler.DoNotRequeue())
 }
 
-func (r *PersesDashboardReconciler) getLatestPersesDashboard(ctx context.Context, req ctrl.Request, dashboard *persesv1alpha1.PersesDashboard) (*ctrl.Result, error) {
+func (r *PersesDashboardReconciler) getLatestPersesDashboard(ctx context.Context, req ctrl.Request, dashboard *persesv1alpha2.PersesDashboard) (*ctrl.Result, error) {
 	if err := r.Get(ctx, req.NamespacedName, dashboard); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("perses dashboard resource not found. Ignoring since object must be deleted")
@@ -80,7 +81,7 @@ func (r *PersesDashboardReconciler) getLatestPersesDashboard(ctx context.Context
 }
 
 func (r *PersesDashboardReconciler) handleDelete(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	dashboard := &persesv1alpha1.PersesDashboard{}
+	dashboard := &persesv1alpha2.PersesDashboard{}
 
 	if err := r.Get(ctx, req.NamespacedName, dashboard); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -97,7 +98,7 @@ func (r *PersesDashboardReconciler) handleDelete(ctx context.Context, req ctrl.R
 }
 
 func (r *PersesDashboardReconciler) setStatusToUnknown(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	dashboard := &persesv1alpha1.PersesDashboard{}
+	dashboard := &persesv1alpha2.PersesDashboard{}
 
 	if r, err := r.getLatestPersesDashboard(ctx, req, dashboard); subreconciler.ShouldHaltOrRequeue(r, err) {
 		return r, err
@@ -115,7 +116,7 @@ func (r *PersesDashboardReconciler) setStatusToUnknown(ctx context.Context, req 
 }
 
 func (r *PersesDashboardReconciler) updateStatus(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	dashboard := &persesv1alpha1.PersesDashboard{}
+	dashboard := &persesv1alpha2.PersesDashboard{}
 
 	if r, err := r.getLatestPersesDashboard(ctx, req, dashboard); subreconciler.ShouldHaltOrRequeue(r, err) {
 		return r, err
@@ -135,6 +136,6 @@ func (r *PersesDashboardReconciler) updateStatus(ctx context.Context, req ctrl.R
 
 func (r *PersesDashboardReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&persesv1alpha1.PersesDashboard{}).
+		For(&persesv1alpha2.PersesDashboard{}).
 		Complete(r)
 }

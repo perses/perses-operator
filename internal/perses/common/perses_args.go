@@ -3,13 +3,13 @@ package common
 import (
 	"fmt"
 
-	"github.com/perses/perses-operator/api/v1alpha1"
+	"github.com/perses/perses-operator/api/v1alpha2"
 )
 
 // GetPersesArgs returns the command line arguments for the Perses server.
 // It includes the configuration file path, TLS settings if enabled,
 // and any additional user-specified arguments.
-func GetPersesArgs(perses *v1alpha1.Perses) []string {
+func GetPersesArgs(perses *v1alpha2.Perses) []string {
 	args := []string{fmt.Sprintf("--config=%s", defaultConfigPath)}
 
 	// Append TLS cert args if TLS is enabled and user certificates are provided

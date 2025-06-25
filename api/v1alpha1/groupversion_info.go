@@ -1,5 +1,5 @@
 /*
-Copyright 2023 The Perses Authors.
+Copyright 2025 The Perses Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -33,4 +33,6 @@ var (
 
 	// AddToScheme adds the types in this group-version to the given scheme.
 	AddToScheme = SchemeBuilder.AddToScheme
+
+	localSchemeBuilder = SchemeBuilder.SchemeBuilder
 )
