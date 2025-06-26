@@ -15,6 +15,7 @@ patchesStrategicMerge:
   - patches/webhook_in_perses.yaml
   - patches/webhook_in_persesdashboards.yaml
   - patches/webhook_in_persesdatasource.yaml
+  - patches/webhook_in_persesglobaldatasource.yaml
 
 # the following config is for teaching kustomize how to do kustomization for CRDs.
 configurations:

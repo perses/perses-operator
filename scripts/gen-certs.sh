@@ -44,9 +44,16 @@ echo "Updating webhook manifests"
 CA_BUNDLE=$(base64 -w 0 -i "${CERT_DIR}/ca.crt")
 export CA_BUNDLE
 
-yq e -i '.spec.conversion.webhook.clientConfig.caBundle = env(CA_BUNDLE)' \
-  config/local/patches/webhook_in_perses.yaml
-yq e -i '.spec.conversion.webhook.clientConfig.caBundle = env(CA_BUNDLE)' \
-  config/local/patches/webhook_in_persesdashboards.yaml
-yq e -i '.spec.conversion.webhook.clientConfig.caBundle =  env(CA_BUNDLE)' \
-  config/local/patches/webhook_in_persesdatasource.yaml
+WEBHOOK_PERSES="patches/webhook_in_perses.yaml"
+WEBHOOK_PERSESDASHBOARDS="patches/webhook_in_persesdashboards.yaml"
+WEBHOOK_PERSESDATASOURCES="patches/webhook_in_persesdatasource.yaml"
+WEBHOOK_PERSESGLOBALDATASOURCES="patches/webhook_in_persesglobaldatasource.yaml"
+
+yq e '.spec.conversion.webhook.clientConfig.caBundle = env(CA_BUNDLE)' \
+  "config/crd/${WEBHOOK_PERSES}" > "config/local/${WEBHOOK_PERSES}"
+yq e '.spec.conversion.webhook.clientConfig.caBundle = env(CA_BUNDLE)' \
+  "config/crd/${WEBHOOK_PERSESDASHBOARDS}" > "config/local/${WEBHOOK_PERSESDASHBOARDS}"
+yq e '.spec.conversion.webhook.clientConfig.caBundle =  env(CA_BUNDLE)' \
+  "config/crd/${WEBHOOK_PERSESDATASOURCES}" > "config/local/${WEBHOOK_PERSESDATASOURCES}"
+yq e '.spec.conversion.webhook.clientConfig.caBundle =  env(CA_BUNDLE)' \
+  "config/crd/${WEBHOOK_PERSESGLOBALDATASOURCES}" > "config/local/${WEBHOOK_PERSESGLOBALDATASOURCES}"

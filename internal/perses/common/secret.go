@@ -11,6 +11,8 @@ import (
 	"github.com/perses/perses-operator/api/v1alpha2"
 )
 
+const SecretNameSuffix = "-secret"
+
 func HasSecretConfig(c *v1alpha2.Client) bool {
 	return c != nil && (c.TLS != nil && c.TLS.Enable || c.BasicAuth != nil || c.OAuth != nil)
 }

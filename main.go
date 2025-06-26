@@ -38,6 +38,7 @@ import (
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 	dashboardcontroller "github.com/perses/perses-operator/controllers/dashboards"
 	datasourcecontroller "github.com/perses/perses-operator/controllers/datasources"
+	globaldatasourcecontroller "github.com/perses/perses-operator/controllers/globaldatasources"
 	persescontroller "github.com/perses/perses-operator/controllers/perses"
 	"github.com/perses/perses-operator/internal/perses/common"
 	//+kubebuilder:scaffold:imports
@@ -150,6 +151,15 @@ func main() {
 		ClientFactory: common.NewWithConfig(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PersesDatasource")
+		os.Exit(1)
+	}
+
+	if err = (&globaldatasourcecontroller.PersesGlobalDatasourceReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		ClientFactory: common.NewWithConfig(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "PersesGlobalDatasource")
 		os.Exit(1)
 	}
 
