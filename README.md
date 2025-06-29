@@ -46,6 +46,14 @@ To delete the CRDs from the cluster:
 make uninstall
 ```
 
+### Deploy controller
+
+Deploy the controller to the cluster:
+
+```sh
+make deploy
+```
+
 ### Undeploy controller
 
 UnDeploy the controller from the cluster:
