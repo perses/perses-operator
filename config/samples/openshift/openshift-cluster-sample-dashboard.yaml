@@ -548,7 +548,17 @@ spec:
           name: Receive Bandwidth
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              mode: list
+              position: bottom
+              values: []
+            visual:
+              areaOpacity: 1
+              connectNulls: false
+              display: line
+              lineWidth: 0.25
+              stack: all
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -567,7 +577,17 @@ spec:
           name: Transmit Bandwidth
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              mode: list
+              position: bottom
+              values: []
+            visual:
+              areaOpacity: 1
+              connectNulls: false
+              display: line
+              lineWidth: 0.25
+              stack: all
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -586,7 +606,17 @@ spec:
           name: "Average Container Bandwidth by Namespace: Received"
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              mode: list
+              position: bottom
+              values: []
+            visual:
+              areaOpacity: 1
+              connectNulls: false
+              display: line
+              lineWidth: 0.25
+              stack: all
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -605,7 +635,17 @@ spec:
           name: "Average Container Bandwidth by Namespace: Transmitted"
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              mode: list
+              position: bottom
+              values: []
+            visual:
+              areaOpacity: 1
+              connectNulls: false
+              display: line
+              lineWidth: 0.25
+              stack: all
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -624,7 +664,17 @@ spec:
           name: Rate of Received Packets
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              mode: list
+              position: bottom
+              values: []
+            visual:
+              areaOpacity: 1
+              connectNulls: false
+              display: line
+              lineWidth: 0.25
+              stack: all
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -643,7 +693,17 @@ spec:
           name: Rate of Transmitted Packets
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              mode: list
+              position: bottom
+              values: []
+            visual:
+              areaOpacity: 1
+              connectNulls: false
+              display: line
+              lineWidth: 0.25
+              stack: all
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -662,7 +722,17 @@ spec:
           name: Rate of Received Packets Dropped
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              mode: list
+              position: bottom
+              values: []
+            visual:
+              areaOpacity: 1
+              connectNulls: false
+              display: line
+              lineWidth: 0.25
+              stack: all
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -681,7 +751,17 @@ spec:
           name: Rate of Transmitted Packets Dropped
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              mode: list
+              position: bottom
+              values: []
+            visual:
+              areaOpacity: 1
+              connectNulls: false
+              display: line
+              lineWidth: 0.25
+              stack: all
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -700,7 +780,17 @@ spec:
           name: IOPS(Reads+Writes)
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              mode: list
+              position: bottom
+              values: []
+            visual:
+              areaOpacity: 1
+              connectNulls: false
+              display: line
+              lineWidth: 0.25
+              stack: all
         queries:
           - kind: TimeSeriesQuery
             spec:
@@ -719,7 +809,17 @@ spec:
           name: ThroughPut(Read+Write)
         plugin:
           kind: TimeSeriesChart
-          spec: {}
+          spec:
+            legend:
+              mode: list
+              position: bottom
+              values: []
+            visual:
+              areaOpacity: 1
+              connectNulls: false
+              display: line
+              lineWidth: 0.25
+              stack: all
         queries:
           - kind: TimeSeriesQuery
             spec:
