@@ -45,7 +45,7 @@ var _ = Describe("Dashboard controller", func() {
 		persesImage := "perses-dev.io/perses:test"
 
 		newDashboard := &persesv1.Dashboard{
-			Kind: "Dashboard",
+			Kind: persesv1.KindDashboard,
 			Metadata: persesv1.ProjectMetadata{
 				Metadata: persesv1.Metadata{
 					Name: DashboardName,

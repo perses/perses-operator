@@ -5,6 +5,7 @@ resources:
   - bases/perses.dev_perses.yaml
   - bases/perses.dev_persesdashboards.yaml
   - bases/perses.dev_persesdatasources.yaml
+  - bases/perses.dev_persesglobaldatasources.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:
@@ -13,6 +14,7 @@ patchesStrategicMerge:
 - patches/webhook_in_perses.yaml
 - patches/webhook_in_persesdashboards.yaml
 - patches/webhook_in_persesdatasource.yaml
+- patches/webhook_in_persesglobaldatasource.yaml
 #+kubebuilder:scaffold:crdkustomizewebhookpatch
 
 # [CERTMANAGER] To enable cert-manager, uncomment all the sections with [CERTMANAGER] prefix.

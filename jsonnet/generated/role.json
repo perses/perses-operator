@@ -177,6 +177,47 @@
         "patch",
         "update"
       ]
+    },
+    {
+      "apiGroups": [
+        "perses.dev"
+      ],
+      "resources": [
+        "persesglobaldatasources"
+      ],
+      "verbs": [
+        "create",
+        "delete",
+        "get",
+        "list",
+        "patch",
+        "update",
+        "watch"
+      ]
+    },
+    {
+      "apiGroups": [
+        "perses.dev"
+      ],
+      "resources": [
+        "persesglobaldatasources/finalizers"
+      ],
+      "verbs": [
+        "update"
+      ]
+    },
+    {
+      "apiGroups": [
+        "perses.dev"
+      ],
+      "resources": [
+        "persesglobaldatasources/status"
+      ],
+      "verbs": [
+        "get",
+        "patch",
+        "update"
+      ]
     }
   ]
 }

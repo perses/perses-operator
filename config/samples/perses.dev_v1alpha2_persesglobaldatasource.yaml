@@ -1,0 +1,17 @@
+apiVersion: perses.dev/v1alpha2
+kind: PersesGlobalDatasource
+metadata:
+  name: perses-globaldatasource-sample
+  namespace: perses-dev
+spec:
+  instanceSelector:
+    matchLabels:
+      app.kubernetes.io/instance: perses-sample
+  config:
+    display:
+      name: 'Default Datasource'
+    default: true
+    plugin:
+      kind: 'PrometheusDatasource'
+      spec:
+        directUrl: 'https://prometheus.demo.prometheus.io'

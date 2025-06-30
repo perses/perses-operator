@@ -8,10 +8,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
-	datasourcecontroller "github.com/perses/perses-operator/controllers/datasources"
-	internal "github.com/perses/perses-operator/internal/perses"
-	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	persescommon "github.com/perses/perses/pkg/model/api/v1/common"
@@ -20,6 +16,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
+	datasourcecontroller "github.com/perses/perses-operator/controllers/datasources"
+	internal "github.com/perses/perses-operator/internal/perses"
+	"github.com/perses/perses-operator/internal/perses/common"
 )
 
 var _ = Describe("Datasource controller", func() {
@@ -44,7 +45,7 @@ var _ = Describe("Datasource controller", func() {
 		persesImage := "perses-dev.io/perses:test"
 
 		newDatasource := &persesv1.Datasource{
-			Kind: "Datasource",
+			Kind: persesv1.KindDatasource,
 			Metadata: persesv1.ProjectMetadata{
 				Metadata: persesv1.Metadata{
 					Name: DatasourceName,
@@ -63,7 +64,7 @@ var _ = Describe("Datasource controller", func() {
 		}
 
 		newSecret := &persesv1.Secret{
-			Kind: "Secret",
+			Kind: persesv1.KindSecret,
 			Metadata: persesv1.ProjectMetadata{
 				Metadata: persesv1.Metadata{
 					Name: PersesSecretName,
