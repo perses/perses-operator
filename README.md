@@ -14,6 +14,14 @@ You’ll need:
 **Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
 - [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) installed and configured to use your cluster.
 
+### Deploy controller
+
+Deploy the controller to the cluster:
+
+```sh
+make deploy
+```
+
 ### Running on the cluster
 
 1. Install custom resource definitions:
@@ -44,14 +52,6 @@ To delete the CRDs from the cluster:
 
 ```sh
 make uninstall
-```
-
-### Deploy controller
-
-Deploy the controller to the cluster:
-
-```sh
-make deploy
 ```
 
 ### Undeploy controller
