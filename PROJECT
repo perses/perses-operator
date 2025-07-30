@@ -6,6 +6,7 @@ domain: perses.dev
 layout:
 - go.kubebuilder.io/v4
 plugins:
+  helm.kubebuilder.io/v1-alpha: {}
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: perses-operator
@@ -16,7 +17,6 @@ resources:
     namespaced: true
   controller: true
   domain: perses.dev
-  group: 
   kind: Perses
   path: github.com/perses/perses-operator/api/v1alpha1
   version: v1alpha1

@@ -488,3 +488,24 @@ generate-changelog:
 .PHONY: tag
 tag:
 	./scripts/release.sh --tag "${VERSION}"
+
+##@ Helm
+.PHONY: helm-chart
+helm-chart: manifests
+	kubebuilder edit --plugins=helm/v1-alpha
+	@echo "Helm chart updated in dist/chart/"
+
+.PHONY: helm-chart-force
+helm-chart-force: manifests
+	kubebuilder edit --plugins=helm/v1-alpha --force
+	@echo "Helm chart forcibly updated in dist/chart/"
+
+.PHONY: helm-install
+helm-install: helm-chart 
+	helm upgrade --install perses-operator dist/chart \
+		--create-namespace \
+		--namespace perses-operator-system \
+		--set image.repository=$(IMAGE_TAG_BASE) \
+		--set image.tag=v$(VERSION) \
+  		--set metrics.enable=false \
+		--force
