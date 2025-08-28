@@ -10,7 +10,7 @@ require (
 	github.com/onsi/gomega v1.37.0
 	github.com/perses/perses v0.51.1
 	github.com/sirupsen/logrus v1.9.3
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.33.4
 	k8s.io/apimachinery v0.33.4
