@@ -56,7 +56,7 @@ var _ = Describe("GlobalDatasource controller", func() {
 				Default: true,
 				Plugin: persescommon.Plugin{
 					Kind: "Prometheus",
-					Spec: map[string]interface{}{},
+					Spec: map[string]any{},
 				},
 			},
 		}

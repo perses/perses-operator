@@ -65,7 +65,7 @@ var _ = Describe("Dashboard controller", func() {
 							},
 							Plugin: persescommon.Plugin{
 								Kind: "PrometheusPlugin",
-								Spec: map[string]interface{}{},
+								Spec: map[string]any{},
 							},
 						},
 					},
