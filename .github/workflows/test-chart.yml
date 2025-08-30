@@ -1,0 +1,56 @@
+name: Test Chart
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test-e2e:
+    name: Run on Ubuntu
+    runs-on: ubuntu-latest
+    steps:
+      - name: Clone the code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install kubebuilder
+        run: |
+          curl -L -o kubebuilder "https://go.kubebuilder.io/dl/latest/$(go env GOOS)/$(go env GOARCH)"
+          chmod +x kubebuilder
+          sudo mv kubebuilder /usr/local/bin/
+
+      - name: Install kind
+        run: |
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/latest/kind-linux-amd64
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
+
+      - name: Create kind cluster
+        run: kind create cluster
+
+      - name: Build and load operator image
+        run: |
+          go mod tidy
+          make manifests  # Generate fresh manifests first
+          # Force Docker usage in CI (simpler than handling both runtimes)
+          make image-build CONTAINER_RUNTIME=docker
+          IMAGE_NAME="docker.io/persesdev/perses-operator:v$(cat VERSION)"
+          kind load docker-image "${IMAGE_NAME}"
+
+      - name: Install Helm
+        run: |
+          curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+      - name: Test Helm chart
+        run: |
+          make helm-chart
+          helm lint dist/chart
+          make helm-install
+
+      - name: Check Helm release
+        run: |
+          helm status perses-operator --namespace perses-operator-system
