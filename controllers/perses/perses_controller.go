@@ -138,10 +138,6 @@ func (r *PersesReconciler) addFinalizer(ctx context.Context, req ctrl.Request) (
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers
 	if !controllerutil.ContainsFinalizer(perses, common.PersesFinalizer) {
 		log.Info("Adding Finalizer for Perses")
-		if ok := controllerutil.AddFinalizer(perses, common.PersesFinalizer); !ok {
-			log.Error("Failed to add finalizer into the custom resource")
-			return subreconciler.RequeueWithDelay(time.Second * 10)
-		}
 
 		// Re-fetch the perses Custom Resource before update the status
 		// so that we have the latest state of the resource on the cluster and we will avoid
@@ -150,6 +146,11 @@ func (r *PersesReconciler) addFinalizer(ctx context.Context, req ctrl.Request) (
 		if err := r.Get(ctx, req.NamespacedName, perses); err != nil {
 			log.WithError(err).Error("Failed to re-fetch perses")
 			return subreconciler.RequeueWithError(err)
+		}
+
+		if ok := controllerutil.AddFinalizer(perses, common.PersesFinalizer); !ok {
+			log.Error("Failed to add finalizer into the custom resource")
+			return subreconciler.RequeueWithDelay(time.Second * 10)
 		}
 
 		if err := r.Update(ctx, perses); err != nil {
