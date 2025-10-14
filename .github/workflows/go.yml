@@ -20,7 +20,7 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v5
-      - uses: perses/github-actions@v0.10.0
+      - uses: perses/github-actions@v0.11.0
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
@@ -34,7 +34,7 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v5
-      - uses: perses/github-actions@v0.10.0
+      - uses: perses/github-actions@v0.11.0
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
@@ -46,7 +46,7 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v5
-      - uses: perses/github-actions@v0.10.0
+      - uses: perses/github-actions@v0.11.0
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
@@ -60,5 +60,5 @@ jobs:
         uses: golangci/golangci-lint-action@v8.0.0
         with:
           # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-          version: v2.1.6
+          version: v2.4.0
           args: --timeout 5m
