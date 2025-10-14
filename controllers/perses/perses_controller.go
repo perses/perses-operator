@@ -118,7 +118,7 @@ func (r *PersesReconciler) setStatusToUnknown(ctx context.Context, req ctrl.Requ
 		// requeue after adding unknown status to allow adding the finalizer to succeed
 		// see explanation on setting a status on creation here
 		// https://github.com/kubernetes-sigs/controller-runtime/blob/1dce6213f6c078f3170921b3a774304d066d5bd4/pkg/controller/controllerutil/controllerutil.go#L378
-		return subreconciler.Requeue()
+		return subreconciler.RequeueWithDelay(time.Second * 5)
 	}
 
 	return subreconciler.ContinueReconciling()
@@ -217,7 +217,7 @@ func (r *PersesReconciler) handleDelete(ctx context.Context, req ctrl.Request) (
 			log.Info("Removing Finalizer for Perses after successfully perform the operations")
 			if ok := controllerutil.RemoveFinalizer(perses, common.PersesFinalizer); !ok {
 				log.Error(nil, "Failed to remove finalizer for Perses")
-				return subreconciler.Requeue()
+				return subreconciler.RequeueWithDelay(time.Second * 10)
 			}
 
 			if err := r.Update(ctx, perses); err != nil {

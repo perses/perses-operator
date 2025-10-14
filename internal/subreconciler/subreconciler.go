@@ -39,15 +39,11 @@ func Evaluate(r *reconcile.Result, e error) (reconcile.Result, error) {
 func ContinueReconciling() (*reconcile.Result, error) { return nil, nil }
 
 // DoNotRequeue returns a controller result pairing specifying not to requeue.
-func DoNotRequeue() (*reconcile.Result, error) { return &ctrl.Result{Requeue: false}, nil }
+func DoNotRequeue() (*reconcile.Result, error) { return &ctrl.Result{}, nil }
 
 // RequeueWithError returns a controller result pairing specifying to
 // requeue with an error message.
 func RequeueWithError(e error) (*reconcile.Result, error) { return &ctrl.Result{}, e }
-
-// Requeue returns a controller result pairing specifying to
-// requeue with no error message implied. This returns no error.
-func Requeue() (*reconcile.Result, error) { return &ctrl.Result{Requeue: true}, nil }
 
 // RequeueWithDelay returns a controller result pairing specifying to
 // requeue after a delay. This returns no error.
@@ -66,7 +62,7 @@ func ShouldRequeue(r *ctrl.Result, err error) bool {
 	if r.IsZero() {
 		res = &ctrl.Result{}
 	}
-	return res.Requeue || (err != nil)
+	return res.RequeueAfter > 0 || (err != nil)
 }
 
 // ShouldHaltOrRequeue returns true if reconciler result is not nil
@@ -75,9 +71,4 @@ func ShouldRequeue(r *ctrl.Result, err error) bool {
 // it's included in case ShouldHaltOrRequeue is called directly.
 func ShouldHaltOrRequeue(r *ctrl.Result, err error) bool {
 	return (r != nil) || ShouldRequeue(r, err)
-}
-
-// ShouldContinue returns the inverse of ShouldHalt.
-func ShouldContinue(r *ctrl.Result, err error) bool {
-	return !ShouldHaltOrRequeue(r, err)
 }
