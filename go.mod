@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/brunoga/deep v1.2.5
-	github.com/onsi/ginkgo/v2 v2.26.0
+	github.com/onsi/ginkgo/v2 v2.27.2
 	github.com/onsi/gomega v1.38.2
 	github.com/perses/perses v0.52.0
 	github.com/sirupsen/logrus v1.9.3
@@ -118,7 +118,6 @@ require (
 	github.com/zitadel/oidc/v3 v3.44.0 // indirect
 	github.com/zitadel/schema v1.3.1 // indirect
 	gitlab.com/digitalxero/go-conventional-commit v1.0.7 // indirect
-	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
