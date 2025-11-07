@@ -77,12 +77,6 @@ type PersesSpec struct {
 	// +optional
 	// ServiceAccountName is the name of the service account to use for the perses deployment or statefulset.
 	ServiceAccountName string `json:"serviceAccountName,omitempty"`
-
-	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	// +optional
-	// PodSecurityContext holds pod-level security attributes and common container settings.
-	// If not specified, defaults to fsGroup: 65534 to ensure proper volume permissions for the nobody user.
-	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
 }
 
 // Metadata to add to deployed pods

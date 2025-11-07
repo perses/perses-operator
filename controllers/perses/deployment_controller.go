@@ -152,10 +152,15 @@ func (r *PersesReconciler) createPersesDeployment(
 					Labels:      ls,
 				},
 				Spec: corev1.PodSpec{
-					NodeSelector:    perses.Spec.NodeSelector,
-					Tolerations:     perses.Spec.Tolerations,
-					Affinity:        perses.Spec.Affinity,
-					SecurityContext: common.GetPodSecurityContext(perses), Containers: []corev1.Container{{
+					NodeSelector: perses.Spec.NodeSelector,
+					Tolerations:  perses.Spec.Tolerations,
+					Affinity:     perses.Spec.Affinity,
+					SecurityContext: &corev1.PodSecurityContext{
+						SeccompProfile: &corev1.SeccompProfile{
+							Type: corev1.SeccompProfileTypeRuntimeDefault,
+						},
+					},
+					Containers: []corev1.Container{{
 						Image:           image,
 						Name:            "perses",
 						ImagePullPolicy: corev1.PullIfNotPresent,

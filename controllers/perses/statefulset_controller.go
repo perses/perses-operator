@@ -154,10 +154,14 @@ func (r *PersesReconciler) createPersesStatefulSet(
 					Labels:      ls,
 				},
 				Spec: corev1.PodSpec{
-					NodeSelector:    perses.Spec.NodeSelector,
-					Tolerations:     perses.Spec.Tolerations,
-					Affinity:        perses.Spec.Affinity,
-					SecurityContext: common.GetPodSecurityContext(perses),
+					NodeSelector: perses.Spec.NodeSelector,
+					Tolerations:  perses.Spec.Tolerations,
+					Affinity:     perses.Spec.Affinity,
+					SecurityContext: &corev1.PodSecurityContext{
+						SeccompProfile: &corev1.SeccompProfile{
+							Type: corev1.SeccompProfileTypeRuntimeDefault,
+						},
+					},
 					Containers: []corev1.Container{{
 						Image:           image,
 						Name:            "perses",
