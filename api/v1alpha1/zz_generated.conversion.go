@@ -223,11 +223,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha2.PersesSpec)(nil), (*PersesSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_PersesSpec_To_v1alpha1_PersesSpec(a.(*v1alpha2.PersesSpec), b.(*PersesSpec), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*PersesStatus)(nil), (*v1alpha2.PersesStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_PersesStatus_To_v1alpha2_PersesStatus(a.(*PersesStatus), b.(*v1alpha2.PersesStatus), scope)
 	}); err != nil {
@@ -280,6 +275,11 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddConversionFunc((*v1alpha2.PersesDashboardSpec)(nil), (*Dashboard)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha2_PersesDashboardSpec_To_v1alpha1_Dashboard(a.(*v1alpha2.PersesDashboardSpec), b.(*Dashboard), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha2.PersesSpec)(nil), (*PersesSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_PersesSpec_To_v1alpha1_PersesSpec(a.(*v1alpha2.PersesSpec), b.(*PersesSpec), scope)
 	}); err != nil {
 		return err
 	}
