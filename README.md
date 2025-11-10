@@ -11,28 +11,36 @@ Install the Perses Operator in your Kubernetes cluster. You can use [KIND](https
 You’ll need:
 
 - a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) or [minikube](https://minikube.sigs.k8s.io/docs/) to get a local cluster for testing, or run against a remote cluster.
-**Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
+  **Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
 - [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) installed and configured to use your cluster.
 
 ### Running on the cluster
 
 1. Install custom resource definitions:
+
 ```sh
 make install
 ```
 
-2. Create a namespace for the resources:
+2. Deploy the operator:
+
+```sh
+make deploy
+```
+
+3. Create a namespace for the resources:
+
 ```sh
 kubectl create namespace perses-dev
 ```
 
-3. Install custom resources:
+4. Install custom resources:
 
 ```sh
 kubectl apply -k config/samples
 ```
 
-4. Check the Perses UI:
+5. Check the Perses UI:
 
 ```sh
 kubectl -n perses-dev port-forward svc/perses-sample 8080:8080
