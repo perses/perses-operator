@@ -14,7 +14,7 @@ You’ll need:
 
 1. Install custom resource definitions:
 ```sh
-make install
+make install-crds
 ```
 
 2. Create a namespace for the resources:
@@ -58,7 +58,7 @@ kubectl -n perses-dev port-forward svc/perses-sample 8080:8080
 To delete the CRDs from the cluster:
 
 ```sh
-make uninstall
+make uninstall-crds
 ```
 
 ### Undeploy controller
@@ -91,7 +91,7 @@ Each instance of the CRD deploys the following resources:
 1. Install Instances of Custom Resources and run the controller:
 
 ```sh
-PERSES_IMAGE=docker.io/persesdev/perses:v0.50.3 make install run
+PERSES_IMAGE=docker.io/persesdev/perses:v0.50.3 make install-crds run
 ```
 
 2. Install a CRD instance
