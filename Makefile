@@ -85,6 +85,13 @@ ENVTEST_VERSION ?= release-0.19
 # Image URL to use all building/pushing image targets
 IMG ?= $(IMAGE_TAG_BASE):v$(VERSION)
 
+# Docker image tag with git SHA and date
+DOCKER_IMAGE_TAG ?= $(subst /,-,$(shell git rev-parse --abbrev-ref HEAD))-$(shell date +%Y-%m-%d)-$(shell git rev-parse --short HEAD)
+
+.PHONY: print-image-tag
+print-image-tag: ## Print the docker image tag with git SHA
+	@echo $(DOCKER_IMAGE_TAG)
+
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
