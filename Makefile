@@ -291,7 +291,7 @@ uninstall-crds: manifests kustomize ## Uninstall CRDs from the K8s cluster speci
 deploy: deploy-with-certmanager ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 
 .PHONY: deploy-with-certmanager
-deploy-with-certmanager: manifests kustomize
+deploy-with-certmanager: manifests kustomize install-cert-manager
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
