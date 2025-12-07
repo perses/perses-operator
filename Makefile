@@ -257,20 +257,41 @@ podman-cross-build: test
 	podman build --platform $(PLATFORMS) --manifest ${IMG} -f Dockerfile.dev
 	podman manifest push ${IMG}
 
+# Add a bundle.yaml file with CRDs and deployment, with kustomize config.
+.PHONY: build-installer
+build-installer: manifests generate kustomize ## Generate a consolidated YAML with CRDs and deployment.
+	@echo ">> generating bundle.yaml (override image using IMG)"
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	$(KUSTOMIZE) build config/default > bundle.yaml
+
 ifndef ignore-not-found
   ignore-not-found = false
 endif
 
+.PHONY: install-cert-manager
+install-cert-manager: ## Install cert-manager into the K8s cluster specified in ~/.kube/config.
+	kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.2/cert-manager.yaml
+	kubectl wait --for=condition=Available --timeout=300s -n cert-manager deployment/cert-manager
+	kubectl wait --for=condition=Available --timeout=300s -n cert-manager deployment/cert-manager-cainjector
+	kubectl wait --for=condition=Available --timeout=300s -n cert-manager deployment/cert-manager-webhook
+
 .PHONY: install-crds
 install-crds: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
+
+.PHONY: uninstall-cert-manager
+uninstall-cert-manager: ## Uninstall cert-manager from the K8s cluster specified in ~/.kube/config.
+	kubectl delete -f https://github.com/cert-manager/cert-manager/releases/download/v1.16.2/cert-manager.yaml --ignore-not-found=$(ignore-not-found)
 
 .PHONY: uninstall-crds
 uninstall-crds: manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: deploy
-deploy: manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+deploy: deploy-with-certmanager ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+
+.PHONY: deploy-with-certmanager
+deploy-with-certmanager: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 

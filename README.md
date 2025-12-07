@@ -24,8 +24,15 @@ make install
 
 2. Deploy the operator:
 
+**Option A: Using cert-manager**
 ```sh
+make install-cert-manager
 make deploy
+```
+
+**Option B: Using self-signed certificates (for development/testing)**
+```sh
+make deploy-local
 ```
 
 3. Create a namespace for the resources:
