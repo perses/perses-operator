@@ -59,6 +59,18 @@ jobs:
         run: |
           make cross-build
           make bundle-build
+      - name: Push main branch images
+        ## This step will run when main branch is pushed.
+        ## It will push docker images with 'main' tag and git SHA tag
+        if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+        run: |
+          make image-push IMG=docker.io/persesdev/perses-operator:main
+          make bundle-push BUNDLE_IMG=docker.io/persesdev/perses-operator-bundle:main
+          
+          export IMAGE_TAG=$(make -s print-image-tag)
+          echo "IMAGE_TAG: ${IMAGE_TAG}"
+          make image-push IMG=docker.io/persesdev/perses-operator:${IMAGE_TAG}
+          make bundle-push BUNDLE_IMG=docker.io/persesdev/perses-operator-bundle:${IMAGE_TAG}
       - name: Publish Release and binaries
         ## This step will only run when a new tag is pushed.
         ## It will build the Go binaries and the docker images and then publish:
