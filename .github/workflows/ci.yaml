@@ -59,17 +59,23 @@ jobs:
         run: |
           make cross-build
           make bundle-build
-      - name: Push main branch images
-        ## This step will run when main branch is pushed.
-        ## It will push docker images with 'main' tag and git SHA tag
+      - name: Push cross-build and bundle images  
+        ## This step pushes the images built by cross-build and bundle-build
+        ## when main branch or tags are pushed
         if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
         run: |
-          make image-push IMG=docker.io/persesdev/perses-operator:main
-          make bundle-push BUNDLE_IMG=docker.io/persesdev/perses-operator-bundle:main
-          
+          # Push the Docker images built by goreleaser cross-build
+          # Get the image tag from the generated goreleaser config
           export IMAGE_TAG=$(make -s print-image-tag)
           echo "IMAGE_TAG: ${IMAGE_TAG}"
-          make image-push IMG=docker.io/persesdev/perses-operator:${IMAGE_TAG}
+          
+          # Push individual architecture images using image-push target
+          make image-push IMG=docker.io/persesdev/perses-operator:${IMAGE_TAG}-distroless-amd64
+          make image-push IMG=docker.io/persesdev/perses-operator:${IMAGE_TAG}-distroless-arm64
+          make image-push IMG=docker.io/persesdev/perses-operator:${IMAGE_TAG}-distroless-debug-amd64
+          make image-push IMG=docker.io/persesdev/perses-operator:${IMAGE_TAG}-distroless-debug-arm64
+          
+          # Push bundle image with git-based tag
           make bundle-push BUNDLE_IMG=docker.io/persesdev/perses-operator-bundle:${IMAGE_TAG}
       - name: Publish Release and binaries
         ## This step will only run when a new tag is pushed.
