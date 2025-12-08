@@ -33,15 +33,14 @@ kubectl apply -k config/samples
 > 
 > A cert is also required to run the operator due to the conversion webhook.
 
-You can run the following to use locally generated certs in your k8s cluster:
-
+**Option A: Using self-signed certificates (for development/testing)**
 ```sh
 IMG=<some-registry>/perses-operator:tag make test-image-build image-push deploy-local
 ```
 
-Or you can deploy using an externally provided certificate: 
-
+**Option B: Using cert-manager (recommended for production)**
 ```sh
+make install-cert-manager
 IMG=<some-registry>/perses-operator:tag make test-image-build image-push deploy
 ```
 
