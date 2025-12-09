@@ -496,6 +496,10 @@ endef
 generate-goreleaser:
 	go run ./scripts/generate-goreleaser/generate-goreleaser.go
 
+.PHONY: push-main-docker-image
+push-main-docker-image:
+	go run ./scripts/push-main-docker-image/push-main-docker-image.go
+
 ## Cross build binaries for all platforms (Use "make image-build" in development)
 .PHONY: cross-build
 cross-build: generate-goreleaser manifests generate fmt vet ## Cross build binaries for all platforms (Use "make build" in development)

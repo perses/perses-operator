@@ -55,28 +55,18 @@ jobs:
         with:
           distribution: goreleaser
           install-only: true
-      - name: Build Go binaries and docker images
-        run: |
-          make cross-build
-          make bundle-build
-      - name: Push cross-build and bundle images  
-        ## This step pushes the images built by cross-build and bundle-build
-        ## when main branch or tags are pushed
+      - name: Build main Go binaries and docker images
         if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
         run: |
-          # Push the Docker images built by goreleaser cross-build
-          # Get the image tag from the generated goreleaser config
-          export IMAGE_TAG=$(make -s print-image-tag)
-          echo "IMAGE_TAG: ${IMAGE_TAG}"
-          
-          # Push individual architecture images using image-push target
-          make image-push IMG=docker.io/persesdev/perses-operator:${IMAGE_TAG}-distroless-amd64
-          make image-push IMG=docker.io/persesdev/perses-operator:${IMAGE_TAG}-distroless-arm64
-          make image-push IMG=docker.io/persesdev/perses-operator:${IMAGE_TAG}-distroless-debug-amd64
-          make image-push IMG=docker.io/persesdev/perses-operator:${IMAGE_TAG}-distroless-debug-arm64
-          
-          # Push bundle image with git-based tag
-          make bundle-push BUNDLE_IMG=docker.io/persesdev/perses-operator-bundle:${IMAGE_TAG}
+          make cross-build
+          BUNDLE_IMG=docker.io/persesdev/perses-operator-bundle:$(make -s print-image-tag) make bundle-build
+      - name: Push main branch images
+        ## This step will run when main branch is pushed.
+        ## It will push docker images with 'main' tag and git SHA tag
+        if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
+        run: |
+          make push-main-docker-image
+          BUNDLE_IMG=docker.io/persesdev/perses-operator-bundle:$(make -s print-image-tag) make bundle-push
       - name: Publish Release and binaries
         ## This step will only run when a new tag is pushed.
         ## It will build the Go binaries and the docker images and then publish:
@@ -85,6 +75,7 @@ jobs:
         if: ${{ github.event_name == 'push' && startsWith(github.ref_name, 'v') }}
         run: |
           make cross-release
+          make bundle-build
           make bundle-push
           make catalog-build
           make catalog-push
