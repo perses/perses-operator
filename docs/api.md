@@ -43,8 +43,8 @@ spec:
         type: secret
         name: perses-certs
         certPath: tls.crt
-        privateKeyPath: tls.key  
-  
+        privateKeyPath: tls.key
+
   # Optional container image to use as the Perses server operand
   image: docker.io/perses/perses:v0.50.3
 
@@ -53,7 +53,7 @@ spec:
     name: perses-service
     annotations:
       my.service/annotation: "true"
-  
+
   # A Complete Perses configuration https://perses.dev/perses/docs/configuration/configuration/
   config:
     database:
@@ -68,7 +68,7 @@ spec:
     ephemeral_dashboard:
       enable: false
       cleanup_interval: "1s"
-  
+
   # Optional TLS configuration
   tls:
     enable: true
@@ -84,21 +84,20 @@ spec:
 
   replicas: 1
   containerPort: 8080
-  
+
   livenessProbe:
     initialDelaySeconds: 30
     periodSeconds: 10
     timeoutSeconds: 5
     successThreshold: 1
     failureThreshold: 3
-  
+
   readinessProbe:
     initialDelaySeconds: 30
     periodSeconds: 10
     timeoutSeconds: 5
     successThreshold: 1
     failureThreshold: 3
-  
 ```
 
 ### PersesDatasource
@@ -120,12 +119,12 @@ spec:
     kind: PrometheusSource
     spec:
       default: true
-      proxy: 
+      proxy:
         kind: HTTPProxy
           spec:
             url: "https://prometheus-server.monitoring.svc.cluster.local:9090"
             secret: prometheus-secret
-      
+
   # Optional datasource proxy client configuration
   client:
     tls:
@@ -214,7 +213,6 @@ spec: # The complete spec of a Perses dashboard: https://perses.dev/perses/docs/
             content:
               "$ref": "#/spec/panels/defaultTimeSeriesChart"
   duration: 1h
-  
 ```
 
 ## Project Management
@@ -346,7 +344,6 @@ spec:
                 label: 5m
         defaultValue: 1m
   duration: 1h
-
 ```
 
 ## Troubleshooting
@@ -354,20 +351,23 @@ spec:
 ### Common Issues
 
 1. **Connection issues with Perses server**:
+
    - Check if the Perses deployment is running correctly
    - Verify network policies allow access to the Perses service
 
-3. **Operator not processing CRs**:
+2. **Operator not processing CRs**:
+
    - Check the operator logs for errors
    - Verify that the correct CRDs are installed
 
-4. **Datasources not working**:
+3. **Datasources not working**:
+
    - Verify the datasource URL is accessible from the Perses pods
    - Check that a proxy is correctly configured if needed
    - Check credentials if authentication is required
    - Look for errors in the Perses server logs
 
-5. **Dashboards not appearing**:
+4. **Dashboards not appearing**:
    - Check that the dashboard is created in the correct namespace
    - Verify that referenced datasources exist and are accessible
 
