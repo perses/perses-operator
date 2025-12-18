@@ -146,11 +146,11 @@ spec:
     tls:
       enable: true
       caCert:
-        type: secret
-        name: prometheus-certs
-        certPath: ca.crt
+        type: secret # May be of type `secret`, `configmap` or `file`
+        name: prometheus-certs # In this case the k8s secret name
+        certPath: ca.crt # The key
       userCert:
-        type: secret
+        type: secret # May be of type `secret`, `configmap` or `file`
         name: prometheus-certs
         certPath: tls.crt
         privateKeyPath: tls.key
@@ -236,6 +236,71 @@ spec: # The complete spec of a Perses dashboard: https://perses.dev/perses/docs/
 The Perses operator maps Perses projects to Kubernetes namespaces. When you create a namespace in Kubernetes, it can be used as a project in Perses. This approach simplifies resource management and aligns with Kubernetes native organization principles.
 
 When reconciling Dashboards or Datasources the Perses operator synchronizes the namespace into a Perses project across all Perses servers in the cluster.
+
+## Secrets
+
+Perses secrets are exclusively managed by the Perses Operator with
+[`PersesDatasource`](#persesdatasource) and
+[`PersesGlobalDatasource`](#persesglobaldatasource) resources
+under the `client` field for proxy configuration.
+
+The api supports three types of secret sources:
+
+- `secret`: Kubernetes Secret
+- `configmap`: Kubernetes ConfigMap
+- `file`: File mounted in the perses pod
+
+The api for these types are the same
+but the keys ending in `Path` refer to a key within a secret or configmap
+when using those types.
+
+> [!WARNING]
+> The `file` type is not useful in the current state
+> as there is no way to mount files into the perses pod.
+
+```yaml
+apiVersion: perses.dev/v1alpha1
+kind: PersesDatasource
+metadata:
+  name: prometheus-through-proxy
+  namespace: monitoring
+spec:
+  config: ...
+  # Optional datasource proxy client configuration
+  client:
+    basicAuth:
+      type: secret
+      name: k8s-basicauth-secret-name
+      namespace: optional-namespacename # if the secret resides in another namespace
+      username: "actual-username"
+      password_path: "password-key-in-secret" # or an actual path if type is `file`
+    oauth:
+      type: secret
+      name: k8s-oauth-secret-name
+      # namespace: monitoring
+      clientIDPath: client-id-key-in-secret
+      clientSecretPath: client-secret-key-in-secret
+      tokenURL: https://auth.example.com/token
+      scopes:
+        - read:metrics
+      endpointParams:
+        audience: prometheus
+      authStyle: dunno
+    tls:
+      enable: true
+      caCert:
+        type: secret # May be of type `secret`, `configmap` or `file`
+        name: prometheus-certs # In this case the k8s secret name
+        certPath: ca.crt # The key in the secret
+      userCert:
+        type: secret # May be of type `secret`, `configmap` or `file`
+        name: prometheus-certs
+        certPath: tls.crt
+        privateKeyPath: tls.key
+```
+
+> [!NOTE]
+> The `basicAuth` and `oauth` fields are mutually exclusive.
 
 ## Examples
 
