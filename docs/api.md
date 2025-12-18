@@ -104,7 +104,23 @@ spec:
 
 The `PersesDatasource` CRD allows you to define datasources that can be used in your Perses dashboards. These datasources provide the data for visualizations and panels.
 
-The PersesDatasource configurations are namespace-scoped.
+The `PersesDatasource` configurations are namespace-scoped.
+They will be created under a Perses project that corresponds to the namespace where the CR is created.
+For instance, a `PersesDatasource` created in the `monitoring` namespace
+will be created under the `monitoring` project in the Perses server.
+
+To configure a secret to be used for proxy authentication,
+you can create a Kubernetes Secret with the necessary credentials
+and reference it in the `client` field used for the datasource proxy configuration.
+This will create a Perses secret in the project corresponding to the namespace where the CR is created.
+The secret will be named after the Datasource name with a `-secret` suffix.
+The secret must be referenced in `spec.config.spec.proxy.spec.secret`.
+
+#### PersesGlobalDatasource
+
+The `PersesGlobalDatasource` CRD allows you to define global datasources that are accessible across all Perses projects.
+The API is the same as `PersesDatasource`, but the resources are globally scoped.
+No project mapping is created and a `GlobalSecret` is created for proxy authentication if needed.
 
 #### Specification
 
@@ -112,7 +128,7 @@ The PersesDatasource configurations are namespace-scoped.
 apiVersion: perses.dev/v1alpha1
 kind: PersesDatasource
 metadata:
-  name: prometheus-trough-proxy
+  name: prometheus-through-proxy
   namespace: monitoring
 spec:
   config: # A complete spec of a Perses datasource: https://perses.dev/perses/docs/api/datasource/
@@ -121,9 +137,9 @@ spec:
       default: true
       proxy:
         kind: HTTPProxy
-          spec:
-            url: "https://prometheus-server.monitoring.svc.cluster.local:9090"
-            secret: prometheus-secret
+        spec:
+          url: "https://prometheus-server.monitoring.svc.cluster.local:9090"
+          secret: prometheus-through-proxy-secret
 
   # Optional datasource proxy client configuration
   client:
