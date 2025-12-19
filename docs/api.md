@@ -43,8 +43,8 @@ spec:
         type: secret
         name: perses-certs
         certPath: tls.crt
-        privateKeyPath: tls.key  
-  
+        privateKeyPath: tls.key
+
   # Optional container image to use as the Perses server operand
   image: docker.io/perses/perses:v0.50.3
 
@@ -53,7 +53,7 @@ spec:
     name: perses-service
     annotations:
       my.service/annotation: "true"
-  
+
   # A Complete Perses configuration https://perses.dev/perses/docs/configuration/configuration/
   config:
     database:
@@ -68,7 +68,7 @@ spec:
     ephemeral_dashboard:
       enable: false
       cleanup_interval: "1s"
-  
+
   # Optional TLS configuration
   tls:
     enable: true
@@ -84,28 +84,43 @@ spec:
 
   replicas: 1
   containerPort: 8080
-  
+
   livenessProbe:
     initialDelaySeconds: 30
     periodSeconds: 10
     timeoutSeconds: 5
     successThreshold: 1
     failureThreshold: 3
-  
+
   readinessProbe:
     initialDelaySeconds: 30
     periodSeconds: 10
     timeoutSeconds: 5
     successThreshold: 1
     failureThreshold: 3
-  
 ```
 
 ### PersesDatasource
 
 The `PersesDatasource` CRD allows you to define datasources that can be used in your Perses dashboards. These datasources provide the data for visualizations and panels.
 
-The PersesDatasource configurations are namespace-scoped.
+The `PersesDatasource` configurations are namespace-scoped.
+They will be created under a Perses project that corresponds to the namespace where the CR is created.
+For instance, a `PersesDatasource` created in the `monitoring` namespace
+will be created under the `monitoring` project in the Perses server.
+
+To configure a secret to be used for proxy authentication,
+you can create a Kubernetes Secret with the necessary credentials
+and reference it in the `client` field used for the datasource proxy configuration.
+This will create a Perses secret in the project corresponding to the namespace where the CR is created.
+The secret will be named after the Datasource name with a `-secret` suffix.
+The secret must be referenced in `spec.config.spec.proxy.spec.secret`.
+
+#### PersesGlobalDatasource
+
+The `PersesGlobalDatasource` CRD allows you to define global datasources that are accessible across all Perses projects.
+The API is the same as `PersesDatasource`, but the resources are globally scoped.
+No project mapping is created and a `GlobalSecret` is created for proxy authentication if needed.
 
 #### Specification
 
@@ -113,29 +128,29 @@ The PersesDatasource configurations are namespace-scoped.
 apiVersion: perses.dev/v1alpha1
 kind: PersesDatasource
 metadata:
-  name: prometheus-trough-proxy
+  name: prometheus-through-proxy
   namespace: monitoring
 spec:
   config: # A complete spec of a Perses datasource: https://perses.dev/perses/docs/api/datasource/
     kind: PrometheusSource
     spec:
       default: true
-      proxy: 
+      proxy:
         kind: HTTPProxy
-          spec:
-            url: "https://prometheus-server.monitoring.svc.cluster.local:9090"
-            secret: prometheus-secret
-      
+        spec:
+          url: "https://prometheus-server.monitoring.svc.cluster.local:9090"
+          secret: prometheus-through-proxy-secret
+
   # Optional datasource proxy client configuration
   client:
     tls:
       enable: true
       caCert:
-        type: secret
-        name: prometheus-certs
-        certPath: ca.crt
+        type: secret # May be of type `secret`, `configmap` or `file`
+        name: prometheus-certs # In this case the k8s secret name
+        certPath: ca.crt # The key
       userCert:
-        type: secret
+        type: secret # May be of type `secret`, `configmap` or `file`
         name: prometheus-certs
         certPath: tls.crt
         privateKeyPath: tls.key
@@ -214,7 +229,6 @@ spec: # The complete spec of a Perses dashboard: https://perses.dev/perses/docs/
             content:
               "$ref": "#/spec/panels/defaultTimeSeriesChart"
   duration: 1h
-  
 ```
 
 ## Project Management
@@ -222,6 +236,71 @@ spec: # The complete spec of a Perses dashboard: https://perses.dev/perses/docs/
 The Perses operator maps Perses projects to Kubernetes namespaces. When you create a namespace in Kubernetes, it can be used as a project in Perses. This approach simplifies resource management and aligns with Kubernetes native organization principles.
 
 When reconciling Dashboards or Datasources the Perses operator synchronizes the namespace into a Perses project across all Perses servers in the cluster.
+
+## Secrets
+
+Perses secrets are exclusively managed by the Perses Operator with
+[`PersesDatasource`](#persesdatasource) and
+[`PersesGlobalDatasource`](#persesglobaldatasource) resources
+under the `client` field for proxy configuration.
+
+The api supports three types of secret sources:
+
+- `secret`: Kubernetes Secret
+- `configmap`: Kubernetes ConfigMap
+- `file`: File mounted in the perses pod
+
+The api for these types are the same
+but the keys ending in `Path` refer to a key within a secret or configmap
+when using those types.
+
+> [!WARNING]
+> The `file` type is not useful in the current state
+> as there is no way to mount files into the perses pod.
+
+```yaml
+apiVersion: perses.dev/v1alpha1
+kind: PersesDatasource
+metadata:
+  name: prometheus-through-proxy
+  namespace: monitoring
+spec:
+  config: ...
+  # Optional datasource proxy client configuration
+  client:
+    basicAuth:
+      type: secret
+      name: k8s-basicauth-secret-name
+      namespace: optional-namespacename # if the secret resides in another namespace
+      username: "actual-username"
+      password_path: "password-key-in-secret" # or an actual path if type is `file`
+    oauth:
+      type: secret
+      name: k8s-oauth-secret-name
+      # namespace: monitoring
+      clientIDPath: client-id-key-in-secret
+      clientSecretPath: client-secret-key-in-secret
+      tokenURL: https://auth.example.com/token
+      scopes:
+        - read:metrics
+      endpointParams:
+        audience: prometheus
+      authStyle: dunno
+    tls:
+      enable: true
+      caCert:
+        type: secret # May be of type `secret`, `configmap` or `file`
+        name: prometheus-certs # In this case the k8s secret name
+        certPath: ca.crt # The key in the secret
+      userCert:
+        type: secret # May be of type `secret`, `configmap` or `file`
+        name: prometheus-certs
+        certPath: tls.crt
+        privateKeyPath: tls.key
+```
+
+> [!NOTE]
+> The `basicAuth` and `oauth` fields are mutually exclusive.
 
 ## Examples
 
@@ -346,7 +425,6 @@ spec:
                 label: 5m
         defaultValue: 1m
   duration: 1h
-
 ```
 
 ## Troubleshooting
@@ -354,20 +432,23 @@ spec:
 ### Common Issues
 
 1. **Connection issues with Perses server**:
+
    - Check if the Perses deployment is running correctly
    - Verify network policies allow access to the Perses service
 
-3. **Operator not processing CRs**:
+2. **Operator not processing CRs**:
+
    - Check the operator logs for errors
    - Verify that the correct CRDs are installed
 
-4. **Datasources not working**:
+3. **Datasources not working**:
+
    - Verify the datasource URL is accessible from the Perses pods
    - Check that a proxy is correctly configured if needed
    - Check credentials if authentication is required
    - Look for errors in the Perses server logs
 
-5. **Dashboards not appearing**:
+4. **Dashboards not appearing**:
    - Check that the dashboard is created in the correct namespace
    - Verify that referenced datasources exist and are accessible
 
