@@ -149,3 +149,6 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
+
+// replace module paths to use specific versions or forks
+replace github.com/charmbracelet/lipgloss/v2 => github.com/charmbracelet/lipgloss/v2 v2.0.0-beta.1
