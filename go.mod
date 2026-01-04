@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/brunoga/deep v1.2.5
 	github.com/goreleaser/goreleaser/v2 v2.12.0
-	github.com/onsi/ginkgo/v2 v2.27.2
+	github.com/onsi/ginkgo/v2 v2.27.3
 	github.com/onsi/gomega v1.38.2
 	github.com/perses/perses v0.52.0
 	github.com/sirupsen/logrus v1.9.3
