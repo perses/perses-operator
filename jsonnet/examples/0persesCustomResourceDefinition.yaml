@@ -15,7 +15,9 @@ spec:
     singular: perses
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - deprecated: true
+    deprecationWarning: perses.dev/v1alpha1 is deprecated; use perses.dev/v1alpha2
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: Perses is the Schema for the perses API

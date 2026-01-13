@@ -21,6 +21,8 @@
     "scope": "Namespaced",
     "versions": [
       {
+        "deprecated": true,
+        "deprecationWarning": "perses.dev/v1alpha1 is deprecated; use perses.dev/v1alpha2",
         "name": "v1alpha1",
         "schema": {
           "openAPIV3Schema": {

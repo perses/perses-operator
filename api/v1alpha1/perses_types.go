@@ -213,6 +213,7 @@ type PersesStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:shortName=per
+//+kubebuilder:deprecatedversion:warning="perses.dev/v1alpha1 is deprecated; use perses.dev/v1alpha2"
 
 // Perses is the Schema for the perses API
 type Perses struct {

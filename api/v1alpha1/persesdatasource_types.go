@@ -34,9 +34,10 @@ type DatasourceSpec struct {
 	Client *Client `json:"client,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
-// +kubebuilder:resource:shortName=perds
+//+kubebuilder:object:root=true
+//+kubebuilder:subresource:status
+//+kubebuilder:resource:shortName=perds
+//+kubebuilder:deprecatedversion:warning="perses.dev/v1alpha1 is deprecated; use perses.dev/v1alpha2"
 
 // PersesDatasource is the Schema for the PersesDatasources API
 type PersesDatasource struct {
