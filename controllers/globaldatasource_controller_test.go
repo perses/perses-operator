@@ -40,7 +40,7 @@ var _ = Describe("GlobalDatasource controller", func() {
 		}
 
 		persesNamespaceName := types.NamespacedName{Name: PersesName, Namespace: PersesNamespace}
-		globaldatasourceNamespaceName := types.NamespacedName{Name: GlobalDatasourceName, Namespace: PersesNamespace}
+		globaldatasourceName := types.NamespacedName{Name: GlobalDatasourceName}
 
 		persesImage := "perses-dev.io/perses:test"
 
@@ -108,12 +108,11 @@ var _ = Describe("GlobalDatasource controller", func() {
 
 			By("Creating the custom resource for the Kind PersesGlobalDatasource")
 			globaldatasource := &persesv1alpha2.PersesGlobalDatasource{}
-			err = k8sClient.Get(ctx, globaldatasourceNamespaceName, globaldatasource)
+			err = k8sClient.Get(ctx, globaldatasourceName, globaldatasource)
 			if err != nil && errors.IsNotFound(err) {
 				perses := &persesv1alpha2.PersesGlobalDatasource{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      GlobalDatasourceName,
-						Namespace: PersesNamespace,
+						Name: GlobalDatasourceName,
 					},
 					Spec: persesv1alpha2.DatasourceSpec{
 						Config: persesv1alpha2.Datasource{
@@ -129,7 +128,7 @@ var _ = Describe("GlobalDatasource controller", func() {
 			By("Checking if the custom resource was successfully created")
 			Eventually(func() error {
 				found := &persesv1alpha2.PersesGlobalDatasource{}
-				return k8sClient.Get(ctx, globaldatasourceNamespaceName, found)
+				return k8sClient.Get(ctx, globaldatasourceName, found)
 			}, time.Minute, time.Second).Should(Succeed())
 
 			// Mock the Perses API to assert that Is creating a new globaldatasource when reconciling
@@ -151,7 +150,7 @@ var _ = Describe("GlobalDatasource controller", func() {
 			}
 
 			_, err = globaldatasourceReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: globaldatasourceNamespaceName,
+				NamespacedName: globaldatasourceName,
 			})
 
 			Expect(err).To(Not(HaveOccurred()))
@@ -171,7 +170,7 @@ var _ = Describe("GlobalDatasource controller", func() {
 			By("Checking the latest Status Condition added to the Perses globaldatasource instance")
 			Eventually(func() error {
 				globaldatasourceWithStatus := &persesv1alpha2.PersesGlobalDatasource{}
-				err = k8sClient.Get(ctx, globaldatasourceNamespaceName, globaldatasourceWithStatus)
+				err = k8sClient.Get(ctx, globaldatasourceName, globaldatasourceWithStatus)
 
 				if len(globaldatasourceWithStatus.Status.Conditions) == 0 {
 					return fmt.Errorf("No status condition was added to the perses globaldatasource instance")
@@ -192,7 +191,7 @@ var _ = Describe("GlobalDatasource controller", func() {
 			mockGlobalSecret.On("Delete", PersesSecretName).Return(nil)
 
 			globaldatasourceToDelete := &persesv1alpha2.PersesGlobalDatasource{}
-			err = k8sClient.Get(ctx, globaldatasourceNamespaceName, globaldatasourceToDelete)
+			err = k8sClient.Get(ctx, globaldatasourceName, globaldatasourceToDelete)
 			Expect(err).To(Not(HaveOccurred()))
 
 			By("Deleting the custom resource")
@@ -200,7 +199,7 @@ var _ = Describe("GlobalDatasource controller", func() {
 			Expect(err).To(Not(HaveOccurred()))
 
 			_, err = globaldatasourceReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: globaldatasourceNamespaceName,
+				NamespacedName: globaldatasourceName,
 			})
 
 			Expect(err).To(Not(HaveOccurred()))

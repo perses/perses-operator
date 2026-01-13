@@ -18,7 +18,7 @@
       ],
       "singular": "persesglobaldatasource"
     },
-    "scope": "Namespaced",
+    "scope": "Cluster",
     "versions": [
       {
         "name": "v1alpha2",

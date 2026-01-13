@@ -28,7 +28,7 @@ type PersesGlobalDatasourceStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
-//+kubebuilder:resource:shortName=pergds
+//+kubebuilder:resource:scope=Cluster,shortName=pergds
 //+kubebuilder:conversion:hub
 //+versionName=v1alpha2
 //+kubebuilder:storageversion

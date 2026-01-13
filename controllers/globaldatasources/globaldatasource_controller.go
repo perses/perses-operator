@@ -126,7 +126,6 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalDatasource(ctx contex
 // creates/updates a Perses Global Secret with configuration,
 // retrieving cert/key data from Secrets, ConfigMaps, or files specified in the PersesGlobalDatasource.
 func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalSecret(ctx context.Context, persesClient v1.ClientInterface, datasource *persesv1alpha2.PersesGlobalDatasource) (*ctrl.Result, error) {
-	namespace := datasource.Namespace
 	datasourceName := datasource.Name
 	secretName := datasourceName + persescommon.SecretNameSuffix
 	basicAuth := datasource.Spec.Client.BasicAuth
@@ -147,12 +146,12 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalSecret(ctx context.Co
 
 		switch basicAuth.Type {
 		case persesv1alpha2.SecretSourceTypeSecret, persesv1alpha2.SecretSourceTypeConfigMap:
-			passwordData, err := persescommon.GetBasicAuthData(ctx, r.Client, namespace, datasourceName, basicAuth)
+			passwordData, err := persescommon.GetBasicAuthData(ctx, r.Client, basicAuth.Namespace, datasourceName, basicAuth)
 
 			if err != nil {
 				gdlog.WithFields(logger.Fields{
 					"globaldatasource": datasourceName,
-					"namespace":        namespace,
+					"namespace":        basicAuth.Namespace,
 					"error":            err,
 				}).Error("Failed to get user basic auth password data for globaldatasource")
 				return subreconciler.RequeueWithError(err)
@@ -180,11 +179,11 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalSecret(ctx context.Co
 		oAuthConfig.TokenURL = oauth.TokenURL
 		switch oauth.Type {
 		case persesv1alpha2.SecretSourceTypeSecret, persesv1alpha2.SecretSourceTypeConfigMap:
-			clientIDData, clientSecretData, err := persescommon.GetOAuthData(ctx, r.Client, namespace, datasourceName, oauth)
+			clientIDData, clientSecretData, err := persescommon.GetOAuthData(ctx, r.Client, oauth.Namespace, datasourceName, oauth)
 			if err != nil {
 				gdlog.WithFields(logger.Fields{
 					"globaldatasource": datasourceName,
-					"namespace":        namespace,
+					"namespace":        oauth.Namespace,
 					"error":            err,
 				}).Error("Failed to get user oauth data for globaldatasource")
 				return subreconciler.RequeueWithError(err)
@@ -214,12 +213,12 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalSecret(ctx context.Co
 		if tls.CaCert != nil {
 			switch tls.CaCert.Type {
 			case persesv1alpha2.SecretSourceTypeSecret, persesv1alpha2.SecretSourceTypeConfigMap:
-				caData, _, err := persescommon.GetTLSCertData(ctx, r.Client, namespace, datasourceName, tls.CaCert)
+				caData, _, err := persescommon.GetTLSCertData(ctx, r.Client, tls.CaCert.Namespace, datasourceName, tls.CaCert)
 
 				if err != nil {
 					gdlog.WithFields(logger.Fields{
 						"globaldatasource": datasourceName,
-						"namespace":        namespace,
+						"namespace":        tls.CaCert.Namespace,
 						"error":            err,
 					}).Error("Failed to get CA data for globaldatasource")
 					return subreconciler.RequeueWithError(err)
@@ -234,12 +233,12 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalSecret(ctx context.Co
 		if tls.UserCert != nil {
 			switch tls.UserCert.Type {
 			case persesv1alpha2.SecretSourceTypeSecret, persesv1alpha2.SecretSourceTypeConfigMap:
-				certData, keyData, err := persescommon.GetTLSCertData(ctx, r.Client, namespace, datasourceName, tls.UserCert)
+				certData, keyData, err := persescommon.GetTLSCertData(ctx, r.Client, tls.UserCert.Namespace, datasourceName, tls.UserCert)
 
 				if err != nil {
 					gdlog.WithFields(logger.Fields{
 						"globaldatasource": datasourceName,
-						"namespace":        namespace,
+						"namespace":        tls.UserCert.Namespace,
 						"error":            err,
 					}).Error("Failed to get user certificate data for globaldatasource")
 					return subreconciler.RequeueWithError(err)
@@ -290,7 +289,7 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalSecret(ctx context.Co
 	return subreconciler.ContinueReconciling()
 }
 
-func (r *PersesGlobalDatasourceReconciler) deleteGlobalDatasourceInAllInstances(ctx context.Context, datasourceNamespace string, datasourceName string) (*ctrl.Result, error) {
+func (r *PersesGlobalDatasourceReconciler) deleteGlobalDatasourceInAllInstances(ctx context.Context, datasourceName string) (*ctrl.Result, error) {
 	persesInstances := &persesv1alpha2.PersesList{}
 	var opts []client.ListOption
 	err := r.List(ctx, persesInstances, opts...)
@@ -306,7 +305,7 @@ func (r *PersesGlobalDatasourceReconciler) deleteGlobalDatasourceInAllInstances(
 
 	for _, persesInstance := range persesInstances.Items {
 		gdlog.Infof("Deleting perses instance: %s", persesInstance.Name)
-		if r, err := r.deleteGlobalDatasource(ctx, persesInstance, datasourceNamespace, datasourceName); subreconciler.ShouldHaltOrRequeue(r, err) {
+		if r, err := r.deleteGlobalDatasource(ctx, persesInstance, datasourceName); subreconciler.ShouldHaltOrRequeue(r, err) {
 			return r, err
 		}
 	}
@@ -314,7 +313,7 @@ func (r *PersesGlobalDatasourceReconciler) deleteGlobalDatasourceInAllInstances(
 	return subreconciler.DoNotRequeue()
 }
 
-func (r *PersesGlobalDatasourceReconciler) deleteGlobalDatasource(ctx context.Context, perses persesv1alpha2.Perses, datasourceNamespace string, datasourceName string) (*ctrl.Result, error) {
+func (r *PersesGlobalDatasourceReconciler) deleteGlobalDatasource(ctx context.Context, perses persesv1alpha2.Perses, datasourceName string) (*ctrl.Result, error) {
 	persesClient, err := r.ClientFactory.CreateClient(ctx, r.Client, perses)
 
 	if err != nil {
