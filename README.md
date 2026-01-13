@@ -19,7 +19,7 @@ You’ll need:
 1. Install custom resource definitions:
 
 ```sh
-make install
+make install-crds
 ```
 
 2. Deploy the operator:
@@ -29,6 +29,12 @@ make install
 make install-cert-manager
 make deploy
 ```
+
+> [!IMPORTANT]
+> This will deploy the controller with the default image 'docker.io/perses/perses-operator:latest'. To > use a different image, set the `IMG` variable:
+> ```sh
+> make deploy IMG=<your-image>
+> ```
 
 **Option B: Using self-signed certificates (for development/testing)**
 ```sh

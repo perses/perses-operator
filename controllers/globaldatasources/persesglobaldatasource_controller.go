@@ -49,7 +49,7 @@ var log = logger.WithField("module", "perses_globaldatasource_controller")
 // +kubebuilder:rbac:groups=perses.dev,resources=persesglobaldatasources/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=configmaps;secrets,verbs=watch;get
 func (r *PersesGlobalDatasourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	log.Infof("Reconciling PersesGlobalDatasource: %s/%s", req.Namespace, req.Name)
+	log.Infof("Reconciling PersesGlobalDatasource: %s", req.Name)
 	subreconcilersForPerses := []subreconciler.FnWithRequest{
 		r.handleDelete,
 		r.setStatusToUnknown,
@@ -88,9 +88,9 @@ func (r *PersesGlobalDatasourceReconciler) handleDelete(ctx context.Context, req
 			return subreconciler.RequeueWithError(err)
 		}
 
-		log.Infof("perses globaldatasource resource not found. Deleting '%s' in '%s'", req.Name, req.Namespace)
+		log.Infof("perses globaldatasource resource not found. Deleting '%s'", req.Name)
 
-		return r.deleteGlobalDatasourceInAllInstances(ctx, req.Namespace, req.Name)
+		return r.deleteGlobalDatasourceInAllInstances(ctx, req.Name)
 	}
 
 	return subreconciler.ContinueReconciling()
