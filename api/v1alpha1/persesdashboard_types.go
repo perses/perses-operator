@@ -29,6 +29,7 @@ type PersesDashboardStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:resource:shortName=perdb
+//+kubebuilder:deprecatedversion:warning="perses.dev/v1alpha1 is deprecated; use perses.dev/v1alpha2"
 
 // PersesDashboard is the Schema for the persesdashboards API
 type PersesDashboard struct {
