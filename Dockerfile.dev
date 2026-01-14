@@ -1,8 +1,15 @@
 FROM golang:1.25-alpine AS build-env
 
-RUN apk add --update --no-cache make bash mailcap jq git findutils
+RUN apk add --update --no-cache make bash mailcap jq git findutils curl
 
 WORKDIR /app
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY Makefile ./
+RUN make build-tools
+
 COPY . .
 
 RUN make build
