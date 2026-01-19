@@ -46,8 +46,12 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 		return result, err
 	}
 
-	if perses.Spec.Config.Database.SQL == nil {
-		stlog.Info("Database SQL configuration is not set, skipping Deployment creation")
+	// Create Deployment for SQL database OR file storage with emptyDir
+	useDeployment := perses.Spec.Config.Database.SQL != nil ||
+		(perses.Spec.Config.Database.File != nil && perses.Spec.Storage != nil && perses.Spec.Storage.UseEmptyDir)
+
+	if !useDeployment {
+		stlog.Info("Not using SQL database or emptyDir, skipping Deployment creation")
 
 		found := &appsv1.Deployment{}
 		err := r.Get(ctx, types.NamespacedName{Name: perses.Name, Namespace: perses.Namespace}, found)

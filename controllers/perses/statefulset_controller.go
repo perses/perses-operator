@@ -47,8 +47,9 @@ func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Re
 		return result, err
 	}
 
-	if perses.Spec.Config.Database.File == nil {
-		stlog.Info("Database file configuration is not set, skipping StatefulSet creation")
+	// Skip StatefulSet if using emptyDir or no file storage
+	if perses.Spec.Config.Database.File == nil || (perses.Spec.Storage != nil && perses.Spec.Storage.UseEmptyDir) {
+		stlog.Info("Database file configuration not set or using emptyDir, skipping StatefulSet creation")
 
 		found := &appsv1.StatefulSet{}
 		err := r.Get(ctx, types.NamespacedName{Name: perses.Name, Namespace: perses.Namespace}, found)
