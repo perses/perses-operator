@@ -1,0 +1,17 @@
+apiVersion: perses.dev/v1alpha1
+kind: Perses
+metadata:
+  labels:
+    app.kubernetes.io/name: perses-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: perses-sample-emptydir-v1alpha1
+spec:
+  containerPort: 8080
+  config:
+    database:
+      file:
+        folder: /data
+        extension: yaml
+  storage:
+    useEmptyDir: true
+    emptyDirSizeLimit: 1Gi  # Optional: set a size limit for the emptyDir volume
