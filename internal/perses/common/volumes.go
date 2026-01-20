@@ -36,7 +36,7 @@ func GetVolumes(perses *v1alpha2.Perses) []corev1.Volume {
 			}
 			// Set size limit if specified
 			if perses.Spec.Storage.EmptyDirSizeLimit != nil {
-				emptyDirVolume.VolumeSource.EmptyDir.SizeLimit = perses.Spec.Storage.EmptyDirSizeLimit
+				emptyDirVolume.EmptyDir.SizeLimit = perses.Spec.Storage.EmptyDirSizeLimit
 			}
 			volumes = append(volumes, emptyDirVolume)
 		} else {
