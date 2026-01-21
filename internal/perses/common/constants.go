@@ -23,6 +23,10 @@ const (
 	TypeAvailablePerses = "Available"
 	TypeDegradedPerses  = "Degraded"
 
+	// CR Condition Status Reasons
+	ReasonMissingPerses = "PersesMissing"
+	ReasonDegraded      = "PersesDegraded" // Generic failure reason for when none other fit
+
 	// Flags
 	PersesServerURLFlag = "perses-server-url"
 

@@ -133,6 +133,36 @@ func (r *PersesDatasourceReconciler) setStatusToComplete(ctx context.Context, re
 	return subreconciler.ContinueReconciling()
 }
 
+func (r *PersesDatasourceReconciler) setStatusToDegraded(
+	ctx context.Context,
+	req ctrl.Request,
+	degradedResult *ctrl.Result,
+	degradedReason string,
+	degradedError error,
+) (*ctrl.Result, error) {
+	// Attempt to update the datasource CR status, setting it to degraded
+	// If updating the datasource CR fails then return the info from the update
+	// rather than the main logic flow's, forcing a requeue
+	datasource := &persesv1alpha2.PersesDatasource{}
+
+	if res, err := r.getLatestPersesDatasource(ctx, req, datasource); subreconciler.ShouldHaltOrRequeue(res, err) {
+		return res, err
+	}
+
+	meta.SetStatusCondition(&datasource.Status.Conditions, metav1.Condition{Type: common.TypeDegradedPerses,
+		Status: metav1.ConditionTrue, Reason: degradedReason,
+		Message: degradedError.Error()})
+
+	if err := r.Status().Update(ctx, datasource); err != nil {
+		log.Error(err, "Failed to update Perses datasource status")
+		return subreconciler.RequeueWithError(err)
+	}
+
+	// If the status was able to be set to degraded perform the main logic loop's
+	// handling of the result and error
+	return degradedResult, degradedError
+}
+
 func (r *PersesDatasourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&persesv1alpha2.PersesDatasource{}).

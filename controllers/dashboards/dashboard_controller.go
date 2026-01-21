@@ -23,12 +23,14 @@ import (
 
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
-	"github.com/perses/perses/pkg/model/api/v1/common"
+	persesv1Common "github.com/perses/perses/pkg/model/api/v1/common"
+
 	logger "github.com/sirupsen/logrus"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
+	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
 )
 
@@ -40,23 +42,26 @@ func (r *PersesDashboardReconciler) reconcileDashboardInAllInstances(ctx context
 	err := r.List(ctx, persesInstances, opts...)
 	if err != nil {
 		dlog.WithError(err).Error("Failed to get perses instances")
-		return subreconciler.RequeueWithError(err)
+		res, err := subreconciler.RequeueWithError(err)
+		return r.setStatusToDegraded(ctx, req, res, common.ReasonMissingPerses, err)
 	}
 
 	if len(persesInstances.Items) == 0 {
 		dlog.Info("No Perses instances found, retrying in 1 minute")
-		return subreconciler.RequeueWithDelay(time.Minute)
+		res, err := subreconciler.RequeueWithDelay(time.Minute)
+		return r.setStatusToDegraded(ctx, req, res, common.ReasonMissingPerses, err)
+
 	}
 
 	dashboard := &persesv1alpha2.PersesDashboard{}
 
-	if r, err := r.getLatestPersesDashboard(ctx, req, dashboard); subreconciler.ShouldHaltOrRequeue(r, err) {
-		return r, err
+	if res, err := r.getLatestPersesDashboard(ctx, req, dashboard); subreconciler.ShouldHaltOrRequeue(res, err) {
+		return r.setStatusToDegraded(ctx, req, res, common.ReasonDegraded, err)
 	}
 
 	for _, persesInstance := range persesInstances.Items {
-		if r, err := r.syncPersesDashboard(ctx, persesInstance, dashboard); subreconciler.ShouldHaltOrRequeue(r, err) {
-			return r, err
+		if res, err := r.syncPersesDashboard(ctx, persesInstance, dashboard); subreconciler.ShouldHaltOrRequeue(res, err) {
+			return r.setStatusToDegraded(ctx, req, res, common.ReasonDegraded, err)
 		}
 	}
 
@@ -81,7 +86,7 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 					Name: dashboard.Namespace,
 				},
 				Spec: persesv1.ProjectSpec{
-					Display: &common.Display{
+					Display: &persesv1Common.Display{
 						Name: dashboard.Namespace,
 					},
 				},

@@ -26,13 +26,15 @@ import (
 	v1 "github.com/perses/perses/pkg/client/api/v1"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
-	"github.com/perses/perses/pkg/model/api/v1/common"
+	persesv1Common "github.com/perses/perses/pkg/model/api/v1/common"
+
 	"github.com/perses/perses/pkg/model/api/v1/secret"
 	logger "github.com/sirupsen/logrus"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
+	"github.com/perses/perses-operator/internal/perses/common"
 	persescommon "github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
 )
@@ -45,23 +47,26 @@ func (r *PersesDatasourceReconciler) reconcileDatasourcesInAllInstances(ctx cont
 	err := r.List(ctx, persesInstances, opts...)
 	if err != nil {
 		dlog.WithError(err).Error("Failed to get perses instances")
-		return subreconciler.RequeueWithError(err)
+		res, err := subreconciler.RequeueWithError(err)
+		return r.setStatusToDegraded(ctx, req, res, common.ReasonMissingPerses, err)
 	}
 
 	if len(persesInstances.Items) == 0 {
 		dlog.Info("No Perses instances found, requeue in 1 minute")
-		return subreconciler.RequeueWithDelay(time.Minute)
+		res, err := subreconciler.RequeueWithDelay(time.Minute)
+		return r.setStatusToDegraded(ctx, req, res, common.ReasonMissingPerses, err)
+
 	}
 
 	datasource := &persesv1alpha2.PersesDatasource{}
 
-	if r, err := r.getLatestPersesDatasource(ctx, req, datasource); subreconciler.ShouldHaltOrRequeue(r, err) {
-		return r, err
+	if res, err := r.getLatestPersesDatasource(ctx, req, datasource); subreconciler.ShouldHaltOrRequeue(res, err) {
+		return r.setStatusToDegraded(ctx, req, res, common.ReasonMissingPerses, err)
 	}
 
 	for _, persesInstance := range persesInstances.Items {
-		if r, err := r.syncPersesDatasource(ctx, persesInstance, datasource); subreconciler.ShouldHaltOrRequeue(r, err) {
-			return r, err
+		if res, err := r.syncPersesDatasource(ctx, persesInstance, datasource); subreconciler.ShouldHaltOrRequeue(res, err) {
+			return r.setStatusToDegraded(ctx, req, res, common.ReasonMissingPerses, err)
 		}
 	}
 
@@ -86,7 +91,7 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 					Name: datasource.Namespace,
 				},
 				Spec: persesv1.ProjectSpec{
-					Display: &common.Display{
+					Display: &persesv1Common.Display{
 						Name: datasource.Namespace,
 					},
 				},

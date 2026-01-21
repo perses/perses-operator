@@ -134,6 +134,36 @@ func (r *PersesDashboardReconciler) setStatusToComplete(ctx context.Context, req
 	return subreconciler.ContinueReconciling()
 }
 
+func (r *PersesDashboardReconciler) setStatusToDegraded(
+	ctx context.Context,
+	req ctrl.Request,
+	degradedResult *ctrl.Result,
+	degradedReason string,
+	degradedError error,
+) (*ctrl.Result, error) {
+	// Attempt to update the dashboard CR status, setting it to degraded
+	// If updating the dashboard CR fails then return the info from the update
+	// rather than the main logic flow's, forcing a requeue
+	dashboard := &persesv1alpha2.PersesDashboard{}
+
+	if res, err := r.getLatestPersesDashboard(ctx, req, dashboard); subreconciler.ShouldHaltOrRequeue(res, err) {
+		return res, err
+	}
+
+	meta.SetStatusCondition(&dashboard.Status.Conditions, metav1.Condition{Type: common.TypeDegradedPerses,
+		Status: metav1.ConditionTrue, Reason: degradedReason,
+		Message: degradedError.Error()})
+
+	if err := r.Status().Update(ctx, dashboard); err != nil {
+		log.Error(err, "Failed to update Perses dashboard status")
+		return subreconciler.RequeueWithError(err)
+	}
+
+	// If the status was able to be set to degraded perform the main logic loop's
+	// handling of the result and error
+	return degradedResult, degradedError
+}
+
 func (r *PersesDashboardReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&persesv1alpha2.PersesDashboard{}).

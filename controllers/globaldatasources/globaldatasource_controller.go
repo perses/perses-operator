@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
+	"github.com/perses/perses-operator/internal/perses/common"
 	persescommon "github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
 )
@@ -44,23 +45,25 @@ func (r *PersesGlobalDatasourceReconciler) reconcileGlobalDatasourcesInAllInstan
 	err := r.List(ctx, persesInstances, opts...)
 	if err != nil {
 		gdlog.WithError(err).Error("Failed to get perses instances")
-		return subreconciler.RequeueWithError(err)
+		res, err := subreconciler.RequeueWithError(err)
+		return r.setStatusToDegraded(ctx, req, res, persescommon.ReasonMissingPerses, err)
 	}
 
 	if len(persesInstances.Items) == 0 {
 		gdlog.Info("No Perses instances found, requeue in 1 minute")
-		return subreconciler.RequeueWithDelay(time.Minute)
+		res, err := subreconciler.RequeueWithDelay(time.Minute)
+		return r.setStatusToDegraded(ctx, req, res, persescommon.ReasonMissingPerses, err)
 	}
 
 	globaldatasource := &persesv1alpha2.PersesGlobalDatasource{}
 
-	if r, err := r.getLatestPersesGlobalDatasource(ctx, req, globaldatasource); subreconciler.ShouldHaltOrRequeue(r, err) {
-		return r, err
+	if res, err := r.getLatestPersesGlobalDatasource(ctx, req, globaldatasource); subreconciler.ShouldHaltOrRequeue(res, err) {
+		return r.setStatusToDegraded(ctx, req, res, common.ReasonDegraded, err)
 	}
 
 	for _, persesInstance := range persesInstances.Items {
-		if r, err := r.syncPersesGlobalDatasource(ctx, persesInstance, globaldatasource); subreconciler.ShouldHaltOrRequeue(r, err) {
-			return r, err
+		if res, err := r.syncPersesGlobalDatasource(ctx, persesInstance, globaldatasource); subreconciler.ShouldHaltOrRequeue(res, err) {
+			return r.setStatusToDegraded(ctx, req, res, common.ReasonDegraded, err)
 		}
 	}
 
