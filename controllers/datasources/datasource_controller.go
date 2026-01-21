@@ -26,7 +26,7 @@ import (
 	v1 "github.com/perses/perses/pkg/client/api/v1"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
-	persesv1Common "github.com/perses/perses/pkg/model/api/v1/common"
+	"github.com/perses/perses/pkg/model/api/v1/common"
 
 	"github.com/perses/perses/pkg/model/api/v1/secret"
 	logger "github.com/sirupsen/logrus"
@@ -34,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
-	"github.com/perses/perses-operator/internal/perses/common"
 	persescommon "github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
 )
@@ -48,20 +47,20 @@ func (r *PersesDatasourceReconciler) reconcileDatasourcesInAllInstances(ctx cont
 	if err != nil {
 		dlog.WithError(err).Error("Failed to get perses instances")
 		res, err := subreconciler.RequeueWithError(err)
-		return r.setStatusToDegraded(ctx, req, res, common.ReasonMissingPerses, err)
+		return r.setStatusToDegraded(ctx, req, res, persescommon.ReasonMissingPerses, err)
 	}
 
 	if len(persesInstances.Items) == 0 {
 		dlog.Info("No Perses instances found, requeue in 1 minute")
 		res, err := subreconciler.RequeueWithDelay(time.Minute)
-		return r.setStatusToDegraded(ctx, req, res, common.ReasonMissingPerses, err)
+		return r.setStatusToDegraded(ctx, req, res, persescommon.ReasonMissingPerses, err)
 
 	}
 
 	datasource := &persesv1alpha2.PersesDatasource{}
 
 	if res, err := r.getLatestPersesDatasource(ctx, req, datasource); subreconciler.ShouldHaltOrRequeue(res, err) {
-		return r.setStatusToDegraded(ctx, req, res, common.ReasonMissingResource, err)
+		return r.setStatusToDegraded(ctx, req, res, persescommon.ReasonMissingResource, err)
 	}
 
 	for _, persesInstance := range persesInstances.Items {
@@ -73,12 +72,12 @@ func (r *PersesDatasourceReconciler) reconcileDatasourcesInAllInstances(ctx cont
 	return subreconciler.ContinueReconciling()
 }
 
-func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, perses persesv1alpha2.Perses, datasource *persesv1alpha2.PersesDatasource) (*ctrl.Result, common.ConditionStatusReason, error) {
+func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, perses persesv1alpha2.Perses, datasource *persesv1alpha2.PersesDatasource) (*ctrl.Result, persescommon.ConditionStatusReason, error) {
 	persesClient, err := r.ClientFactory.CreateClient(ctx, r.Client, perses)
 
 	if err != nil {
 		dlog.WithError(err).Error("Failed to create perses rest client")
-		return subreconciler.RequeueWithErrorAndReason(err, common.ReasonConnectionFailed)
+		return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonConnectionFailed)
 	}
 
 	_, err = persesClient.Project().Get(datasource.Namespace)
@@ -91,7 +90,7 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 					Name: datasource.Namespace,
 				},
 				Spec: persesv1.ProjectSpec{
-					Display: &persesv1Common.Display{
+					Display: &common.Display{
 						Name: datasource.Namespace,
 					},
 				},
@@ -99,13 +98,13 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 
 			if err != nil {
 				dlog.WithError(err).Errorf("Failed to create perses project: %s", datasource.Namespace)
-				return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
+				return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
 			}
 
 			dlog.Infof("Project created: %s", datasource.Namespace)
 		} else {
 			dlog.WithError(err).Errorf("project error: %s", datasource.Namespace)
-			return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
+			return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
 		}
 	}
 
@@ -136,7 +135,7 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 
 			if err != nil {
 				dlog.WithError(err).Errorf("Failed to create datasource: %s", datasource.Name)
-				return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
+				return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
 			}
 
 			dlog.Infof("Datasource created: %s", datasource.Name)
@@ -145,13 +144,13 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 			return res, "", err
 		}
 
-		return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
+		return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
 	} else {
 		_, err = persesClient.Datasource(datasource.Namespace).Update(datasourceWithName)
 
 		if err != nil {
 			dlog.WithError(err).Errorf("Failed to update datasource: %s", datasource.Name)
-			return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
+			return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
 		}
 
 		dlog.Infof("Datasource updated: %s", datasource.Name)
@@ -163,7 +162,7 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 
 // creates/updates a Perses Secret with configuration,
 // retrieving cert/key data from Secrets, ConfigMaps, or files specified in the PersesDatasource.
-func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, persesClient v1.ClientInterface, datasource *persesv1alpha2.PersesDatasource) (*ctrl.Result, common.ConditionStatusReason, error) {
+func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, persesClient v1.ClientInterface, datasource *persesv1alpha2.PersesDatasource) (*ctrl.Result, persescommon.ConditionStatusReason, error) {
 	namespace := datasource.Namespace
 	datasourceName := datasource.Name
 	secretName := datasourceName + persescommon.SecretNameSuffix
@@ -195,7 +194,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 					"namespace":  namespace,
 					"error":      err,
 				}).Error("Failed to get user basic auth password data for datasource")
-				return subreconciler.RequeueWithErrorAndReason(err, common.ReasonInvalidConfiguration)
+				return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonInvalidConfiguration)
 			}
 
 			basicAuthConfig.Password = passwordData
@@ -228,7 +227,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 					"namespace":  namespace,
 					"error":      err,
 				}).Error("Failed to get user oauth data for datasource")
-				return subreconciler.RequeueWithErrorAndReason(err, common.ReasonInvalidConfiguration)
+				return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonInvalidConfiguration)
 			}
 
 			oAuthConfig.ClientID = clientIDData
@@ -239,7 +238,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 			clientID, err := os.ReadFile(oauth.ClientIDPath)
 			if err != nil {
 				err = fmt.Errorf("failed to read the OAuth client ID file: %s", oauth.ClientIDPath)
-				return subreconciler.RequeueWithErrorAndReason(err, common.ReasonInvalidConfiguration)
+				return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonInvalidConfiguration)
 
 			}
 			oAuthConfig.ClientID = string(clientID)
@@ -265,7 +264,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 						"namespace":  namespace,
 						"error":      err,
 					}).Error("Failed to get CA data for datasource")
-					return subreconciler.RequeueWithErrorAndReason(err, common.ReasonInvalidConfiguration)
+					return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonInvalidConfiguration)
 				}
 
 				tlsConfig.CA = caData
@@ -285,7 +284,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 						"namespace":  namespace,
 						"error":      err,
 					}).Error("Failed to get user certificate data for datasource")
-					return subreconciler.RequeueWithErrorAndReason(err, common.ReasonInvalidConfiguration)
+					return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonInvalidConfiguration)
 				}
 
 				tlsConfig.Cert = certData
@@ -310,7 +309,7 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 
 			if err != nil {
 				dlog.WithError(err).Errorf("Failed to create secret: %s", secretName)
-				return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
+				return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
 			}
 
 			dlog.Infof("Secret created: %s", secretName)
@@ -319,13 +318,13 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 			return res, "", err
 		}
 
-		return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
+		return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
 	} else {
 		_, err = persesClient.Secret(namespace).Update(secretWithName)
 
 		if err != nil {
 			dlog.WithError(err).Errorf("Failed to update secret: %s", secretName)
-			return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
+			return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
 		}
 
 		dlog.Infof("Secret updated: %s", secretName)
