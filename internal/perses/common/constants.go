@@ -23,10 +23,6 @@ const (
 	TypeAvailablePerses = "Available"
 	TypeDegradedPerses  = "Degraded"
 
-	// CR Condition Status Reasons
-	ReasonMissingPerses = "PersesMissing"
-	ReasonDegraded      = "PersesDegraded" // Generic failure reason for when none other fit
-
 	// Flags
 	PersesServerURLFlag = "perses-server-url"
 
@@ -46,6 +42,19 @@ const (
 	defaultConfigPath = configMountPath + "/config.yaml"
 
 	defaultFileMode = 420
+)
+
+type ConditionStatusReason string
+
+const (
+	// Failure to be used when unable to locate any perses backends
+	ReasonMissingPerses        ConditionStatusReason = "PersesMissing"
+	ReasonConnectionFailed     ConditionStatusReason = "PersesConnectionFailed"
+	ReasonInvalidConfiguration ConditionStatusReason = "InvalidConfiguration"
+	// Failure to be used when resource that started the reconciliation is unable to be found
+	ReasonMissingResource ConditionStatusReason = "MissingResource"
+	// Generic failure for when the reason is due to the backend returning an error
+	ReasonBackendError ConditionStatusReason = "PersesBackendError"
 )
 
 // isTLSEnabled checks if TLS is enabled in the Perses configuration

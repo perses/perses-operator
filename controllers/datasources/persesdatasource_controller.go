@@ -137,7 +137,7 @@ func (r *PersesDatasourceReconciler) setStatusToDegraded(
 	ctx context.Context,
 	req ctrl.Request,
 	degradedResult *ctrl.Result,
-	degradedReason string,
+	degradedReason common.ConditionStatusReason,
 	degradedError error,
 ) (*ctrl.Result, error) {
 	// Attempt to update the datasource CR status, setting it to degraded
@@ -150,7 +150,7 @@ func (r *PersesDatasourceReconciler) setStatusToDegraded(
 	}
 
 	meta.SetStatusCondition(&datasource.Status.Conditions, metav1.Condition{Type: common.TypeDegradedPerses,
-		Status: metav1.ConditionTrue, Reason: degradedReason,
+		Status: metav1.ConditionTrue, Reason: string(degradedReason),
 		Message: degradedError.Error()})
 
 	if err := r.Status().Update(ctx, datasource); err != nil {

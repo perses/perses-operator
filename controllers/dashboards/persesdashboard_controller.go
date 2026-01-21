@@ -138,7 +138,7 @@ func (r *PersesDashboardReconciler) setStatusToDegraded(
 	ctx context.Context,
 	req ctrl.Request,
 	degradedResult *ctrl.Result,
-	degradedReason string,
+	degradedReason common.ConditionStatusReason,
 	degradedError error,
 ) (*ctrl.Result, error) {
 	// Attempt to update the dashboard CR status, setting it to degraded
@@ -151,7 +151,7 @@ func (r *PersesDashboardReconciler) setStatusToDegraded(
 	}
 
 	meta.SetStatusCondition(&dashboard.Status.Conditions, metav1.Condition{Type: common.TypeDegradedPerses,
-		Status: metav1.ConditionTrue, Reason: degradedReason,
+		Status: metav1.ConditionTrue, Reason: string(degradedReason),
 		Message: degradedError.Error()})
 
 	if err := r.Status().Update(ctx, dashboard); err != nil {
