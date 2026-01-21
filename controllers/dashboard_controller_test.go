@@ -179,10 +179,10 @@ var _ = Describe("Dashboard controller", func() {
 				} else {
 					latestStatusCondition := dashboardWithStatus.Status.Conditions[len(dashboardWithStatus.Status.Conditions)-1]
 					expectedLatestStatusCondition := metav1.Condition{Type: common.TypeAvailablePerses,
-						Status: metav1.ConditionTrue, Reason: "Reconciling",
+						Status: metav1.ConditionTrue, Reason: "Reconciled",
 						Message: fmt.Sprintf("Dashboard (%s) created successfully", dashboardWithStatus.Name)}
-					if latestStatusCondition.Message != expectedLatestStatusCondition.Message && latestStatusCondition.Reason != expectedLatestStatusCondition.Reason && latestStatusCondition.Status != expectedLatestStatusCondition.Status && latestStatusCondition.Type != expectedLatestStatusCondition.Type {
-						return fmt.Errorf("The latest status condition added to the perses dashboard instance is not as expected, got: %v", expectedLatestStatusCondition)
+					if latestStatusCondition.Message != expectedLatestStatusCondition.Message || latestStatusCondition.Reason != expectedLatestStatusCondition.Reason || latestStatusCondition.Status != expectedLatestStatusCondition.Status || latestStatusCondition.Type != expectedLatestStatusCondition.Type {
+						return fmt.Errorf("The latest status condition added to the perses dashboard instance is not as expected. Expected %v but recieved %v", expectedLatestStatusCondition, latestStatusCondition)
 					}
 				}
 

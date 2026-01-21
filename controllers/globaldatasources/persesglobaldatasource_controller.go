@@ -54,7 +54,7 @@ func (r *PersesGlobalDatasourceReconciler) Reconcile(ctx context.Context, req ct
 		r.handleDelete,
 		r.setStatusToUnknown,
 		r.reconcileGlobalDatasourcesInAllInstances,
-		r.updateStatus,
+		r.setStatusToComplete,
 	}
 
 	for _, f := range subreconcilersForPerses {
@@ -114,7 +114,7 @@ func (r *PersesGlobalDatasourceReconciler) setStatusToUnknown(ctx context.Contex
 	return subreconciler.ContinueReconciling()
 }
 
-func (r *PersesGlobalDatasourceReconciler) updateStatus(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
+func (r *PersesGlobalDatasourceReconciler) setStatusToComplete(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
 	globaldatasource := &persesv1alpha2.PersesGlobalDatasource{}
 
 	if r, err := r.getLatestPersesGlobalDatasource(ctx, req, globaldatasource); subreconciler.ShouldHaltOrRequeue(r, err) {
@@ -122,7 +122,7 @@ func (r *PersesGlobalDatasourceReconciler) updateStatus(ctx context.Context, req
 	}
 
 	meta.SetStatusCondition(&globaldatasource.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses,
-		Status: metav1.ConditionTrue, Reason: "Reconciling",
+		Status: metav1.ConditionTrue, Reason: "Reconciled",
 		Message: fmt.Sprintf("GlobalDatasource (%s) created successfully", globaldatasource.Name)})
 
 	if err := r.Status().Update(ctx, globaldatasource); err != nil {

@@ -55,7 +55,7 @@ func (r *PersesDashboardReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		r.handleDelete,
 		r.setStatusToUnknown,
 		r.reconcileDashboardInAllInstances,
-		r.updateStatus,
+		r.setStatusToComplete,
 	}
 
 	for _, f := range subreconcilersForPerses {
@@ -115,7 +115,7 @@ func (r *PersesDashboardReconciler) setStatusToUnknown(ctx context.Context, req 
 	return subreconciler.ContinueReconciling()
 }
 
-func (r *PersesDashboardReconciler) updateStatus(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
+func (r *PersesDashboardReconciler) setStatusToComplete(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
 	dashboard := &persesv1alpha2.PersesDashboard{}
 
 	if r, err := r.getLatestPersesDashboard(ctx, req, dashboard); subreconciler.ShouldHaltOrRequeue(r, err) {
@@ -123,7 +123,7 @@ func (r *PersesDashboardReconciler) updateStatus(ctx context.Context, req ctrl.R
 	}
 
 	meta.SetStatusCondition(&dashboard.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses,
-		Status: metav1.ConditionTrue, Reason: "Reconciling",
+		Status: metav1.ConditionTrue, Reason: "Reconciled",
 		Message: fmt.Sprintf("Dashboard (%s) created successfully", dashboard.Name)})
 
 	if err := r.Status().Update(ctx, dashboard); err != nil {
