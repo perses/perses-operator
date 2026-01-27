@@ -23,12 +23,14 @@ import (
 
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
-	"github.com/perses/perses/pkg/model/api/v1/common"
+	persesv1Common "github.com/perses/perses/pkg/model/api/v1/common"
+
 	logger "github.com/sirupsen/logrus"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
+	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
 )
 
@@ -40,35 +42,38 @@ func (r *PersesDashboardReconciler) reconcileDashboardInAllInstances(ctx context
 	err := r.List(ctx, persesInstances, opts...)
 	if err != nil {
 		dlog.WithError(err).Error("Failed to get perses instances")
-		return subreconciler.RequeueWithError(err)
+		res, err := subreconciler.RequeueWithError(err)
+		return r.setStatusToDegraded(ctx, req, res, common.ReasonMissingPerses, err)
 	}
 
 	if len(persesInstances.Items) == 0 {
 		dlog.Info("No Perses instances found, retrying in 1 minute")
-		return subreconciler.RequeueWithDelay(time.Minute)
+		res, err := subreconciler.RequeueWithDelay(time.Minute)
+		return r.setStatusToDegraded(ctx, req, res, common.ReasonMissingPerses, err)
+
 	}
 
 	dashboard := &persesv1alpha2.PersesDashboard{}
 
-	if r, err := r.getLatestPersesDashboard(ctx, req, dashboard); subreconciler.ShouldHaltOrRequeue(r, err) {
-		return r, err
+	if res, err := r.getLatestPersesDashboard(ctx, req, dashboard); subreconciler.ShouldHaltOrRequeue(res, err) {
+		return r.setStatusToDegraded(ctx, req, res, common.ReasonMissingResource, err)
 	}
 
 	for _, persesInstance := range persesInstances.Items {
-		if r, err := r.syncPersesDashboard(ctx, persesInstance, dashboard); subreconciler.ShouldHaltOrRequeue(r, err) {
-			return r, err
+		if res, reason, err := r.syncPersesDashboard(ctx, persesInstance, dashboard); subreconciler.ShouldHaltOrRequeue(res, err) {
+			return r.setStatusToDegraded(ctx, req, res, reason, err)
 		}
 	}
 
 	return subreconciler.ContinueReconciling()
 }
 
-func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, perses persesv1alpha2.Perses, dashboard *persesv1alpha2.PersesDashboard) (*ctrl.Result, error) {
+func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, perses persesv1alpha2.Perses, dashboard *persesv1alpha2.PersesDashboard) (*ctrl.Result, common.ConditionStatusReason, error) {
 	persesClient, err := r.ClientFactory.CreateClient(ctx, r.Client, perses)
 
 	if err != nil {
 		dlog.WithError(err).Error("Failed to create perses rest client")
-		return subreconciler.RequeueWithError(err)
+		return subreconciler.RequeueWithErrorAndReason(err, common.ReasonConnectionFailed)
 	}
 
 	_, err = persesClient.Project().Get(dashboard.Namespace)
@@ -81,7 +86,7 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 					Name: dashboard.Namespace,
 				},
 				Spec: persesv1.ProjectSpec{
-					Display: &common.Display{
+					Display: &persesv1Common.Display{
 						Name: dashboard.Namespace,
 					},
 				},
@@ -89,13 +94,13 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 
 			if err != nil {
 				dlog.WithError(err).Errorf("Failed to create perses project: %s", dashboard.Namespace)
-				return subreconciler.RequeueWithError(err)
+				return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
 			}
 
 			dlog.Infof("Project created: %s", dashboard.Namespace)
 		} else {
 			dlog.WithError(err).Errorf("project error: %s", dashboard.Namespace)
-			return subreconciler.RequeueWithError(err)
+			return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
 		}
 	}
 
@@ -117,27 +122,30 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 
 			if err != nil {
 				dlog.WithError(err).Errorf("Failed to create dashboard: %s", dashboard.Name)
-				return subreconciler.RequeueWithError(err)
+				return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
 			}
 
 			dlog.Infof("Dashboard created: %s", dashboard.Name)
 
-			return subreconciler.ContinueReconciling()
+			res, err := subreconciler.ContinueReconciling()
+			return res, "", err
 		}
 
-		return subreconciler.RequeueWithError(err)
+		return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
 	} else {
 		_, err = persesClient.Dashboard(dashboard.Namespace).Update(persesDashboard)
 
 		if err != nil {
 			dlog.WithError(err).Errorf("Failed to update dashboard: %s", dashboard.Name)
-			return subreconciler.RequeueWithError(err)
+
+			return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
 		}
 
 		dlog.Infof("Dashboard updated: %s", dashboard.Name)
 	}
 
-	return subreconciler.ContinueReconciling()
+	res, err := subreconciler.ContinueReconciling()
+	return res, "", err
 }
 
 func (r *PersesDashboardReconciler) deleteDashboardInAllInstances(ctx context.Context, _ ctrl.Request, dashbboardNamespace string, dashboardName string) (*ctrl.Result, error) {

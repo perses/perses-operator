@@ -54,7 +54,7 @@ func (r *PersesGlobalDatasourceReconciler) Reconcile(ctx context.Context, req ct
 		r.handleDelete,
 		r.setStatusToUnknown,
 		r.reconcileGlobalDatasourcesInAllInstances,
-		r.updateStatus,
+		r.setStatusToComplete,
 	}
 
 	for _, f := range subreconcilersForPerses {
@@ -114,7 +114,7 @@ func (r *PersesGlobalDatasourceReconciler) setStatusToUnknown(ctx context.Contex
 	return subreconciler.ContinueReconciling()
 }
 
-func (r *PersesGlobalDatasourceReconciler) updateStatus(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
+func (r *PersesGlobalDatasourceReconciler) setStatusToComplete(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
 	globaldatasource := &persesv1alpha2.PersesGlobalDatasource{}
 
 	if r, err := r.getLatestPersesGlobalDatasource(ctx, req, globaldatasource); subreconciler.ShouldHaltOrRequeue(r, err) {
@@ -122,7 +122,7 @@ func (r *PersesGlobalDatasourceReconciler) updateStatus(ctx context.Context, req
 	}
 
 	meta.SetStatusCondition(&globaldatasource.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses,
-		Status: metav1.ConditionTrue, Reason: "Reconciling",
+		Status: metav1.ConditionTrue, Reason: "Reconciled",
 		Message: fmt.Sprintf("GlobalDatasource (%s) created successfully", globaldatasource.Name)})
 
 	if err := r.Status().Update(ctx, globaldatasource); err != nil {
@@ -131,6 +131,36 @@ func (r *PersesGlobalDatasourceReconciler) updateStatus(ctx context.Context, req
 	}
 
 	return subreconciler.ContinueReconciling()
+}
+
+func (r *PersesGlobalDatasourceReconciler) setStatusToDegraded(
+	ctx context.Context,
+	req ctrl.Request,
+	degradedResult *ctrl.Result,
+	degradedReason common.ConditionStatusReason,
+	degradedError error,
+) (*ctrl.Result, error) {
+	// Attempt to update the globaldatasource CR status, setting it to degraded
+	// If updating the globaldatasource CR fails then return the info from the update
+	// rather than the main logic flow's, forcing a requeue
+	globaldatasource := &persesv1alpha2.PersesGlobalDatasource{}
+
+	if res, err := r.getLatestPersesGlobalDatasource(ctx, req, globaldatasource); subreconciler.ShouldHaltOrRequeue(res, err) {
+		return res, err
+	}
+
+	meta.SetStatusCondition(&globaldatasource.Status.Conditions, metav1.Condition{Type: common.TypeDegradedPerses,
+		Status: metav1.ConditionTrue, Reason: string(degradedReason),
+		Message: degradedError.Error()})
+
+	if err := r.Status().Update(ctx, globaldatasource); err != nil {
+		log.Error(err, "Failed to update Perses globaldatasource status")
+		return subreconciler.RequeueWithError(err)
+	}
+
+	// If the status was able to be set to degraded perform the main logic loop's
+	// handling of the result and error
+	return degradedResult, degradedError
 }
 
 func (r *PersesGlobalDatasourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
