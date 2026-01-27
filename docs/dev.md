@@ -22,13 +22,7 @@ make install-crds
 kubectl create namespace perses-dev
 ```
 
-3. Install custom resources:
-
-```sh
-kubectl apply -k config/samples
-```
-
-4. Using the the location specified by `IMG`, build a testing image and push it to the registry, then deploy the controller to the cluster:
+3. Using the the location specified by `IMG`, build a testing image and push it to the registry, then deploy the controller to the cluster:
 > **Note:** Make sure the image is accessible either publicly or from the cluster internal registry.
 > 
 > A cert is also required to run the operator due to the conversion webhook.
@@ -45,6 +39,12 @@ IMG=<some-registry>/perses-operator:tag make test-image-build image-push deploy
 ```
 
 > **Note:** If you already have an image built, you can deploy it to the cluster using `IMG=<some-registry>/perses-operator:tag make deploy`.
+
+4. Install custom resources:
+
+```sh
+kubectl apply -k config/samples
+```
 
 5. Port forward the service so you can access the Perses UI at `http://localhost:8080`:
 
