@@ -163,19 +163,21 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&persesv1alpha1.Perses{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "Perses")
-		os.Exit(1)
-	}
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err = (&persesv1alpha1.Perses{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Perses")
+			os.Exit(1)
+		}
 
-	if err = (&persesv1alpha1.PersesDatasource{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "PersesDatasource")
-		os.Exit(1)
-	}
+		if err = (&persesv1alpha1.PersesDatasource{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "PersesDatasource")
+			os.Exit(1)
+		}
 
-	if err = (&persesv1alpha1.PersesDashboard{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "PersesDashboard")
-		os.Exit(1)
+		if err = (&persesv1alpha1.PersesDashboard{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "PersesDashboard")
+			os.Exit(1)
+		}
 	}
 	//+kubebuilder:scaffold:builder
 

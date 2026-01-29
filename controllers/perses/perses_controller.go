@@ -68,6 +68,7 @@ func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		r.reconcileConfigMap,
 		r.reconcileDeployment,
 		r.reconcileStatefulSet,
+		r.setStatusToComplete,
 	}
 
 	// Run all subreconcilers sequentially
@@ -251,6 +252,26 @@ func (r *PersesReconciler) doFinalizerOperationsForPerses(perses *v1alpha2.Perse
 				perses.Name,
 				perses.Namespace))
 	}
+}
+
+func (r *PersesReconciler) setStatusToComplete(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
+	perses := &v1alpha2.Perses{}
+
+	if r, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(r, err) {
+		log.Error("no latest perses")
+		return r, err
+	}
+
+	meta.SetStatusCondition(&perses.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses,
+		Status: metav1.ConditionTrue, Reason: "Reconciled",
+		Message: fmt.Sprintf("Perses (%s) created successfully", perses.Name)})
+
+	if err := r.Status().Update(ctx, perses); err != nil {
+		log.Error(err, "Failed to update Perses status")
+		return subreconciler.RequeueWithError(err)
+	}
+
+	return subreconciler.ContinueReconciling()
 }
 
 // SetupWithManager sets up the controller with the Manager.

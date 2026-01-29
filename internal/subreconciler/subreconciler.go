@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/perses/perses-operator/internal/perses/common"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
@@ -44,6 +45,11 @@ func DoNotRequeue() (*reconcile.Result, error) { return &ctrl.Result{}, nil }
 // RequeueWithError returns a controller result pairing specifying to
 // requeue with an error message.
 func RequeueWithError(e error) (*reconcile.Result, error) { return &ctrl.Result{}, e }
+
+func RequeueWithErrorAndReason(e error, reason common.ConditionStatusReason) (*reconcile.Result, common.ConditionStatusReason, error) {
+	res, e := RequeueWithError(e)
+	return res, reason, e
+}
 
 // RequeueWithDelay returns a controller result pairing specifying to
 // requeue after a delay. This returns no error.

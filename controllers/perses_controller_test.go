@@ -192,16 +192,19 @@ var _ = Describe("Perses controller", func() {
 
 			By("Checking the latest Status Condition added to the Perses instance")
 			Eventually(func() error {
-				if len(perses.Status.Conditions) != 0 {
-					latestStatusCondition := perses.Status.Conditions[len(perses.Status.Conditions)-1]
+				persesWithStatus := &persesv1alpha2.Perses{}
+				err = k8sClient.Get(ctx, typeNamespaceName, persesWithStatus)
+
+				if len(persesWithStatus.Status.Conditions) != 0 {
+					latestStatusCondition := persesWithStatus.Status.Conditions[len(persesWithStatus.Status.Conditions)-1]
 					expectedLatestStatusCondition := metav1.Condition{Type: common.TypeAvailablePerses,
-						Status: metav1.ConditionTrue, Reason: "Reconciling",
-						Message: fmt.Sprintf("StatefulSet for custom resource (%s) created successfully", perses.Name)}
-					if latestStatusCondition != expectedLatestStatusCondition {
-						return fmt.Errorf("The latest status condition added to the perses instance is not as expected")
+						Status: metav1.ConditionTrue, Reason: "Reconciled",
+						Message: fmt.Sprintf("Perses (%s) created successfully", persesWithStatus.Name)}
+					if latestStatusCondition.Message != expectedLatestStatusCondition.Message || latestStatusCondition.Reason != expectedLatestStatusCondition.Reason || latestStatusCondition.Status != expectedLatestStatusCondition.Status || latestStatusCondition.Type != expectedLatestStatusCondition.Type {
+						return fmt.Errorf("The latest status condition added to the perses instance is not as expected. Expected %v but recieved %v", expectedLatestStatusCondition, latestStatusCondition)
 					}
 				}
-				return nil
+				return err
 			}, time.Minute, time.Second).Should(Succeed())
 
 			persesToDelete := &persesv1alpha2.Perses{}
