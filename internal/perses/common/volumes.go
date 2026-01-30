@@ -26,14 +26,29 @@ func GetVolumes(perses *v1alpha2.Perses) []corev1.Volume {
 	}
 
 	if perses.Spec.Config.Database.File != nil {
-		volumes = append(volumes, corev1.Volume{
-			Name: StorageVolumeName,
-			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: GetStorageName(perses.Name),
+		// Use emptyDir if configured, otherwise use PVC
+		if perses.Spec.Storage != nil && perses.Spec.Storage.UseEmptyDir {
+			emptyDirVolume := corev1.Volume{
+				Name: StorageVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
 				},
-			},
-		})
+			}
+			// Set size limit if specified
+			if perses.Spec.Storage.EmptyDirSizeLimit != nil {
+				emptyDirVolume.EmptyDir.SizeLimit = perses.Spec.Storage.EmptyDirSizeLimit
+			}
+			volumes = append(volumes, emptyDirVolume)
+		} else {
+			volumes = append(volumes, corev1.Volume{
+				Name: StorageVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+						ClaimName: GetStorageName(perses.Name),
+					},
+				},
+			})
+		}
 	} else {
 		volumes = append(volumes, corev1.Volume{
 			Name: StorageVolumeName,

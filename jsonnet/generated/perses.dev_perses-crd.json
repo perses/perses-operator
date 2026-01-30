@@ -2628,6 +2628,19 @@
                     },
                     "description": "Storage configuration used by the StatefulSet",
                     "properties": {
+                      "emptyDirSizeLimit": {
+                        "anyOf": [
+                          {
+                            "type": "integer"
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ],
+                        "description": "EmptyDirSizeLimit sets a size limit for emptyDir volumes.\nOnly applies when UseEmptyDir is true.",
+                        "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+                        "x-kubernetes-int-or-string": true
+                      },
                       "size": {
                         "anyOf": [
                           {
@@ -2644,6 +2657,10 @@
                       "storageClass": {
                         "description": "StorageClass to use for PVCs.\nIf not specified, will use the default storage class",
                         "type": "string"
+                      },
+                      "useEmptyDir": {
+                        "description": "UseEmptyDir uses ephemeral emptyDir storage instead of PVC.\nData will be lost when the pod is deleted or restarted.\nThis causes a Deployment to be created instead of a StatefulSet.",
+                        "type": "boolean"
                       }
                     },
                     "type": "object"
@@ -5591,6 +5608,19 @@
                     },
                     "description": "Storage configuration used by the StatefulSet",
                     "properties": {
+                      "emptyDirSizeLimit": {
+                        "anyOf": [
+                          {
+                            "type": "integer"
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ],
+                        "description": "EmptyDirSizeLimit sets a size limit for emptyDir volumes.\nOnly applies when UseEmptyDir is true.",
+                        "pattern": "^(\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\\+|-)?(([0-9]+(\\.[0-9]*)?)|(\\.[0-9]+))))?$",
+                        "x-kubernetes-int-or-string": true
+                      },
                       "size": {
                         "anyOf": [
                           {
@@ -5607,6 +5637,10 @@
                       "storageClass": {
                         "description": "StorageClass to use for PVCs.\nIf not specified, will use the default storage class",
                         "type": "string"
+                      },
+                      "useEmptyDir": {
+                        "description": "UseEmptyDir uses ephemeral emptyDir storage instead of PVC.\nData will be lost when the pod is deleted or restarted.\nThis causes a Deployment to be created instead of a StatefulSet.",
+                        "type": "boolean"
                       }
                     },
                     "type": "object"

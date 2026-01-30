@@ -208,6 +208,15 @@ type StorageConfiguration struct {
 	// cannot be decreased.
 	// +optional
 	Size resource.Quantity `json:"size,omitempty"`
+	// UseEmptyDir uses ephemeral emptyDir storage instead of PVC.
+	// Data will be lost when the pod is deleted or restarted.
+	// This causes a Deployment to be created instead of a StatefulSet.
+	// +optional
+	UseEmptyDir bool `json:"useEmptyDir,omitempty"`
+	// EmptyDirSizeLimit sets a size limit for emptyDir volumes.
+	// Only applies when UseEmptyDir is true.
+	// +optional
+	EmptyDirSizeLimit *resource.Quantity `json:"emptyDirSizeLimit,omitempty"`
 }
 
 // PersesStatus defines the observed state of Perses

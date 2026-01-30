@@ -1069,6 +1069,8 @@ func Convert_v1alpha2_SecretSource_To_v1alpha1_SecretSource(in *v1alpha2.SecretS
 func autoConvert_v1alpha1_StorageConfiguration_To_v1alpha2_StorageConfiguration(in *StorageConfiguration, out *v1alpha2.StorageConfiguration, s conversion.Scope) error {
 	out.StorageClass = in.StorageClass
 	out.Size = in.Size
+	out.UseEmptyDir = in.UseEmptyDir
+	out.EmptyDirSizeLimit = in.EmptyDirSizeLimit
 	return nil
 }
 
@@ -1080,6 +1082,8 @@ func Convert_v1alpha1_StorageConfiguration_To_v1alpha2_StorageConfiguration(in *
 func autoConvert_v1alpha2_StorageConfiguration_To_v1alpha1_StorageConfiguration(in *v1alpha2.StorageConfiguration, out *StorageConfiguration, s conversion.Scope) error {
 	out.StorageClass = in.StorageClass
 	out.Size = in.Size
+	out.UseEmptyDir = in.UseEmptyDir
+	out.EmptyDirSizeLimit = in.EmptyDirSizeLimit
 	return nil
 }
 

@@ -6,6 +6,7 @@ This documentation provides information on how to use the Perses Operator custom
 
 - [Custom Resources](#custom-resources)
   - [Perses](#perses)
+    - [Database and Storage Configuration](#database-and-storage-configuration)
   - [PersesDatasource](#persesdatasource)
   - [PersesDashboard](#persesdashboard)
 - [Examples](#examples)
@@ -82,6 +83,15 @@ spec:
       certPath: tls.crt
       privateKeyPath: tls.key
 
+  # Optional storage configuration
+  storage:
+    # For file-based storage with persistent volumes (StatefulSet)
+    storageClass: standard
+    size: 1Gi
+    # Or for ephemeral storage (Deployment)
+    # useEmptyDir: true
+    # emptyDirSizeLimit: 1Gi
+
   replicas: 1
   containerPort: 8080
 
@@ -99,6 +109,85 @@ spec:
     successThreshold: 1
     failureThreshold: 3
 ```
+
+#### Database and Storage Configuration
+
+The Perses operator's workload type (StatefulSet vs Deployment) is
+determined by the `config.database` configuration. The optional `storage`
+field is only used when `config.database.file` is configured.
+
+##### SQL Database (Deployment)
+
+When using an external SQL database, the operator creates a Deployment. The
+`storage` field is not used:
+
+```yaml
+spec:
+  config:
+    database:
+      sql:
+        type: postgres
+        connection: "postgresql://user:password@host:5432/perses"
+```
+
+**Behavior:**
+
+- Creates a Deployment
+- All data is stored in the external database
+- No local storage or PVCs required
+
+##### File-based Database with PersistentVolumeClaim (StatefulSet)
+
+When using file-based storage, the operator creates a StatefulSet with
+PersistentVolumeClaims by default:
+
+```yaml
+spec:
+  config:
+    database:
+      file:
+        folder: "/perses"
+        extension: "yaml"
+  # Optional storage configuration
+  storage:
+    storageClass: standard  # Optional: defaults to cluster default storage class
+    size: 10Gi             # Optional: defaults to 1Gi
+```
+
+**Behavior:**
+
+- Creates a StatefulSet with stable pod identity
+- Data persists across pod restarts and rescheduling
+- The `storage` field is optional; if omitted, defaults to 1Gi with the
+  default storage class
+
+##### File-based Database with emptyDir (Deployment)
+
+For development, testing, or when data persistence is not required, you can
+configure file-based storage to use ephemeral emptyDir:
+
+```yaml
+spec:
+  config:
+    database:
+      file:
+        folder: "/perses"
+        extension: "yaml"
+  storage:
+    useEmptyDir: true
+    emptyDirSizeLimit: 1Gi  # Optional: set a size limit to prevent disk exhaustion
+```
+
+**Behavior:**
+
+- Creates a Deployment (not StatefulSet)
+- Data is ephemeral and tied to the pod lifecycle
+- Data is lost when the pod is deleted or restarted
+- No PersistentVolumeClaim is created
+
+> **Note:** When `useEmptyDir: true` is set, the `storageClass` and `size`
+> fields are ignored. The operator uses emptyDir regardless of other
+> storage configuration values.
 
 ### PersesDatasource
 

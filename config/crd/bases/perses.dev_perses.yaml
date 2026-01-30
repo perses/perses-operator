@@ -2560,6 +2560,15 @@ spec:
                   size: 1Gi
                 description: Storage configuration used by the StatefulSet
                 properties:
+                  emptyDirSizeLimit:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      EmptyDirSizeLimit sets a size limit for emptyDir volumes.
+                      Only applies when UseEmptyDir is true.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                   size:
                     anyOf:
                     - type: integer
@@ -2574,6 +2583,12 @@ spec:
                       StorageClass to use for PVCs.
                       If not specified, will use the default storage class
                     type: string
+                  useEmptyDir:
+                    description: |-
+                      UseEmptyDir uses ephemeral emptyDir storage instead of PVC.
+                      Data will be lost when the pod is deleted or restarted.
+                      This causes a Deployment to be created instead of a StatefulSet.
+                    type: boolean
                 type: object
               tls:
                 description: tls specifies the tls configuration for the perses instance
@@ -5523,6 +5538,15 @@ spec:
                   size: 1Gi
                 description: Storage configuration used by the StatefulSet
                 properties:
+                  emptyDirSizeLimit:
+                    anyOf:
+                    - type: integer
+                    - type: string
+                    description: |-
+                      EmptyDirSizeLimit sets a size limit for emptyDir volumes.
+                      Only applies when UseEmptyDir is true.
+                    pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                    x-kubernetes-int-or-string: true
                   size:
                     anyOf:
                     - type: integer
@@ -5537,6 +5561,12 @@ spec:
                       StorageClass to use for PVCs.
                       If not specified, will use the default storage class
                     type: string
+                  useEmptyDir:
+                    description: |-
+                      UseEmptyDir uses ephemeral emptyDir storage instead of PVC.
+                      Data will be lost when the pod is deleted or restarted.
+                      This causes a Deployment to be created instead of a StatefulSet.
+                    type: boolean
                 type: object
               tls:
                 description: tls specifies the tls configuration for the perses instance
