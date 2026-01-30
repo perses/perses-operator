@@ -87,13 +87,13 @@ func (r *PersesReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Requ
 
 	// call update with dry run to fill out fields that are also returned via the k8s api
 	if err := r.Update(ctx, cm, client.DryRunAll); err != nil {
-		cmlog.Error(err, "Failed to update ConfigMap with dry run")
+		cmlog.WithError(err).Error("Failed to update ConfigMap with dry run")
 		return subreconciler.RequeueWithError(err)
 	}
 
 	if configMapNeedsUpdate(found, cm, configName, perses) {
 		if err := r.Update(ctx, cm); err != nil {
-			cmlog.Error(err, "Failed to update ConfigMap")
+			cmlog.WithError(err).Error("Failed to update ConfigMap")
 			return subreconciler.RequeueWithError(err)
 		}
 	}

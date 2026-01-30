@@ -54,7 +54,7 @@ func (r *PersesReconciler) reconcileService(ctx context.Context, req ctrl.Reques
 	found := &corev1.Service{}
 	if err := r.Get(ctx, types.NamespacedName{Name: serviceName, Namespace: perses.Namespace}, found); err != nil {
 		if !apierrors.IsNotFound(err) {
-			log.WithError(err).Error("Failed to get Service")
+			slog.WithError(err).Error("Failed to get Service")
 
 			return subreconciler.RequeueWithError(err)
 		}
@@ -68,7 +68,7 @@ func (r *PersesReconciler) reconcileService(ctx context.Context, req ctrl.Reques
 				Message: fmt.Sprintf("Failed to create Service for the custom resource (%s): (%s)", perses.Name, err2)})
 
 			if err = r.Status().Update(ctx, perses); err != nil {
-				slog.Error(err, "Failed to update perses status")
+				slog.WithError(err).Error("Failed to update perses status")
 				return subreconciler.RequeueWithError(err)
 			}
 
@@ -92,13 +92,13 @@ func (r *PersesReconciler) reconcileService(ctx context.Context, req ctrl.Reques
 
 	// call update with dry run to fill out fields that are also returned via the k8s api
 	if err = r.Update(ctx, svc, client.DryRunAll); err != nil {
-		slog.Error(err, "Failed to update Service with dry run")
+		slog.WithError(err).Error("Failed to update Service with dry run")
 		return subreconciler.RequeueWithError(err)
 	}
 
 	if serviceNeedsUpdate(found, svc, perses.Name, perses) {
 		if err = r.Update(ctx, svc); err != nil {
-			slog.Error(err, "Failed to update Service")
+			slog.WithError(err).Error("Failed to update Service")
 			return subreconciler.RequeueWithError(err)
 		}
 	}

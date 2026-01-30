@@ -47,14 +47,14 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 	}
 
 	if perses.Spec.Config.Database.SQL == nil {
-		stlog.Info("Database SQL configuration is not set, skipping Deployment creation")
+		dlog.Info("Database SQL configuration is not set, skipping Deployment creation")
 
 		found := &appsv1.Deployment{}
 		err := r.Get(ctx, types.NamespacedName{Name: perses.Name, Namespace: perses.Namespace}, found)
 		if err == nil {
-			stlog.Info("Deleting Deployment since database configuration changed")
+			dlog.Info("Deleting Deployment since database configuration changed")
 			if err := r.Delete(ctx, found); err != nil {
-				stlog.WithError(err).Error("Failed to delete Deployment")
+				dlog.WithError(err).Error("Failed to delete Deployment")
 				return subreconciler.RequeueWithError(err)
 			}
 		}
@@ -69,8 +69,8 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 			return subreconciler.RequeueWithError(err)
 		}
 
-		dep, err2 := r.createPersesDeployment(perses)
-		if err2 != nil {
+		dep, err := r.createPersesDeployment(perses)
+		if err != nil {
 			dlog.WithError(err).Error("Failed to define new Deployment resource for perses")
 
 			meta.SetStatusCondition(&perses.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses,
@@ -78,7 +78,7 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 				Message: fmt.Sprintf("Failed to create Deployment for the custom resource (%s): (%s)", perses.Name, err)})
 
 			if err := r.Status().Update(ctx, perses); err != nil {
-				dlog.Error(err, "Failed to update perses status")
+				dlog.WithError(err).Error("Failed to update perses status")
 				return subreconciler.RequeueWithError(err)
 			}
 
@@ -102,13 +102,13 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 
 	// call update with dry run to fill out fields that are also returned via the k8s api
 	if err = r.Update(ctx, dep, client.DryRunAll); err != nil {
-		dlog.Error(err, "Failed to update Deployment with dry run")
+		dlog.WithError(err).Error("Failed to update Deployment with dry run")
 		return subreconciler.RequeueWithError(err)
 	}
 
 	if !equality.Semantic.DeepEqual(found.Spec, dep.Spec) {
 		if err = r.Update(ctx, dep); err != nil {
-			dlog.Error(err, "Failed to update Deployment")
+			dlog.WithError(err).Error("Failed to update Deployment")
 			return subreconciler.RequeueWithError(err)
 		}
 	}
