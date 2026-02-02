@@ -126,7 +126,7 @@ func (r *PersesGlobalDatasourceReconciler) setStatusToComplete(ctx context.Conte
 		Message: fmt.Sprintf("GlobalDatasource (%s) created successfully", globaldatasource.Name)})
 
 	if err := r.Status().Update(ctx, globaldatasource); err != nil {
-		log.Error(err, "Failed to update Perses globaldatasource status")
+		log.WithError(err).Error("Failed to update Perses globaldatasource status")
 		return subreconciler.RequeueWithError(err)
 	}
 
@@ -154,7 +154,7 @@ func (r *PersesGlobalDatasourceReconciler) setStatusToDegraded(
 		Message: degradedError.Error()})
 
 	if err := r.Status().Update(ctx, globaldatasource); err != nil {
-		log.Error(err, "Failed to update Perses globaldatasource status")
+		log.WithError(err).Error("Failed to update Perses globaldatasource status")
 		return subreconciler.RequeueWithError(err)
 	}
 

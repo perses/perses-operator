@@ -126,7 +126,7 @@ func (r *PersesDatasourceReconciler) setStatusToComplete(ctx context.Context, re
 		Message: fmt.Sprintf("Datasource (%s) created successfully", datasource.Name)})
 
 	if err := r.Status().Update(ctx, datasource); err != nil {
-		log.Error(err, "Failed to update Perses datasource status")
+		log.WithError(err).Error("Failed to update Perses datasource status")
 		return subreconciler.RequeueWithError(err)
 	}
 
@@ -154,7 +154,7 @@ func (r *PersesDatasourceReconciler) setStatusToDegraded(
 		Message: degradedError.Error()})
 
 	if err := r.Status().Update(ctx, datasource); err != nil {
-		log.Error(err, "Failed to update Perses datasource status")
+		log.WithError(err).Error("Failed to update Perses datasource status")
 		return subreconciler.RequeueWithError(err)
 	}
 
