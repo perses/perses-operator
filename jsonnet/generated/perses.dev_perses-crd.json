@@ -815,11 +815,12 @@
                             "type": "string"
                           },
                           "namespace": {
-                            "description": "Namsespace of certificate k8s resource (when type is secret or configmap)",
+                            "description": "Namespace of certificate k8s resource (when type is secret or configmap)",
                             "type": "string"
                           },
                           "password_path": {
                             "description": "Path to password",
+                            "minLength": 1,
                             "type": "string"
                           },
                           "type": {
@@ -833,6 +834,7 @@
                           },
                           "username": {
                             "description": "Username for basic auth",
+                            "minLength": 1,
                             "type": "string"
                           }
                         },
@@ -886,7 +888,7 @@
                             "type": "string"
                           },
                           "namespace": {
-                            "description": "Namsespace of certificate k8s resource (when type is secret or configmap)",
+                            "description": "Namespace of certificate k8s resource (when type is secret or configmap)",
                             "type": "string"
                           },
                           "scopes": {
@@ -898,6 +900,7 @@
                           },
                           "tokenURL": {
                             "description": "TokenURL is the resource server's token endpoint\nURL. This is a constant specific to each server.",
+                            "minLength": 1,
                             "type": "string"
                           },
                           "type": {
@@ -924,6 +927,7 @@
                             "properties": {
                               "certPath": {
                                 "description": "Path to Certificate",
+                                "minLength": 1,
                                 "type": "string"
                               },
                               "name": {
@@ -931,7 +935,7 @@
                                 "type": "string"
                               },
                               "namespace": {
-                                "description": "Namsespace of certificate k8s resource (when type is secret or configmap)",
+                                "description": "Namespace of certificate k8s resource (when type is secret or configmap)",
                                 "type": "string"
                               },
                               "privateKeyPath": {
@@ -967,6 +971,7 @@
                             "properties": {
                               "certPath": {
                                 "description": "Path to Certificate",
+                                "minLength": 1,
                                 "type": "string"
                               },
                               "name": {
@@ -974,7 +979,7 @@
                                 "type": "string"
                               },
                               "namespace": {
-                                "description": "Namsespace of certificate k8s resource (when type is secret or configmap)",
+                                "description": "Namespace of certificate k8s resource (when type is secret or configmap)",
                                 "type": "string"
                               },
                               "privateKeyPath": {
@@ -2656,6 +2661,7 @@
                         "properties": {
                           "certPath": {
                             "description": "Path to Certificate",
+                            "minLength": 1,
                             "type": "string"
                           },
                           "name": {
@@ -2663,7 +2669,7 @@
                             "type": "string"
                           },
                           "namespace": {
-                            "description": "Namsespace of certificate k8s resource (when type is secret or configmap)",
+                            "description": "Namespace of certificate k8s resource (when type is secret or configmap)",
                             "type": "string"
                           },
                           "privateKeyPath": {
@@ -2699,6 +2705,7 @@
                         "properties": {
                           "certPath": {
                             "description": "Path to Certificate",
+                            "minLength": 1,
                             "type": "string"
                           },
                           "name": {
@@ -2706,7 +2713,7 @@
                             "type": "string"
                           },
                           "namespace": {
-                            "description": "Namsespace of certificate k8s resource (when type is secret or configmap)",
+                            "description": "Namespace of certificate k8s resource (when type is secret or configmap)",
                             "type": "string"
                           },
                           "privateKeyPath": {
@@ -3631,11 +3638,12 @@
                             "type": "string"
                           },
                           "namespace": {
-                            "description": "Namsespace of certificate k8s resource (when type is secret or configmap)",
+                            "description": "Namespace of certificate k8s resource (when type is secret or configmap)",
                             "type": "string"
                           },
                           "password_path": {
                             "description": "Path to password",
+                            "minLength": 1,
                             "type": "string"
                           },
                           "type": {
@@ -3649,6 +3657,7 @@
                           },
                           "username": {
                             "description": "Username for basic auth",
+                            "minLength": 1,
                             "type": "string"
                           }
                         },
@@ -3702,7 +3711,7 @@
                             "type": "string"
                           },
                           "namespace": {
-                            "description": "Namsespace of certificate k8s resource (when type is secret or configmap)",
+                            "description": "Namespace of certificate k8s resource (when type is secret or configmap)",
                             "type": "string"
                           },
                           "scopes": {
@@ -3714,6 +3723,7 @@
                           },
                           "tokenURL": {
                             "description": "TokenURL is the resource server's token endpoint\nURL. This is a constant specific to each server.",
+                            "minLength": 1,
                             "type": "string"
                           },
                           "type": {
@@ -3740,6 +3750,7 @@
                             "properties": {
                               "certPath": {
                                 "description": "Path to Certificate",
+                                "minLength": 1,
                                 "type": "string"
                               },
                               "name": {
@@ -3747,7 +3758,7 @@
                                 "type": "string"
                               },
                               "namespace": {
-                                "description": "Namsespace of certificate k8s resource (when type is secret or configmap)",
+                                "description": "Namespace of certificate k8s resource (when type is secret or configmap)",
                                 "type": "string"
                               },
                               "privateKeyPath": {
@@ -3783,6 +3794,7 @@
                             "properties": {
                               "certPath": {
                                 "description": "Path to Certificate",
+                                "minLength": 1,
                                 "type": "string"
                               },
                               "name": {
@@ -3790,7 +3802,7 @@
                                 "type": "string"
                               },
                               "namespace": {
-                                "description": "Namsespace of certificate k8s resource (when type is secret or configmap)",
+                                "description": "Namespace of certificate k8s resource (when type is secret or configmap)",
                                 "type": "string"
                               },
                               "privateKeyPath": {
@@ -5619,6 +5631,7 @@
                         "properties": {
                           "certPath": {
                             "description": "Path to Certificate",
+                            "minLength": 1,
                             "type": "string"
                           },
                           "name": {
@@ -5626,7 +5639,7 @@
                             "type": "string"
                           },
                           "namespace": {
-                            "description": "Namsespace of certificate k8s resource (when type is secret or configmap)",
+                            "description": "Namespace of certificate k8s resource (when type is secret or configmap)",
                             "type": "string"
                           },
                           "privateKeyPath": {
@@ -5662,6 +5675,7 @@
                         "properties": {
                           "certPath": {
                             "description": "Path to Certificate",
+                            "minLength": 1,
                             "type": "string"
                           },
                           "name": {
@@ -5669,7 +5683,7 @@
                             "type": "string"
                           },
                           "namespace": {
-                            "description": "Namsespace of certificate k8s resource (when type is secret or configmap)",
+                            "description": "Namespace of certificate k8s resource (when type is secret or configmap)",
                             "type": "string"
                           },
                           "privateKeyPath": {

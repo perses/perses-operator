@@ -28,6 +28,7 @@ type PersesDashboardStatus struct {
 
 type PersesDashboardSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +kubebuilder:validation:Required
 	Config Dashboard `json:"config"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional

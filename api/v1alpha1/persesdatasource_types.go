@@ -28,7 +28,8 @@ type PersesDatasourceStatus struct {
 
 type DatasourceSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	Config Datasource `json:"config,omitempty"`
+	// +kubebuilder:validation:Required
+	Config Datasource `json:"config"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Client *Client `json:"client,omitempty"`

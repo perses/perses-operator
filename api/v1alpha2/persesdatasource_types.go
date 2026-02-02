@@ -28,6 +28,7 @@ type PersesDatasourceStatus struct {
 
 type DatasourceSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +kubebuilder:validation:Required
 	Config Datasource `json:"config"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
