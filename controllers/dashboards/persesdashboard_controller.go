@@ -19,7 +19,6 @@ package dashboards
 import (
 	"context"
 	"fmt"
-	"time"
 
 	logger "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -85,8 +84,8 @@ func (r *PersesDashboardReconciler) handleDelete(ctx context.Context, req ctrl.R
 
 	if err := r.Get(ctx, req.NamespacedName, dashboard); err != nil {
 		if !apierrors.IsNotFound(err) {
-			dlog.Info("No Perses instances found, retrying in 1 minute")
-			return subreconciler.RequeueWithDelay(time.Minute)
+			log.WithError(err).Error("Failed to get perses dashboard")
+			return subreconciler.RequeueWithError(err)
 		}
 
 		log.Infof("perses dashboard resource not found. Deleting '%s' in '%s'", req.Name, req.Namespace)
@@ -127,7 +126,7 @@ func (r *PersesDashboardReconciler) setStatusToComplete(ctx context.Context, req
 		Message: fmt.Sprintf("Dashboard (%s) created successfully", dashboard.Name)})
 
 	if err := r.Status().Update(ctx, dashboard); err != nil {
-		log.Error(err, "Failed to update Perses dashboard status")
+		log.WithError(err).Error("Failed to update Perses dashboard status")
 		return subreconciler.RequeueWithError(err)
 	}
 
@@ -155,7 +154,7 @@ func (r *PersesDashboardReconciler) setStatusToDegraded(
 		Message: degradedError.Error()})
 
 	if err := r.Status().Update(ctx, dashboard); err != nil {
-		log.Error(err, "Failed to update Perses dashboard status")
+		log.WithError(err).Error("Failed to update Perses dashboard status")
 		return subreconciler.RequeueWithError(err)
 	}
 
