@@ -217,7 +217,7 @@ func (r *PersesReconciler) handleDelete(ctx context.Context, req ctrl.Request) (
 
 			log.Info("Removing Finalizer for Perses after successfully perform the operations")
 			if ok := controllerutil.RemoveFinalizer(perses, common.PersesFinalizer); !ok {
-				log.Error(nil, "Failed to remove finalizer for Perses")
+				log.Error("Failed to remove finalizer for Perses")
 				return subreconciler.RequeueWithDelay(time.Second * 10)
 			}
 
@@ -258,7 +258,6 @@ func (r *PersesReconciler) setStatusToComplete(ctx context.Context, req ctrl.Req
 	perses := &v1alpha2.Perses{}
 
 	if r, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(r, err) {
-		log.Error("no latest perses")
 		return r, err
 	}
 
@@ -267,7 +266,7 @@ func (r *PersesReconciler) setStatusToComplete(ctx context.Context, req ctrl.Req
 		Message: fmt.Sprintf("Perses (%s) created successfully", perses.Name)})
 
 	if err := r.Status().Update(ctx, perses); err != nil {
-		log.Error(err, "Failed to update Perses status")
+		log.WithError(err).Error("Failed to update Perses status")
 		return subreconciler.RequeueWithError(err)
 	}
 
