@@ -1,0 +1,75 @@
+name: ✋ Support
+description: Support needed with Perses Operator
+labels: ["kind/support", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Note:** This repository is about perses-operator itself. If you have questions about Perses, go to [perses/perses](https://github.com/perses/perses).
+  - type: textarea
+    attributes:
+      label: What do you need help with?
+      description: A concise description of what you're experiencing.
+      value: |
+        ## Description
+
+        ## What I've tried
+
+        ## Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Perses Operator Version
+      description: |
+        Provide the perses-operator version used.
+        This will be automatically formatted into code, so no need for backticks.
+      placeholder: |
+        Try kubectl -n <namespace> describe deployment/perses-operator-controller-manager
+        # paste output here
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Kubernetes Version
+      description: |
+        Paste the output of `kubectl version -o yaml`
+        This will be automatically formatted into code, so no need for backticks.
+      render: yaml
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Kubernetes Cluster Type
+      description: Select Kubernetes cluster type
+      options:
+        - kind
+        - minikube
+        - kubeadm
+        - OpenShift
+        - EKS
+        - GKE
+        - AKS
+        - Rancher
+        - Other (please comment)
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Manifests
+      description: |
+        Insert manifests relevant to the issue.
+        This will be automatically formatted into code, so no need for backticks.
+      render: yaml
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Anything else?
+      description: |
+        Links? References? Anything that will give us more context about the issue you are encountering!
+
+        Tip: You can attach images or any other relevant log files by clicking this area to highlight it and then dragging files in.
+    validations:
+      required: false
