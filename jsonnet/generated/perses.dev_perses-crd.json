@@ -2273,7 +2273,10 @@
                     "type": "object"
                   },
                   "containerPort": {
+                    "default": 8080,
                     "format": "int32",
+                    "maximum": 65535,
+                    "minimum": 1,
                     "type": "integer"
                   },
                   "image": {
@@ -5096,7 +5099,10 @@
                     "type": "object"
                   },
                   "containerPort": {
+                    "default": 8080,
                     "format": "int32",
+                    "maximum": 65535,
+                    "minimum": 1,
                     "type": "integer"
                   },
                   "image": {

@@ -285,6 +285,50 @@ var _ = Describe("API Validation", func() {
 			Expect(errors.IsInvalid(err)).To(BeTrue())
 		})
 	})
+
+	Context("ContainerPort validation", func() {
+		ctx := context.Background()
+
+		It("should reject ContainerPort exceeding 65535", func() {
+			By("Creating a Perses resource with ContainerPort 65536")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "invalid-port-too-high",
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					ContainerPort: 65536, // Invalid: maximum is 65535
+				},
+			}
+
+			By("Expecting the creation to fail with validation error")
+			err := k8sClient.Create(ctx, perses)
+			Expect(err).To(HaveOccurred())
+			Expect(errors.IsInvalid(err)).To(BeTrue())
+		})
+
+		It("should accept ContainerPort with valid value", func() {
+			By("Creating a Perses resource with valid ContainerPort 8500")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "valid-port",
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					ContainerPort: 8500,
+				},
+			}
+
+			By("Expecting the creation to succeed")
+			err := k8sClient.Create(ctx, perses)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Cleaning up the created resource")
+			Eventually(func() error {
+				return k8sClient.Delete(ctx, perses)
+			}, time.Minute, time.Second).Should(Succeed())
+		})
+	})
 })
 
 var _ = Describe("PersesDashboard API Validation", func() {
