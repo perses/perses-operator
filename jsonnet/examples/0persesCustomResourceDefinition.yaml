@@ -2075,7 +2075,10 @@ spec:
                     type: object
                 type: object
               containerPort:
+                default: 8080
                 format: int32
+                maximum: 65535
+                minimum: 1
                 type: integer
               image:
                 description: Image specifies the container image that should be used for the Perses deployment.
@@ -4657,7 +4660,10 @@ spec:
                     type: object
                 type: object
               containerPort:
+                default: 8080
                 format: int32
+                maximum: 65535
+                minimum: 1
                 type: integer
               image:
                 description: Image specifies the container image that should be used for the Perses deployment.
