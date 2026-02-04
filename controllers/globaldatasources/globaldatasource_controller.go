@@ -54,9 +54,10 @@ func (r *PersesGlobalDatasourceReconciler) reconcileGlobalDatasourcesInAllInstan
 		return r.setStatusToDegraded(ctx, req, res, persescommon.ReasonMissingPerses, err)
 	}
 
-	globaldatasource := &persesv1alpha2.PersesGlobalDatasource{}
-
-	if res, err := r.getLatestPersesGlobalDatasource(ctx, req, globaldatasource); subreconciler.ShouldHaltOrRequeue(res, err) {
+	globaldatasource, ok := globalDatasourceFromContext(ctx)
+	if !ok {
+		gdlog.Error("globaldatasource not found in context")
+		res, err := subreconciler.RequeueWithError(fmt.Errorf("globaldatasource not found in context"))
 		return r.setStatusToDegraded(ctx, req, res, persescommon.ReasonMissingResource, err)
 	}
 
