@@ -41,14 +41,14 @@ import (
 var stlog = logger.WithField("module", "statefulset_controller")
 
 func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	perses := &v1alpha2.Perses{}
-
-	if result, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(result, err) {
-		return result, err
+	perses, ok := persesFromContext(ctx)
+	if !ok {
+		stlog.Error("perses not found in context")
+		return subreconciler.RequeueWithError(fmt.Errorf("perses not found in context"))
 	}
 
 	if perses.Spec.Config.Database.File == nil {
-		stlog.Info("Database file configuration is not set, skipping StatefulSet creation")
+		stlog.Debug("Database file configuration is not set, skipping StatefulSet creation")
 
 		found := &appsv1.StatefulSet{}
 		err := r.Get(ctx, types.NamespacedName{Name: perses.Name, Namespace: perses.Namespace}, found)

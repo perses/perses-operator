@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -37,6 +38,19 @@ import (
 	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
 )
+
+type persesContextKey string
+
+const contextKey persesContextKey = "perses"
+
+func withPerses(ctx context.Context, p *v1alpha2.Perses) context.Context {
+	return context.WithValue(ctx, contextKey, p)
+}
+
+func persesFromContext(ctx context.Context) (*v1alpha2.Perses, bool) {
+	p, ok := ctx.Value(contextKey).(*v1alpha2.Perses)
+	return p, ok
+}
 
 type Config struct {
 	PersesImage string
@@ -60,6 +74,19 @@ var log = logger.WithField("module", "perses_controller")
 // +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
 func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	perses := &v1alpha2.Perses{}
+	if err := r.Get(ctx, req.NamespacedName, perses); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Info("perses resource not found. Ignoring since object must be deleted")
+			return subreconciler.Evaluate(subreconciler.DoNotRequeue())
+		}
+		log.WithError(err).Error("Failed to get perses")
+		return subreconciler.Evaluate(subreconciler.RequeueWithError(err))
+	}
+
+	// Store perses in context for all sub-reconcilers
+	ctx = withPerses(ctx, perses)
+
 	subreconcilersForPerses := []subreconciler.FnWithRequest{
 		r.handleDelete,
 		r.setStatusToUnknown,
@@ -81,17 +108,32 @@ func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	return subreconciler.Evaluate(subreconciler.DoNotRequeue())
 }
 
-func (r *PersesReconciler) getLatestPerses(ctx context.Context, req ctrl.Request, perses *v1alpha2.Perses) (*ctrl.Result, error) {
-	// Fetch the latest version of the perses resource
-	if err := r.Get(ctx, req.NamespacedName, perses); err != nil {
+func (r *PersesReconciler) updatePersesStatus(
+	ctx context.Context,
+	req ctrl.Request,
+	updateFn func(*v1alpha2.Perses),
+) (*ctrl.Result, error) {
+	_, ok := persesFromContext(ctx)
+	if !ok {
+		log.Error("perses not found in context")
+		return subreconciler.RequeueWithError(fmt.Errorf("perses not found in context"))
+	}
+
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		fresh := &v1alpha2.Perses{}
+		if err := r.Get(ctx, req.NamespacedName, fresh); err != nil {
+			return err
+		}
+		updateFn(fresh)
+		return r.Status().Update(ctx, fresh)
+	})
+
+	if err != nil {
 		if apierrors.IsNotFound(err) {
-			// If the custom resource is not found then, it usually means that it was deleted or not created
-			// In this way, we will stop the reconciliation
 			log.Info("perses resource not found. Ignoring since object must be deleted")
 			return subreconciler.DoNotRequeue()
 		}
-		// Error reading the object - requeue the request.
-		log.WithError(err).Error("Failed to get perses")
+		log.WithError(err).Error("Failed to update Perses status")
 		return subreconciler.RequeueWithError(err)
 	}
 
@@ -99,23 +141,27 @@ func (r *PersesReconciler) getLatestPerses(ctx context.Context, req ctrl.Request
 }
 
 func (r *PersesReconciler) setStatusToUnknown(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	perses := &v1alpha2.Perses{}
-
-	// Fetch the latest Perses
-	// If this fails, bubble up the reconcile results to the main reconciler
-	if r, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(r, err) {
-		return r, err
+	_, ok := persesFromContext(ctx)
+	if !ok {
+		log.Error("perses not found in context")
+		return subreconciler.RequeueWithError(fmt.Errorf("perses not found in context"))
 	}
 
-	// Let's just set the status as Unknown when no status are available
-	if len(perses.Status.Conditions) == 0 {
-		meta.SetStatusCondition(&perses.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses, Status: metav1.ConditionUnknown, Reason: "Reconciling", Message: "Starting reconciliation"})
-
-		if err := r.Status().Update(ctx, perses); err != nil {
-			log.WithError(err).Error("Failed to update Perses status")
-			return subreconciler.RequeueWithError(err)
+	needsRequeue := false
+	result, err := r.updatePersesStatus(ctx, req, func(p *v1alpha2.Perses) {
+		// Only set status to Unknown when no status conditions exist yet
+		if len(p.Status.Conditions) == 0 {
+			meta.SetStatusCondition(&p.Status.Conditions, metav1.Condition{
+				Type: common.TypeAvailablePerses, Status: metav1.ConditionUnknown,
+				Reason: "Reconciling", Message: "Starting reconciliation"})
+			needsRequeue = true
 		}
+	})
+	if err != nil {
+		return result, err
+	}
 
+	if needsRequeue {
 		// requeue after adding unknown status to allow adding the finalizer to succeed
 		// see explanation on setting a status on creation here
 		// https://github.com/kubernetes-sigs/controller-runtime/blob/1dce6213f6c078f3170921b3a774304d066d5bd4/pkg/controller/controllerutil/controllerutil.go#L378
@@ -126,12 +172,10 @@ func (r *PersesReconciler) setStatusToUnknown(ctx context.Context, req ctrl.Requ
 }
 
 func (r *PersesReconciler) addFinalizer(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	perses := &v1alpha2.Perses{}
-
-	// Fetch the latest Perses
-	// If this fails, bubble up the reconcile results to the main reconciler
-	if r, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(r, err) {
-		return r, err
+	perses, ok := persesFromContext(ctx)
+	if !ok {
+		log.Error("perses not found in context")
+		return subreconciler.RequeueWithError(fmt.Errorf("perses not found in context"))
 	}
 
 	// Let's add a finalizer. Then, we can define some operations which should
@@ -140,21 +184,25 @@ func (r *PersesReconciler) addFinalizer(ctx context.Context, req ctrl.Request) (
 	if !controllerutil.ContainsFinalizer(perses, common.PersesFinalizer) {
 		log.Info("Adding Finalizer for Perses")
 
-		// Re-fetch the perses Custom Resource before update the status
-		// so that we have the latest state of the resource on the cluster and we will avoid
-		// raise the issue "the object has been modified, please apply
-		// your changes to the latest version and try again" which would re-trigger the reconciliation
-		if err := r.Get(ctx, req.NamespacedName, perses); err != nil {
-			log.WithError(err).Error("Failed to re-fetch perses")
-			return subreconciler.RequeueWithError(err)
-		}
+		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			// Re-fetch the perses Custom Resource before update
+			// so that we have the latest state of the resource on the cluster
+			if err := r.Get(ctx, req.NamespacedName, perses); err != nil {
+				return err
+			}
 
-		if ok := controllerutil.AddFinalizer(perses, common.PersesFinalizer); !ok {
-			log.Error("Failed to add finalizer into the custom resource")
-			return subreconciler.RequeueWithDelay(time.Second * 10)
-		}
+			if ok := controllerutil.AddFinalizer(perses, common.PersesFinalizer); !ok {
+				return fmt.Errorf("failed to add finalizer into the custom resource")
+			}
 
-		if err := r.Update(ctx, perses); err != nil {
+			return r.Update(ctx, perses)
+		})
+
+		if err != nil {
+			if apierrors.IsNotFound(err) {
+				log.Info("perses resource not found. Ignoring since object must be deleted")
+				return subreconciler.DoNotRequeue()
+			}
 			log.WithError(err).Error("Failed to update custom resource to add finalizer")
 			return subreconciler.RequeueWithError(err)
 		}
@@ -164,12 +212,10 @@ func (r *PersesReconciler) addFinalizer(ctx context.Context, req ctrl.Request) (
 }
 
 func (r *PersesReconciler) handleDelete(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	perses := &v1alpha2.Perses{}
-
-	// Fetch the latest Perses
-	// If this fails, bubble up the reconcile results to the main reconciler
-	if r, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(r, err) {
-		return r, err
+	perses, ok := persesFromContext(ctx)
+	if !ok {
+		log.Error("perses not found in context")
+		return subreconciler.RequeueWithError(fmt.Errorf("perses not found in context"))
 	}
 
 	// Check if the Perses instance is marked to be deleted, which is
@@ -179,13 +225,13 @@ func (r *PersesReconciler) handleDelete(ctx context.Context, req ctrl.Request) (
 		if controllerutil.ContainsFinalizer(perses, common.PersesFinalizer) {
 			log.Info("Performing Finalizer Operations for Perses before delete CR")
 
-			// Let's add here an status "Downgrade" to define that this resource begin its process to be terminated.
-			meta.SetStatusCondition(&perses.Status.Conditions, metav1.Condition{Type: common.TypeDegradedPerses,
-				Status: metav1.ConditionUnknown, Reason: "Finalizing",
-				Message: fmt.Sprintf("Performing finalizer operations for the custom resource: %s ", perses.Name)})
-
-			if err := r.Status().Update(ctx, perses); err != nil {
-				log.WithError(err).Error("Failed to update Perses status")
+			// Set status to indicate finalization is in progress
+			_, err := r.updatePersesStatus(ctx, req, func(p *v1alpha2.Perses) {
+				meta.SetStatusCondition(&p.Status.Conditions, metav1.Condition{
+					Type: common.TypeDegradedPerses, Status: metav1.ConditionUnknown,
+					Reason: "Finalizing", Message: fmt.Sprintf("Performing finalizer operations for the custom resource: %s ", p.Name)})
+			})
+			if err != nil {
 				return subreconciler.RequeueWithError(err)
 			}
 
@@ -197,31 +243,31 @@ func (r *PersesReconciler) handleDelete(ctx context.Context, req ctrl.Request) (
 			// then you need to ensure that all worked fine before deleting and updating the Downgrade status
 			// otherwise, you should requeue here.
 
-			// Re-fetch the perses Custom Resource before update the status
-			// so that we have the latest state of the resource on the cluster and we will avoid
-			// raise the issue "the object has been modified, please apply
-			// your changes to the latest version and try again" which would re-trigger the reconciliation
-			if err := r.Get(ctx, req.NamespacedName, perses); err != nil {
-				log.WithError(err).Error("Failed to re-fetch perses")
+			// Update status to indicate finalization is complete
+			_, err = r.updatePersesStatus(ctx, req, func(p *v1alpha2.Perses) {
+				meta.SetStatusCondition(&p.Status.Conditions, metav1.Condition{
+					Type: common.TypeDegradedPerses, Status: metav1.ConditionTrue,
+					Reason: "Finalizing", Message: fmt.Sprintf("Finalizer operations for custom resource %s name were successfully accomplished", p.Name)})
+			})
+			if err != nil {
 				return subreconciler.RequeueWithError(err)
 			}
 
-			meta.SetStatusCondition(&perses.Status.Conditions, metav1.Condition{Type: common.TypeDegradedPerses,
-				Status: metav1.ConditionTrue, Reason: "Finalizing",
-				Message: fmt.Sprintf("Finalizer operations for custom resource %s name were successfully accomplished", perses.Name)})
+			// Remove finalizer in a separate retry block
+			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				if err := r.Get(ctx, req.NamespacedName, perses); err != nil {
+					return err
+				}
 
-			if err := r.Status().Update(ctx, perses); err != nil {
-				log.WithError(err).Error("Failed to update Perses status")
-				return subreconciler.RequeueWithError(err)
-			}
+				log.Info("Removing Finalizer for Perses after successfully perform the operations")
+				if ok := controllerutil.RemoveFinalizer(perses, common.PersesFinalizer); !ok {
+					return fmt.Errorf("failed to remove finalizer for Perses")
+				}
 
-			log.Info("Removing Finalizer for Perses after successfully perform the operations")
-			if ok := controllerutil.RemoveFinalizer(perses, common.PersesFinalizer); !ok {
-				log.Error("Failed to remove finalizer for Perses")
-				return subreconciler.RequeueWithDelay(time.Second * 10)
-			}
+				return r.Update(ctx, perses)
+			})
 
-			if err := r.Update(ctx, perses); err != nil {
+			if err != nil {
 				log.WithError(err).Error("Failed to remove finalizer for Perses")
 				return subreconciler.RequeueWithError(err)
 			}
@@ -255,22 +301,11 @@ func (r *PersesReconciler) doFinalizerOperationsForPerses(perses *v1alpha2.Perse
 }
 
 func (r *PersesReconciler) setStatusToComplete(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	perses := &v1alpha2.Perses{}
-
-	if r, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(r, err) {
-		return r, err
-	}
-
-	meta.SetStatusCondition(&perses.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses,
-		Status: metav1.ConditionTrue, Reason: "Reconciled",
-		Message: fmt.Sprintf("Perses (%s) created successfully", perses.Name)})
-
-	if err := r.Status().Update(ctx, perses); err != nil {
-		log.WithError(err).Error("Failed to update Perses status")
-		return subreconciler.RequeueWithError(err)
-	}
-
-	return subreconciler.ContinueReconciling()
+	return r.updatePersesStatus(ctx, req, func(perses *v1alpha2.Perses) {
+		meta.SetStatusCondition(&perses.Status.Conditions, metav1.Condition{
+			Type: common.TypeAvailablePerses, Status: metav1.ConditionTrue,
+			Reason: "Reconciled", Message: fmt.Sprintf("Perses (%s) created successfully", perses.Name)})
+	})
 }
 
 // SetupWithManager sets up the controller with the Manager.

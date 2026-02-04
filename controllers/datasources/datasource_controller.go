@@ -57,9 +57,10 @@ func (r *PersesDatasourceReconciler) reconcileDatasourcesInAllInstances(ctx cont
 
 	}
 
-	datasource := &persesv1alpha2.PersesDatasource{}
-
-	if res, err := r.getLatestPersesDatasource(ctx, req, datasource); subreconciler.ShouldHaltOrRequeue(res, err) {
+	datasource, ok := datasourceFromContext(ctx)
+	if !ok {
+		dlog.Error("datasource not found in context")
+		res, err := subreconciler.RequeueWithError(fmt.Errorf("datasource not found in context"))
 		return r.setStatusToDegraded(ctx, req, res, persescommon.ReasonMissingResource, err)
 	}
 
