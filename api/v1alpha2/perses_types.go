@@ -86,6 +86,18 @@ type PersesSpec struct {
 	// PodSecurityContext holds pod-level security attributes and common container settings.
 	// If not specified, defaults to fsGroup: 65534 to ensure proper volume permissions for the nobody user.
 	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +kubebuilder:validation:Enum=panic;fatal;error;warning;info;debug;trace
+	// +optional
+	// LogLevel defines the log level for Perses.
+	LogLevel *string `json:"logLevel,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	// LogMethodTrace when true, includes the calling method as a field in the log.
+	// It can be useful to see immediately where the log comes from.
+	LogMethodTrace *bool `json:"logMethodTrace,omitempty"`
 }
 
 // Metadata to add to deployed pods

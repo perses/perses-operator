@@ -329,6 +329,82 @@ var _ = Describe("API Validation", func() {
 			}, time.Minute, time.Second).Should(Succeed())
 		})
 	})
+
+	Context("LogLevel validation", func() {
+		ctx := context.Background()
+
+		It("should reject LogLevel with invalid value", func() {
+			By("Creating a Perses resource with invalid LogLevel")
+			invalidLogLevel := "invalid"
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "invalid-loglevel",
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					ContainerPort: 8080,
+					LogLevel:      &invalidLogLevel,
+				},
+			}
+
+			By("Expecting the creation to fail with validation error")
+			err := k8sClient.Create(ctx, perses)
+			Expect(err).To(HaveOccurred())
+			Expect(errors.IsInvalid(err)).To(BeTrue())
+		})
+
+		It("should accept LogLevel with valid value", func() {
+			By("Creating a Perses resource with valid LogLevel debug")
+			debugLogLevel := "debug"
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "valid-loglevel",
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					ContainerPort: 8080,
+					LogLevel:      &debugLogLevel,
+				},
+			}
+
+			By("Expecting the creation to succeed")
+			err := k8sClient.Create(ctx, perses)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Cleaning up the created resource")
+			Eventually(func() error {
+				return k8sClient.Delete(ctx, perses)
+			}, time.Minute, time.Second).Should(Succeed())
+		})
+	})
+
+	Context("LogMethodTrace validation", func() {
+		ctx := context.Background()
+
+		It("should accept LogMethodTrace with true value", func() {
+			By("Creating a Perses resource with LogMethodTrace enabled")
+			logMethodTrace := true
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "valid-logmethodtrace",
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					ContainerPort:  8080,
+					LogMethodTrace: &logMethodTrace,
+				},
+			}
+
+			By("Expecting the creation to succeed")
+			err := k8sClient.Create(ctx, perses)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Cleaning up the created resource")
+			Eventually(func() error {
+				return k8sClient.Delete(ctx, perses)
+			}, time.Minute, time.Second).Should(Succeed())
+		})
+	})
 })
 
 var _ = Describe("PersesDashboard API Validation", func() {

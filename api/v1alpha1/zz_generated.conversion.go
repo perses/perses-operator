@@ -1019,6 +1019,8 @@ func autoConvert_v1alpha2_PersesSpec_To_v1alpha1_PersesSpec(in *v1alpha2.PersesS
 	}
 	out.ServiceAccountName = in.ServiceAccountName
 	// WARNING: in.PodSecurityContext requires manual conversion: does not exist in peer-type
+	// WARNING: in.LogLevel requires manual conversion: does not exist in peer-type
+	// WARNING: in.LogMethodTrace requires manual conversion: does not exist in peer-type
 	return nil
 }
 
