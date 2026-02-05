@@ -85,6 +85,13 @@ spec:
   replicas: 1
   containerPort: 8080
 
+  # Optional log level for Perses server
+  # Possible values: panic, fatal, error, warning, info, debug, trace
+  logLevel: debug
+
+  # Optional: include the calling method as a field in the log
+  logMethodTrace: true
+
   livenessProbe:
     initialDelaySeconds: 30
     periodSeconds: 10

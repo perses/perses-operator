@@ -16,6 +16,8 @@ spec:
       enable: false
       cleanup_interval: '1s'
   containerPort: 8080
+  logLevel: debug
+  logMethodTrace: true
   livenessProbe:
     initialDelaySeconds: 10
     periodSeconds: 10

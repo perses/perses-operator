@@ -5259,6 +5259,23 @@
                     },
                     "type": "object"
                   },
+                  "logLevel": {
+                    "description": "LogLevel defines the log level for Perses.",
+                    "enum": [
+                      "panic",
+                      "fatal",
+                      "error",
+                      "warning",
+                      "info",
+                      "debug",
+                      "trace"
+                    ],
+                    "type": "string"
+                  },
+                  "logMethodTrace": {
+                    "description": "LogMethodTrace when true, includes the calling method as a field in the log.\nIt can be useful to see immediately where the log comes from.",
+                    "type": "boolean"
+                  },
                   "metadata": {
                     "description": "Metadata to add to deployed pods",
                     "properties": {
