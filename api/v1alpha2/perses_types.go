@@ -43,6 +43,12 @@ type PersesSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	// Resources defines the compute resources configured for the container.
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec

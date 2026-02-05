@@ -198,6 +198,10 @@ func (r *PersesReconciler) createPersesDeployment(
 		},
 	}
 
+	if perses.Spec.Resources != nil {
+		dep.Spec.Template.Spec.Containers[0].Resources = *perses.Spec.Resources
+	}
+
 	if perses.Spec.ServiceAccountName != "" {
 		dep.Spec.Template.Spec.ServiceAccountName = perses.Spec.ServiceAccountName
 	}

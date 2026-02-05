@@ -63,7 +63,7 @@
               "--leader-elect"
             ],
             "image": "controller:latest",
-            "imagePullPolicy": "Always",
+            "imagePullPolicy": "IfNotPresent",
             "livenessProbe": {
               "httpGet": {
                 "path": "/healthz",

@@ -984,6 +984,7 @@ func autoConvert_v1alpha2_PersesSpec_To_v1alpha1_PersesSpec(in *v1alpha2.PersesS
 	out.Args = in.Args
 	out.ContainerPort = in.ContainerPort
 	out.Replicas = in.Replicas
+	// WARNING: in.Resources requires manual conversion: does not exist in peer-type
 	out.NodeSelector = in.NodeSelector
 	out.Tolerations = in.Tolerations
 	out.Affinity = in.Affinity
