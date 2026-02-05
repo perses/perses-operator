@@ -204,6 +204,10 @@ func (r *PersesReconciler) createPersesStatefulSet(
 		},
 	}
 
+	if perses.Spec.Resources != nil {
+		sts.Spec.Template.Spec.Containers[0].Resources = *perses.Spec.Resources
+	}
+
 	if perses.Spec.Storage != nil {
 		if perses.Spec.Storage.StorageClass != nil && len(*perses.Spec.Storage.StorageClass) > 0 {
 			sts.Spec.VolumeClaimTemplates[0].Spec.StorageClassName = perses.Spec.Storage.StorageClass

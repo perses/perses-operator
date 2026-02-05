@@ -9,9 +9,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
-	persescontroller "github.com/perses/perses-operator/controllers/perses"
-	"github.com/perses/perses-operator/internal/perses/common"
 	persesconfig "github.com/perses/perses/pkg/model/api/config"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -20,6 +17,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
+	persescontroller "github.com/perses/perses-operator/controllers/perses"
+	"github.com/perses/perses-operator/internal/perses/common"
 )
 
 var _ = Describe("Perses controller", func() {
@@ -67,8 +68,13 @@ var _ = Describe("Perses controller", func() {
 						},
 						ServiceAccountName: "perses-service-account",
 						Replicas:           &replicas,
-						ContainerPort:      8080,
-						Image:              persesImage,
+						Resources: &corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceMemory: resource.MustParse("128Mi"),
+							},
+						},
+						ContainerPort: 8080,
+						Image:         persesImage,
 						Service: &persesv1alpha2.PersesService{
 							Name: persesServiceName,
 							Annotations: map[string]string{
@@ -186,6 +192,10 @@ var _ = Describe("Perses controller", func() {
 						if value != PersesName {
 							return fmt.Errorf("The label in the StatefulSet is not the one defined in the custom resource")
 						}
+					}
+					if found.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().String() != "128Mi" {
+						return fmt.Errorf("The resources requests in the StatefulSet is not the one defined in the custom resource")
+
 					}
 				}
 

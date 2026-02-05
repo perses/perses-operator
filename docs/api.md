@@ -25,7 +25,7 @@ The Perses server instances are namespace-scoped, the operator will deploy a Per
 #### Specification
 
 ```yaml
-apiVersion: perses.dev/v1alpha1
+apiVersion: perses.dev/v1alpha2
 kind: Perses
 metadata:
   name: perses-sample
@@ -60,11 +60,6 @@ spec:
       file:
         folder: "/perses"
         extension: "yaml"
-    schemas:
-      panels_path: "/etc/perses/cue/schemas/panels"
-      queries_path: "/etc/perses/cue/schemas/queries"
-      datasources_path: "/etc/perses/cue/schemas/datasources"
-      variables_path: "/etc/perses/cue/schemas/variables"
     ephemeral_dashboard:
       enable: false
       cleanup_interval: "1s"
@@ -83,6 +78,14 @@ spec:
       privateKeyPath: tls.key
 
   replicas: 1
+  
+  # Optional resource limits and requests
+  resources:
+    limits:
+      memory: 500Mi
+    requests:
+      memory:
+      
   containerPort: 8080
 
   # Optional log level for Perses server
