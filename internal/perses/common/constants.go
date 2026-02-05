@@ -42,6 +42,9 @@ const (
 	defaultConfigPath = configMountPath + "/config.yaml"
 
 	defaultFileMode = 420
+
+	// Annotation for TLS certificate checksum to trigger pod restart on certificate rotation
+	TLSCertificateChecksumAnnotation = "perses.dev/tls-certificate-checksum"
 )
 
 type ConditionStatusReason string

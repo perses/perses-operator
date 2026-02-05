@@ -69,7 +69,7 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 			return subreconciler.RequeueWithError(err)
 		}
 
-		dep, err := r.createPersesDeployment(perses)
+		dep, err := r.createPersesDeployment(ctx, perses)
 		if err != nil {
 			dlog.WithError(err).Error("Failed to define new Deployment resource for perses")
 
@@ -94,7 +94,7 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 		return subreconciler.ContinueReconciling()
 	}
 
-	dep, err := r.createPersesDeployment(perses)
+	dep, err := r.createPersesDeployment(ctx, perses)
 	if err != nil {
 		dlog.WithError(err).Error("Failed to define new Deployment resource for perses")
 		return subreconciler.RequeueWithError(err)
@@ -117,13 +117,22 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 }
 
 func (r *PersesReconciler) createPersesDeployment(
-	perses *v1alpha2.Perses) (*appsv1.Deployment, error) {
+	ctx context.Context, perses *v1alpha2.Perses) (*appsv1.Deployment, error) {
 
 	ls := common.LabelsForPerses(perses.Name, perses)
 
 	annotations := map[string]string{}
 	if perses.Spec.Metadata != nil && perses.Spec.Metadata.Annotations != nil {
-		annotations = perses.Spec.Metadata.Annotations
+		for k, v := range perses.Spec.Metadata.Annotations {
+			annotations[k] = v
+		}
+	}
+
+	tlsChecksum, err := common.ComputeTLSCertificateChecksum(ctx, r.Client, perses)
+	if err != nil {
+		dlog.WithError(err).Warn("Failed to compute TLS certificate checksum, continuing without it")
+	} else if tlsChecksum != "" {
+		annotations[common.TLSCertificateChecksumAnnotation] = tlsChecksum
 	}
 
 	// Get the Operand image

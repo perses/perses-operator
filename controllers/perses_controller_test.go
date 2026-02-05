@@ -470,4 +470,163 @@ var _ = Describe("Perses controller", func() {
 			}, time.Minute, time.Second).Should(BeTrue(), "Perses resource should be deleted after finalizer removal")
 		})
 	})
+
+	Context("TLS certificate checksum annotation", func() {
+		const PersesNameTLS = "test-perses-tls"
+		const TLSSecretName = "perses-tls-secret"
+		const tlsTestImage = "perses-dev.io/perses:tls-test"
+
+		BeforeEach(func() {
+			By("Setting the Image ENV VAR for TLS tests")
+			err := os.Setenv("PERSES_IMAGE", tlsTestImage)
+			Expect(err).To(Not(HaveOccurred()))
+		})
+
+		AfterEach(func() {
+			By("Removing the Image ENV VAR for TLS tests")
+			_ = os.Unsetenv("PERSES_IMAGE")
+		})
+
+		It("should add TLS certificate checksum annotation when TLS is configured", func() {
+			typeNamespaceName := types.NamespacedName{Name: PersesNameTLS, Namespace: persesNamespace}
+			secretNamespaceName := types.NamespacedName{Name: TLSSecretName, Namespace: persesNamespace}
+
+			By("Creating the TLS secret")
+			tlsSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      TLSSecretName,
+					Namespace: persesNamespace,
+				},
+				Data: map[string][]byte{
+					"tls.crt": []byte("-----BEGIN CERTIFICATE-----\ntest-cert\n-----END CERTIFICATE-----"),
+					"tls.key": []byte("-----BEGIN PRIVATE KEY-----\ntest-key\n-----END PRIVATE KEY-----"),
+				},
+			}
+			err := k8sClient.Create(ctx, tlsSecret)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Creating the Perses resource with TLS configuration")
+			replicas := int32(1)
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      PersesNameTLS,
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					Replicas:      &replicas,
+					ContainerPort: 8080,
+					Image:         tlsTestImage,
+					Config: persesv1alpha2.PersesConfig{
+						Config: persesconfig.Config{
+							Database: persesconfig.Database{
+								SQL: &persesconfig.SQL{
+									User:     "user",
+									Password: "password",
+								},
+							},
+						},
+					},
+					TLS: &persesv1alpha2.TLS{
+						Enable: true,
+						UserCert: &persesv1alpha2.Certificate{
+							SecretSource: persesv1alpha2.SecretSource{
+								Type: persesv1alpha2.SecretSourceTypeSecret,
+								Name: TLSSecretName,
+							},
+							CertPath:       "tls.crt",
+							PrivateKeyPath: "tls.key",
+						},
+					},
+				},
+			}
+			err = k8sClient.Create(ctx, perses)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Checking if the Deployment has the TLS checksum annotation")
+			Eventually(func() error {
+				found := &appsv1.Deployment{}
+				err := k8sClient.Get(ctx, typeNamespaceName, found)
+				if err != nil {
+					return err
+				}
+				if found.Spec.Template.Annotations == nil {
+					return fmt.Errorf("annotations map is nil")
+				}
+				if _, ok := found.Spec.Template.Annotations[common.TLSCertificateChecksumAnnotation]; !ok {
+					return fmt.Errorf("TLS checksum annotation not found")
+				}
+				checksum := found.Spec.Template.Annotations[common.TLSCertificateChecksumAnnotation]
+				if len(checksum) != 64 {
+					return fmt.Errorf("checksum length is %d, expected 64", len(checksum))
+				}
+				return nil
+			}, time.Minute*2, time.Second).Should(Succeed())
+
+			By("Cleaning up resources")
+			persesToDelete := &persesv1alpha2.Perses{}
+			err = k8sClient.Get(ctx, typeNamespaceName, persesToDelete)
+			if err == nil {
+				_ = k8sClient.Delete(ctx, persesToDelete)
+			}
+
+			secretToDelete := &corev1.Secret{}
+			err = k8sClient.Get(ctx, secretNamespaceName, secretToDelete)
+			if err == nil {
+				_ = k8sClient.Delete(ctx, secretToDelete)
+			}
+		})
+
+		It("should not add TLS checksum annotation when TLS is not configured", func() {
+			const PersesNameNoTLS = "test-perses-no-tls"
+			typeNamespaceName := types.NamespacedName{Name: PersesNameNoTLS, Namespace: persesNamespace}
+
+			By("Creating the Perses resource without TLS configuration")
+			replicas := int32(1)
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      PersesNameNoTLS,
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					Replicas:      &replicas,
+					ContainerPort: 8080,
+					Image:         tlsTestImage,
+					Config: persesv1alpha2.PersesConfig{
+						Config: persesconfig.Config{
+							Database: persesconfig.Database{
+								File: &persesconfig.File{
+									Folder: "/etc/perses/storage",
+								},
+							},
+						},
+					},
+				},
+			}
+			err := k8sClient.Create(ctx, perses)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Checking if the StatefulSet exists and does not have the TLS checksum annotation")
+			Eventually(func() error {
+				found := &appsv1.StatefulSet{}
+				err := k8sClient.Get(ctx, typeNamespaceName, found)
+				if err != nil {
+					return err
+				}
+				// Annotation should not be present
+				if found.Spec.Template.Annotations != nil {
+					if _, ok := found.Spec.Template.Annotations[common.TLSCertificateChecksumAnnotation]; ok {
+						return fmt.Errorf("TLS checksum annotation should not be present")
+					}
+				}
+				return nil
+			}, time.Minute*2, time.Second).Should(Succeed())
+
+			By("Cleaning up resources")
+			persesToDelete := &persesv1alpha2.Perses{}
+			err = k8sClient.Get(ctx, typeNamespaceName, persesToDelete)
+			if err == nil {
+				_ = k8sClient.Delete(ctx, persesToDelete)
+			}
+		})
+	})
 })

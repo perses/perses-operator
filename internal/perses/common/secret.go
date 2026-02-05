@@ -1,8 +1,28 @@
+/*
+Copyright 2026 The Perses Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package common
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"sort"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -160,4 +180,88 @@ func GetTLSCertData(ctx context.Context, client client.Client, namespace string,
 	}
 
 	return "", "", nil
+}
+
+// ComputeTLSCertificateChecksum computes a SHA256 checksum of all TLS certificate data
+// referenced in the Perses TLS configuration. This checksum can be used as a pod annotation
+// to trigger rolling updates when certificates are rotated.
+func ComputeTLSCertificateChecksum(ctx context.Context, c client.Client, perses *v1alpha2.Perses) (string, error) {
+	if !isTLSEnabled(perses) {
+		return "", nil
+	}
+
+	var checksumParts []string
+
+	if perses.Spec.TLS.CaCert != nil {
+		certData, _, err := GetTLSCertData(ctx, c, perses.Namespace, perses.Name, perses.Spec.TLS.CaCert)
+		if err != nil {
+			return "", fmt.Errorf("failed to get CA certificate data: %w", err)
+		}
+		if certData != "" {
+			checksumParts = append(checksumParts, certData)
+		}
+	}
+
+	if perses.Spec.TLS.UserCert != nil {
+		certData, keyData, err := GetTLSCertData(ctx, c, perses.Namespace, perses.Name, perses.Spec.TLS.UserCert)
+		if err != nil {
+			return "", fmt.Errorf("failed to get user certificate data: %w", err)
+		}
+		if certData != "" {
+			checksumParts = append(checksumParts, certData)
+		}
+		if keyData != "" {
+			checksumParts = append(checksumParts, keyData)
+		}
+	}
+
+	if len(checksumParts) == 0 {
+		return "", nil
+	}
+
+	// Sort for deterministic ordering in case new cert fields are added
+	sort.Strings(checksumParts)
+
+	hash := sha256.Sum256([]byte(strings.Join(checksumParts, "")))
+	return hex.EncodeToString(hash[:]), nil
+}
+
+// GetTLSSecretReferences returns a list of Secret references used in TLS configuration.
+// This only returns references with Type=Secret (not ConfigMap).
+// This can be used to set up watches for certificate rotation.
+func GetTLSSecretReferences(perses *v1alpha2.Perses) []types.NamespacedName {
+	if !isTLSEnabled(perses) {
+		return nil
+	}
+
+	var refs []types.NamespacedName
+	namespace := perses.Namespace
+
+	if perses.Spec.TLS.CaCert != nil &&
+		perses.Spec.TLS.CaCert.Type == v1alpha2.SecretSourceTypeSecret &&
+		perses.Spec.TLS.CaCert.Name != "" {
+		ns := namespace
+		if perses.Spec.TLS.CaCert.Namespace != "" {
+			ns = perses.Spec.TLS.CaCert.Namespace
+		}
+		refs = append(refs, types.NamespacedName{
+			Namespace: ns,
+			Name:      perses.Spec.TLS.CaCert.Name,
+		})
+	}
+
+	if perses.Spec.TLS.UserCert != nil &&
+		perses.Spec.TLS.UserCert.Type == v1alpha2.SecretSourceTypeSecret &&
+		perses.Spec.TLS.UserCert.Name != "" {
+		ns := namespace
+		if perses.Spec.TLS.UserCert.Namespace != "" {
+			ns = perses.Spec.TLS.UserCert.Namespace
+		}
+		refs = append(refs, types.NamespacedName{
+			Namespace: ns,
+			Name:      perses.Spec.TLS.UserCert.Name,
+		})
+	}
+
+	return refs
 }
