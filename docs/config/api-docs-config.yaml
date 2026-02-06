@@ -1,0 +1,12 @@
+processor:
+  # RE2 regular expressions describing types that should be excluded from the generated documentation.
+  ignoreTypes:
+    - "List$"
+  # RE2 regular expressions describing type fields that should be excluded from the generated documentation.
+  ignoreFields:
+    - "TypeMeta$"
+
+render:
+  # Version of Kubernetes to use when generating links to Kubernetes API documentation.
+  # Automatically replaced by `make generate-api-docs` from the k8s.io/api version in go.mod.
+  kubernetesVersion: K8S_API_VERSION

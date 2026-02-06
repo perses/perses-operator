@@ -1,465 +1,511 @@
-# Perses Operator Documentation
+# API Reference
 
-This documentation provides information on how to use the Perses Operator custom resources to manage Perses installations in Kubernetes.
+## Packages
+- [perses.dev/v1alpha2](#persesdevv1alpha2)
 
-## Table of Contents
 
-- [Custom Resources](#custom-resources)
-  - [Perses](#perses)
-  - [PersesDatasource](#persesdatasource)
-  - [PersesDashboard](#persesdashboard)
-- [Examples](#examples)
-- [Project Management](#project-management)
-- [Troubleshooting](#troubleshooting)
+## perses.dev/v1alpha2
 
-## Custom Resources
+Package v1alpha2 contains API Schema definitions for the v1alpha2 API group
 
-The Perses Operator introduces the following Custom Resource Definitions (CRDs):
+### Resource Types
+- [Perses](#perses)
+- [PersesDashboard](#persesdashboard)
+- [PersesDatasource](#persesdatasource)
+- [PersesGlobalDatasource](#persesglobaldatasource)
 
-### Perses
 
-The `Perses` CRD is the main resource that deploys and configures a Perses server instance.
 
-The Perses server instances are namespace-scoped, the operator will deploy a Perses server in the same namespace as the Perses CR. Datasources and dashboards created in other namespaces will be synchronized across all Perses servers in the cluster.
+#### BasicAuth
 
-#### Specification
 
-```yaml
-apiVersion: perses.dev/v1alpha2
-kind: Perses
-metadata:
-  name: perses-sample
-  namespace: perses-dev
-spec:
-  # Optional configuration for the Perses client that the operator will use to connect to Perses servers
-  client:
-    tls:
-      enable: true
-      caCert:
-        type: secret
-        name: perses-certs
-        certPath: ca.crt
-      userCert:
-        type: secret
-        name: perses-certs
-        certPath: tls.crt
-        privateKeyPath: tls.key
 
-  # Optional container image to use as the Perses server operand
-  image: docker.io/perses/perses:v0.50.3
 
-  # Optional service configuration
-  service:
-    name: perses-service
-    annotations:
-      my.service/annotation: "true"
 
-  # A Complete Perses configuration https://perses.dev/perses/docs/configuration/configuration/
-  config:
-    database:
-      file:
-        folder: "/perses"
-        extension: "yaml"
-    ephemeral_dashboard:
-      enable: false
-      cleanup_interval: "1s"
 
-  # Optional TLS configuration
-  tls:
-    enable: true
-    caCert:
-      type: secret
-      name: perses-certs
-      certPath: ca.crt
-    userCert:
-      type: secret
-      name: perses-certs
-      certPath: tls.crt
-      privateKeyPath: tls.key
 
-  replicas: 1
-  
-  # Optional resource limits and requests
-  resources:
-    limits:
-      memory: 500Mi
-    requests:
-      memory:
-      
-  containerPort: 8080
+_Appears in:_
+- [Client](#client)
 
-  # Optional log level for Perses server
-  # Possible values: panic, fatal, error, warning, info, debug, trace
-  logLevel: debug
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `type` _[SecretSourceType](#secretsourcetype)_ | Type source type of secret |  | Enum: [secret configmap file] <br />Required: \{\} <br /> |
+| `name` _string_ | Name of basic auth k8s resource (when type is secret or configmap) |  | Optional: \{\} <br /> |
+| `namespace` _string_ | Namespace of certificate k8s resource (when type is secret or configmap) |  | Optional: \{\} <br /> |
+| `username` _string_ | Username for basic auth |  | MinLength: 1 <br />Required: \{\} <br /> |
+| `password_path` _string_ | Path to password |  | MinLength: 1 <br />Required: \{\} <br /> |
 
-  # Optional: include the calling method as a field in the log
-  logMethodTrace: true
 
-  livenessProbe:
-    initialDelaySeconds: 30
-    periodSeconds: 10
-    timeoutSeconds: 5
-    successThreshold: 1
-    failureThreshold: 3
+#### Certificate
 
-  readinessProbe:
-    initialDelaySeconds: 30
-    periodSeconds: 10
-    timeoutSeconds: 5
-    successThreshold: 1
-    failureThreshold: 3
-```
 
-### PersesDatasource
 
-The `PersesDatasource` CRD allows you to define datasources that can be used in your Perses dashboards. These datasources provide the data for visualizations and panels.
 
-The `PersesDatasource` configurations are namespace-scoped.
-They will be created under a Perses project that corresponds to the namespace where the CR is created.
-For instance, a `PersesDatasource` created in the `monitoring` namespace
-will be created under the `monitoring` project in the Perses server.
 
-To configure a secret to be used for proxy authentication,
-you can create a Kubernetes Secret with the necessary credentials
-and reference it in the `client` field used for the datasource proxy configuration.
-This will create a Perses secret in the project corresponding to the namespace where the CR is created.
-The secret will be named after the Datasource name with a `-secret` suffix.
-The secret must be referenced in `spec.config.spec.proxy.spec.secret`.
+
+
+_Appears in:_
+- [TLS](#tls)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `type` _[SecretSourceType](#secretsourcetype)_ | Type source type of secret |  | Enum: [secret configmap file] <br />Required: \{\} <br /> |
+| `name` _string_ | Name of basic auth k8s resource (when type is secret or configmap) |  | Optional: \{\} <br /> |
+| `namespace` _string_ | Namespace of certificate k8s resource (when type is secret or configmap) |  | Optional: \{\} <br /> |
+| `certPath` _string_ | Path to Certificate |  | MinLength: 1 <br />Required: \{\} <br /> |
+| `privateKeyPath` _string_ | Path to Private key certificate |  | Optional: \{\} <br /> |
+
+
+#### Client
+
+
+
+
+
+
+
+_Appears in:_
+- [DatasourceSpec](#datasourcespec)
+- [PersesSpec](#persesspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `basicAuth` _[BasicAuth](#basicauth)_ | BasicAuth basic auth config for perses client |  | Optional: \{\} <br /> |
+| `oauth` _[OAuth](#oauth)_ | OAuth configuration for perses client |  | Optional: \{\} <br /> |
+| `tls` _[TLS](#tls)_ | TLS the equivalent to the tls_config for perses client |  | Optional: \{\} <br /> |
+| `kubernetesAuth` _[KubernetesAuth](#kubernetesauth)_ | KubernetesAuth configuration for perses client |  | Optional: \{\} <br /> |
+
+
+#### Dashboard
+
+
+
+Dashboard represents the Perses dashboard configuration including
+display settings, datasources, variables, panels, layouts, and time ranges.
+
+
+
+_Appears in:_
+- [PersesDashboardSpec](#persesdashboardspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `display` _[Display](#display)_ |  |  |  |
+| `datasources` _object (keys:string, values:[DatasourceSpec](#datasourcespec))_ | Datasources is an optional list of datasource definition. |  |  |
+| `variables` _Variable array_ |  |  |  |
+| `panels` _object (keys:string, values:[Panel](#panel))_ |  |  |  |
+| `layouts` _Layout array_ |  |  |  |
+| `duration` _[Duration](#duration)_ | Duration is the default time range to use when getting data to fill the dashboard |  | Format: duration <br />Pattern: `^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$` <br />Type: string <br /> |
+| `refreshInterval` _[Duration](#duration)_ | RefreshInterval is the default refresh interval to use when landing on the dashboard |  | Format: duration <br />Pattern: `^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$` <br />Type: string <br /> |
+
+
+#### Datasource
+
+
+
+Datasource represents the Perses datasource configuration including
+display metadata, default flag, and plugin-specific settings.
+
+
+
+_Appears in:_
+- [DatasourceSpec](#datasourcespec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `display` _[Display](#display)_ |  |  |  |
+| `default` _boolean_ |  |  |  |
+| `plugin` _[Plugin](#plugin)_ | Plugin will contain the datasource configuration.<br />The data typed is available in Cue. |  |  |
+
+
+#### DatasourceSpec
+
+
+
+DatasourceSpec defines the desired state of a Perses datasource
+
+
+
+_Appears in:_
+- [PersesDatasource](#persesdatasource)
+- [PersesGlobalDatasource](#persesglobaldatasource)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `config` _[Datasource](#datasource)_ | Perses datasource configuration |  | Required: \{\} <br /> |
+| `client` _[Client](#client)_ | Client authentication and TLS configuration for the datasource |  | Optional: \{\} <br /> |
+| `instanceSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#labelselector-v1-meta)_ | InstanceSelector selects Perses instances where this datasource will be created |  | Optional: \{\} <br /> |
+
+
+#### KubernetesAuth
+
+
+
+
+
+
+
+_Appears in:_
+- [Client](#client)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enable` _boolean_ | Enable kubernetes auth for perses client |  |  |
+
+
+#### Metadata
+
+
+
+Metadata to add to deployed pods
+
+
+
+_Appears in:_
+- [PersesSpec](#persesspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `labels` _object (keys:string, values:string)_ | Labels are key/value pairs attached to pods |  |  |
+| `annotations` _object (keys:string, values:string)_ | Annotations are key/value pairs attached to pods for non-identifying metadata |  |  |
+
+
+#### OAuth
+
+
+
+
+
+
+
+_Appears in:_
+- [Client](#client)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `type` _[SecretSourceType](#secretsourcetype)_ | Type source type of secret |  | Enum: [secret configmap file] <br />Required: \{\} <br /> |
+| `name` _string_ | Name of basic auth k8s resource (when type is secret or configmap) |  | Optional: \{\} <br /> |
+| `namespace` _string_ | Namespace of certificate k8s resource (when type is secret or configmap) |  | Optional: \{\} <br /> |
+| `clientIDPath` _string_ | Path to client id |  | Optional: \{\} <br /> |
+| `clientSecretPath` _string_ | Path to client secret |  | Optional: \{\} <br /> |
+| `tokenURL` _string_ | TokenURL is the resource server's token endpoint<br />URL. This is a constant specific to each server. |  | MinLength: 1 <br />Required: \{\} <br /> |
+| `scopes` _string array_ | Scope specifies optional requested permissions. |  | Optional: \{\} <br /> |
+| `endpointParams` _object (keys:string, values:string array)_ | EndpointParams specifies additional parameters for requests to the token endpoint. |  | Optional: \{\} <br /> |
+| `authStyle` _integer_ | AuthStyle optionally specifies how the endpoint wants the<br />client ID & client secret sent. The zero value means to<br />auto-detect. |  | Optional: \{\} <br /> |
+
+
+#### Perses
+
+
+
+Perses is the Schema for the perses API
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `perses.dev/v1alpha2` | | |
+| `kind` _string_ | `Perses` | | |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[PersesSpec](#persesspec)_ |  |  |  |
+| `status` _[PersesStatus](#persesstatus)_ |  |  |  |
+
+
+#### PersesConfig
+
+
+
+PersesConfig represents the Perses server configuration including
+API, security, database, provisioning, and plugin settings.
+
+
+
+_Appears in:_
+- [PersesSpec](#persesspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `api_prefix` _string_ | Use it in case you want to prefix the API path. |  |  |
+| `security` _[Security](#security)_ | Security contains any configuration that changes the API behavior like the endpoints exposed or if the permissions are activated. |  |  |
+| `database` _[Database](#database)_ | Database contains the different configuration depending on the database you want to use |  |  |
+| `schemas` _[Schemas](#schemas)_ | Schemas contain the configuration to get access to the CUE schemas<br />DEPRECATED.<br />Please remove it from your config. |  |  |
+| `dashboard` _[DashboardConfig](#dashboardconfig)_ | Dashboard contains the configuration for the dashboard feature. |  |  |
+| `provisioning` _[ProvisioningConfig](#provisioningconfig)_ | Provisioning contains the provisioning config that can be used if you want to provide default resources. |  |  |
+| `datasource` _[DatasourceConfig](#datasourceconfig)_ | Datasource contains the configuration for the datasource. |  |  |
+| `variable` _[VariableConfig](#variableconfig)_ | Variable contains the configuration for the variable. |  |  |
+| `ephemeral_dashboards_cleanup_interval` _[Duration](#duration)_ | EphemeralDashboardsCleanupInterval is the interval at which the ephemeral dashboards are cleaned up<br />DEPRECATED.<br />Please use the config EphemeralDashboard instead. |  | Format: duration <br />Pattern: `^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$` <br />Type: string <br /> |
+| `ephemeral_dashboard` _[EphemeralDashboard](#ephemeraldashboard)_ | EphemeralDashboard contains the config about the ephemeral dashboard feature |  |  |
+| `frontend` _[Frontend](#frontend)_ | Frontend contains any config that will be used by the frontend itself. |  |  |
+| `plugin` _[Plugin](#plugin)_ | Plugin contains the config for runtime plugins. |  |  |
+
+
+#### PersesDashboard
+
+
+
+PersesDashboard is the Schema for the persesdashboards API
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `perses.dev/v1alpha2` | | |
+| `kind` _string_ | `PersesDashboard` | | |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[PersesDashboardSpec](#persesdashboardspec)_ |  |  |  |
+| `status` _[PersesDashboardStatus](#persesdashboardstatus)_ |  |  |  |
+
+
+#### PersesDashboardSpec
+
+
+
+PersesDashboardSpec defines the desired state of PersesDashboard
+
+
+
+_Appears in:_
+- [PersesDashboard](#persesdashboard)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `config` _[Dashboard](#dashboard)_ | Perses dashboard configuration |  | Required: \{\} <br /> |
+| `instanceSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#labelselector-v1-meta)_ | InstanceSelector selects Perses instances where this dashboard will be created |  | Optional: \{\} <br /> |
+
+
+#### PersesDashboardStatus
+
+
+
+PersesDashboardStatus defines the observed state of PersesDashboard
+
+
+
+_Appears in:_
+- [PersesDashboard](#persesdashboard)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#condition-v1-meta) array_ | Conditions represent the latest observations of the PersesDashboard resource state |  |  |
+
+
+#### PersesDatasource
+
+
+
+PersesDatasource is the Schema for the PersesDatasources API
+
+
+
+
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `perses.dev/v1alpha2` | | |
+| `kind` _string_ | `PersesDatasource` | | |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[DatasourceSpec](#datasourcespec)_ |  |  |  |
+| `status` _[PersesDatasourceStatus](#persesdatasourcestatus)_ |  |  |  |
+
+
+#### PersesDatasourceStatus
+
+
+
+PersesDatasourceStatus defines the observed state of PersesDatasource
+
+
+
+_Appears in:_
+- [PersesDatasource](#persesdatasource)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#condition-v1-meta) array_ | Conditions represent the latest observations of the PersesDatasource resource state |  |  |
+
 
 #### PersesGlobalDatasource
 
-The `PersesGlobalDatasource` CRD allows you to define global datasources that are accessible across all Perses projects.
-The API is the same as `PersesDatasource`, but the resources are globally scoped.
-No project mapping is created and a `GlobalSecret` is created for proxy authentication if needed.
 
-#### Specification
 
-```yaml
-apiVersion: perses.dev/v1alpha1
-kind: PersesDatasource
-metadata:
-  name: prometheus-through-proxy
-  namespace: monitoring
-spec:
-  config: # A complete spec of a Perses datasource: https://perses.dev/perses/docs/api/datasource/
-    kind: PrometheusSource
-    spec:
-      default: true
-      proxy:
-        kind: HTTPProxy
-        spec:
-          url: "https://prometheus-server.monitoring.svc.cluster.local:9090"
-          secret: prometheus-through-proxy-secret
+PersesGlobalDatasource is the Schema for the PersesGlobalDatasources API
 
-  # Optional datasource proxy client configuration
-  client:
-    tls:
-      enable: true
-      caCert:
-        type: secret # May be of type `secret`, `configmap` or `file`
-        name: prometheus-certs # In this case the k8s secret name
-        certPath: ca.crt # The key
-      userCert:
-        type: secret # May be of type `secret`, `configmap` or `file`
-        name: prometheus-certs
-        certPath: tls.crt
-        privateKeyPath: tls.key
-```
 
-```yaml
-apiVersion: perses.dev/v1alpha1
-kind: PersesDatasource
-metadata:
-  name: prometheus
-  namespace: monitoring
-spec:
-  config: # A complete spec of a Perses datasource: https://perses.dev/perses/docs/api/datasource/
-    kind: PrometheusSource
-    spec:
-      default: true
-      directUrl: "https://prometheus.demo.prometheus.io"
-```
 
-### PersesDashboard
 
-The `PersesDashboard` CRD allows you to define Perses dashboards directly using Kubernetes resources. This enables dashboard-as-code practices and GitOps workflows in conjunction with [percli](https://perses.dev/perses/docs/cli/) and the [Perses Go SDK](https://perses.dev/perses/docs/dac/go/).
 
-The PersesDashboard configurations are namespace-scoped.
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `apiVersion` _string_ | `perses.dev/v1alpha2` | | |
+| `kind` _string_ | `PersesGlobalDatasource` | | |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `spec` _[DatasourceSpec](#datasourcespec)_ |  |  |  |
+| `status` _[PersesGlobalDatasourceStatus](#persesglobaldatasourcestatus)_ |  |  |  |
 
-#### Specification
 
-```yaml
-apiVersion: perses.dev/v1alpha1
-kind: PersesDashboard
-metadata:
-  name: kubernetes-overview
-  namespace: monitoring
-spec: # The complete spec of a Perses dashboard: https://perses.dev/perses/docs/api/dashboard/
-  display:
-    name: "Kubernetes Overview"
-    description: "Overview of Kubernetes cluster metrics"
-  variables:
-    - kind: ListVariable
-      spec:
-        name: job
-        allowMultiple: false
-        allowAllValue: false
-        plugin:
-          kind: PrometheusLabelValuesVariable
-          spec:
-            labelName: job
-  panels:
-    defaultTimeSeriesChart:
-      kind: Panel
-      spec:
-        display:
-          name: Default Time Series Panel
-        plugin:
-          kind: TimeSeriesChart
-          spec: {}
-        queries:
-          - kind: TimeSeriesQuery
-            spec:
-              plugin:
-                kind: PrometheusTimeSeriesQuery
-                spec:
-                  query: up
-  layouts:
-    - kind: Grid
-      spec:
-        display:
-          title: Row 1
-          collapse:
-            open: true
-        items:
-          - x: 0
-            y: 0
-            width: 2
-            height: 3
-            content:
-              "$ref": "#/spec/panels/defaultTimeSeriesChart"
-  duration: 1h
-```
+#### PersesGlobalDatasourceStatus
 
-## Project Management
 
-The Perses operator maps Perses projects to Kubernetes namespaces. When you create a namespace in Kubernetes, it can be used as a project in Perses. This approach simplifies resource management and aligns with Kubernetes native organization principles.
 
-When reconciling Dashboards or Datasources the Perses operator synchronizes the namespace into a Perses project across all Perses servers in the cluster.
+PersesGlobalDatasourceStatus defines the observed state of PersesGlobalDatasource
 
-## Secrets
 
-Perses secrets are exclusively managed by the Perses Operator with
-[`PersesDatasource`](#persesdatasource) and
-[`PersesGlobalDatasource`](#persesglobaldatasource) resources
-under the `client` field for proxy configuration.
 
-The api supports three types of secret sources:
+_Appears in:_
+- [PersesGlobalDatasource](#persesglobaldatasource)
 
-- `secret`: Kubernetes Secret
-- `configmap`: Kubernetes ConfigMap
-- `file`: File mounted in the perses pod
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#condition-v1-meta) array_ | Conditions represent the latest observations of the PersesGlobalDatasource resource state |  |  |
 
-The api for these types are the same
-but the keys ending in `Path` refer to a key within a secret or configmap
-when using those types.
 
-> [!WARNING]
-> The `file` type is not useful in the current state
-> as there is no way to mount files into the perses pod.
+#### PersesService
 
-```yaml
-apiVersion: perses.dev/v1alpha1
-kind: PersesDatasource
-metadata:
-  name: prometheus-through-proxy
-  namespace: monitoring
-spec:
-  config: ...
-  # Optional datasource proxy client configuration
-  client:
-    basicAuth:
-      type: secret
-      name: k8s-basicauth-secret-name
-      namespace: optional-namespacename # if the secret resides in another namespace
-      username: "actual-username"
-      password_path: "password-key-in-secret" # or an actual path if type is `file`
-    oauth:
-      type: secret
-      name: k8s-oauth-secret-name
-      # namespace: monitoring
-      clientIDPath: client-id-key-in-secret
-      clientSecretPath: client-secret-key-in-secret
-      tokenURL: https://auth.example.com/token
-      scopes:
-        - read:metrics
-      endpointParams:
-        audience: prometheus
-      authStyle: dunno
-    tls:
-      enable: true
-      caCert:
-        type: secret # May be of type `secret`, `configmap` or `file`
-        name: prometheus-certs # In this case the k8s secret name
-        certPath: ca.crt # The key in the secret
-      userCert:
-        type: secret # May be of type `secret`, `configmap` or `file`
-        name: prometheus-certs
-        certPath: tls.crt
-        privateKeyPath: tls.key
-```
 
-> [!NOTE]
-> The `basicAuth` and `oauth` fields are mutually exclusive.
 
-## Examples
+PersesService defines service configuration for Perses
 
-### Simple Perses Installation
 
-```yaml
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: monitoring
----
-apiVersion: perses.dev/v1alpha1
-kind: Perses
-metadata:
-  name: perses
-  namespace: monitoring
-spec:
-  image: docker.io/perses/perses:v0.50.3
-  config:
-    database:
-      file:
-        folder: "/perses"
-        extension: "yaml"
-    ephemeral_dashboard:
-      enable: false
-      cleanup_interval: "1s"
-  containerPort: 8080
-```
 
-### Creating Datasources and Dashboards
+_Appears in:_
+- [PersesSpec](#persesspec)
 
-```yaml
-# Create a Prometheus datasource
-apiVersion: perses.dev/v1alpha1
-kind: PersesDatasource
-metadata:
-  name: prometheus-main
-  namespace: monitoring
-spec:
-  config:
-    display:
-      name: "Default Datasource"
-    default: true
-    plugin:
-      kind: "PrometheusDatasource"
-      spec:
-        directUrl: "https://prometheus.demo.prometheus.io"
----
-# Create a dashboard
-apiVersion: perses.dev/v1alpha1
-kind: PersesDashboard
-metadata:
-  name: perses-dashboard-sample
-  namespace: monitoring
-spec:
-  display:
-    name: perses-dashboard-sample
-  panels:
-    defaultTimeSeriesChart:
-      kind: Panel
-      spec:
-        display:
-          name: defaultTimeSeriesChart
-        plugin:
-          kind: TimeSeriesChart
-          spec: {}
-        queries:
-          - kind: TimeSeriesQuery
-            spec:
-              plugin:
-                kind: PrometheusTimeSeriesQuery
-                spec:
-                  query: up
-    seriesTest:
-      kind: Panel
-      spec:
-        display:
-          name: seriesTest
-        plugin:
-          kind: TimeSeriesChart
-          spec: {}
-        queries:
-          - kind: TimeSeriesQuery
-            spec:
-              plugin:
-                kind: PrometheusTimeSeriesQuery
-                spec:
-                  query: rate(caddy_http_response_duration_seconds_sum[$interval])
-  layouts:
-    - kind: Grid
-      spec:
-        display:
-          title: Panel Group
-          collapse:
-            open: true
-        items:
-          - x: 0
-            y: 0
-            width: 12
-            height: 6
-            content:
-              $ref: "#/spec/panels/defaultTimeSeriesChart"
-          - x: 12
-            y: 0
-            width: 12
-            height: 6
-            content:
-              $ref: "#/spec/panels/seriesTest"
-  variables:
-    - kind: ListVariable
-      spec:
-        name: interval
-        allowAllValue: false
-        allowMultiple: false
-        plugin:
-          kind: StaticListVariable
-          spec:
-            values:
-              - value: 1m
-                label: 1m
-              - value: 5m
-                label: 5m
-        defaultValue: 1m
-  duration: 1h
-```
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name of the Kubernetes service |  | Optional: \{\} <br /> |
+| `annotations` _object (keys:string, values:string)_ | Annotations attached to the service for non-identifying metadata |  | Optional: \{\} <br /> |
 
-## Troubleshooting
 
-### Common Issues
+#### PersesSpec
 
-1. **Connection issues with Perses server**:
 
-   - Check if the Perses deployment is running correctly
-   - Verify network policies allow access to the Perses service
 
-2. **Operator not processing CRs**:
+PersesSpec defines the desired state of Perses
 
-   - Check the operator logs for errors
-   - Verify that the correct CRDs are installed
 
-3. **Datasources not working**:
 
-   - Verify the datasource URL is accessible from the Perses pods
-   - Check that a proxy is correctly configured if needed
-   - Check credentials if authentication is required
-   - Look for errors in the Perses server logs
+_Appears in:_
+- [Perses](#perses)
 
-4. **Dashboards not appearing**:
-   - Check that the dashboard is created in the correct namespace
-   - Verify that referenced datasources exist and are accessible
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `metadata` _[Metadata](#metadata)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `client` _[Client](#client)_ | Perses client configuration |  | Optional: \{\} <br /> |
+| `config` _[PersesConfig](#persesconfig)_ | Perses server configuration |  |  |
+| `args` _string array_ | Args extra arguments to pass to perses |  |  |
+| `containerPort` _integer_ |  | 8080 | Maximum: 65535 <br />Minimum: 1 <br /> |
+| `replicas` _integer_ |  |  | Optional: \{\} <br /> |
+| `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core)_ | Resources defines the compute resources configured for the container. |  | Optional: \{\} <br /> |
+| `nodeSelector` _object (keys:string, values:string)_ | NodeSelector constrains pods to nodes with matching labels |  |  |
+| `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#toleration-v1-core) array_ |  |  |  |
+| `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#affinity-v1-core)_ |  |  | Optional: \{\} <br /> |
+| `image` _string_ | Image specifies the container image that should be used for the Perses deployment. |  | Optional: \{\} <br /> |
+| `service` _[PersesService](#persesservice)_ | service specifies the service configuration for the perses instance |  | Optional: \{\} <br /> |
+| `livenessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#probe-v1-core)_ |  |  | Optional: \{\} <br /> |
+| `readinessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#probe-v1-core)_ |  |  | Optional: \{\} <br /> |
+| `tls` _[TLS](#tls)_ | tls specifies the tls configuration for the perses instance |  | Optional: \{\} <br /> |
+| `storage` _[StorageConfiguration](#storageconfiguration)_ | Storage configuration used by the StatefulSet | \{ size:1Gi \} | Optional: \{\} <br /> |
+| `serviceAccountName` _string_ | ServiceAccountName is the name of the service account to use for the perses deployment or statefulset. |  | Optional: \{\} <br /> |
+| `podSecurityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#podsecuritycontext-v1-core)_ | PodSecurityContext holds pod-level security attributes and common container settings.<br />If not specified, defaults to fsGroup: 65534 to ensure proper volume permissions for the nobody user. |  | Optional: \{\} <br /> |
+| `logLevel` _string_ | LogLevel defines the log level for Perses. |  | Enum: [panic fatal error warning info debug trace] <br />Optional: \{\} <br /> |
+| `logMethodTrace` _boolean_ | LogMethodTrace when true, includes the calling method as a field in the log.<br />It can be useful to see immediately where the log comes from. |  | Optional: \{\} <br /> |
 
-For more detailed information or support, please visit the [Perses GitHub repository](https://github.com/perses/perses).
+
+#### PersesStatus
+
+
+
+PersesStatus defines the observed state of Perses
+
+
+
+_Appears in:_
+- [Perses](#perses)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#condition-v1-meta) array_ | Conditions represent the latest observations of the Perses resource state |  |  |
+
+
+#### SecretSource
+
+
+
+SecretSource configuration for a perses secret source
+
+
+
+_Appears in:_
+- [BasicAuth](#basicauth)
+- [Certificate](#certificate)
+- [OAuth](#oauth)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `type` _[SecretSourceType](#secretsourcetype)_ | Type source type of secret |  | Enum: [secret configmap file] <br />Required: \{\} <br /> |
+| `name` _string_ | Name of basic auth k8s resource (when type is secret or configmap) |  | Optional: \{\} <br /> |
+| `namespace` _string_ | Namespace of certificate k8s resource (when type is secret or configmap) |  | Optional: \{\} <br /> |
+
+
+#### SecretSourceType
+
+_Underlying type:_ _string_
+
+SecretSourceType types of secret sources in k8s
+
+
+
+_Appears in:_
+- [BasicAuth](#basicauth)
+- [Certificate](#certificate)
+- [OAuth](#oauth)
+- [SecretSource](#secretsource)
+
+| Field | Description |
+| --- | --- |
+| `secret` |  |
+| `configmap` |  |
+| `file` |  |
+
+
+#### StorageConfiguration
+
+
+
+StorageConfiguration is the configuration used to create and reconcile PVCs
+
+
+
+_Appears in:_
+- [PersesSpec](#persesspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `storageClass` _string_ | StorageClass to use for PVCs.<br />If not specified, will use the default storage class |  | Optional: \{\} <br /> |
+| `size` _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#quantity-resource-api)_ | Size of the storage.<br />cannot be decreased. |  | Optional: \{\} <br /> |
+
+
+#### TLS
+
+
+
+
+
+
+
+_Appears in:_
+- [Client](#client)
+- [PersesSpec](#persesspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `enable` _boolean_ | Enable TLS connection to perses |  |  |
+| `caCert` _[Certificate](#certificate)_ | CaCert to verify the perses certificate |  | Optional: \{\} <br /> |
+| `userCert` _[Certificate](#certificate)_ | UserCert client cert/key for mTLS |  | Optional: \{\} <br /> |
+| `insecureSkipVerify` _boolean_ | InsecureSkipVerify skip verify of perses certificate |  | Optional: \{\} <br /> |
+
+
