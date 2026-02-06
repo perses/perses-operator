@@ -7,6 +7,8 @@ import (
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 )
 
+// Datasource represents the Perses datasource configuration including
+// display metadata, default flag, and plugin-specific settings.
 type Datasource struct {
 	persesv1.DatasourceSpec `json:",inline"`
 }

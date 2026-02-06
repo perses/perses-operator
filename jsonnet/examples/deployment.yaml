@@ -46,7 +46,7 @@ spec:
       - args:
         - --leader-elect
         image: persesdev/perses-operator:v0.2.0
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: Always
         livenessProbe:
           httpGet:
             path: /healthz
