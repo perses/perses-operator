@@ -430,7 +430,7 @@ bundle: manifests kustomize operator-sdk ## Generate bundle manifests and metada
 
 .PHONY: bundle-check
 bundle-check: bundle
-	git diff --exit-code bundle config
+	git diff --exit-code bundle config jsonnet/generated jsonnet/examples
 
 .PHONY: bundle-build
 bundle-build: generate bundle ## Build the bundle image.
