@@ -28,11 +28,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/perses/perses-operator/api/v1alpha2"
 	"github.com/perses/perses-operator/internal/perses/common"
@@ -73,6 +76,7 @@ var log = logger.WithField("module", "perses_controller")
 // +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
 // +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch
 func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	perses := &v1alpha2.Perses{}
 	if err := r.Get(ctx, req.NamespacedName, perses); err != nil {
@@ -316,5 +320,51 @@ func (r *PersesReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Service{}).
+		// Watch for changes to Secrets referenced in TLS configuration
+		Watches(
+			&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(r.findPersesForTLSSecret),
+		).
 		Complete(r)
+}
+
+// findPersesForTLSSecret finds all Perses resources that reference the given Secret
+// in their TLS configuration and returns reconcile requests for them.
+func (r *PersesReconciler) findPersesForTLSSecret(ctx context.Context, obj client.Object) []reconcile.Request {
+	secret := obj.(*corev1.Secret)
+	var requests []reconcile.Request
+
+	// List all Perses resources
+	persesList := &v1alpha2.PersesList{}
+	if err := r.List(ctx, persesList); err != nil {
+		log.WithError(err).Error("Failed to list Perses resources for secret watch")
+		return nil
+	}
+
+	secretRef := types.NamespacedName{
+		Namespace: secret.Namespace,
+		Name:      secret.Name,
+	}
+
+	for _, perses := range persesList.Items {
+		tlsRefs := common.GetTLSSecretReferences(&perses)
+		for _, ref := range tlsRefs {
+			if ref == secretRef {
+				requests = append(requests, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: perses.Namespace,
+						Name:      perses.Name,
+					},
+				})
+				break
+			}
+		}
+	}
+
+	if len(requests) > 0 {
+		log.WithField("secret", secretRef).WithField("count", len(requests)).
+			Info("Secret changed, triggering reconciliation for Perses resources")
+	}
+
+	return requests
 }

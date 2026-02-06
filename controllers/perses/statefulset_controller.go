@@ -71,7 +71,7 @@ func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Re
 			return subreconciler.RequeueWithError(err)
 		}
 
-		sts, err := r.createPersesStatefulSet(perses)
+		sts, err := r.createPersesStatefulSet(ctx, perses)
 		if err != nil {
 			stlog.WithError(err).Error("Failed to define new StatefulSet resource for perses")
 
@@ -96,7 +96,7 @@ func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Re
 		return subreconciler.RequeueWithDelay(time.Minute)
 	}
 
-	sts, err := r.createPersesStatefulSet(perses)
+	sts, err := r.createPersesStatefulSet(ctx, perses)
 	if err != nil {
 		stlog.WithError(err).Error("Failed to define new StatefulSet resource for perses")
 		return subreconciler.RequeueWithError(err)
@@ -119,13 +119,22 @@ func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Re
 }
 
 func (r *PersesReconciler) createPersesStatefulSet(
-	perses *v1alpha2.Perses) (*appsv1.StatefulSet, error) {
+	ctx context.Context, perses *v1alpha2.Perses) (*appsv1.StatefulSet, error) {
 
 	ls := common.LabelsForPerses(perses.Name, perses)
 
 	annotations := map[string]string{}
 	if perses.Spec.Metadata != nil && perses.Spec.Metadata.Annotations != nil {
-		annotations = perses.Spec.Metadata.Annotations
+		for k, v := range perses.Spec.Metadata.Annotations {
+			annotations[k] = v
+		}
+	}
+
+	tlsChecksum, err := common.ComputeTLSCertificateChecksum(ctx, r.Client, perses)
+	if err != nil {
+		stlog.WithError(err).Warn("Failed to compute TLS certificate checksum, continuing without it")
+	} else if tlsChecksum != "" {
+		annotations[common.TLSCertificateChecksumAnnotation] = tlsChecksum
 	}
 
 	// Get the Operand image
