@@ -7,6 +7,8 @@ import (
 	"github.com/perses/perses/pkg/model/api/config"
 )
 
+// PersesConfig represents the Perses server configuration including
+// API, security, database, provisioning, and plugin settings.
 type PersesConfig struct {
 	config.Config `json:",inline"`
 }

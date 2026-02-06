@@ -380,8 +380,10 @@
                 "type": "object"
               },
               "spec": {
+                "description": "DatasourceSpec defines the desired state of a Perses datasource",
                 "properties": {
                   "client": {
+                    "description": "Client authentication and TLS configuration for the datasource",
                     "properties": {
                       "basicAuth": {
                         "description": "BasicAuth basic auth config for perses client",
@@ -588,6 +590,7 @@
                     "type": "object"
                   },
                   "config": {
+                    "description": "Perses datasource configuration",
                     "properties": {
                       "default": {
                         "type": "boolean"
@@ -627,7 +630,7 @@
                     "type": "object"
                   },
                   "instanceSelector": {
-                    "description": "A label selector is a label query over a set of resources. The result of matchLabels and\nmatchExpressions are ANDed. An empty label selector matches all objects. A null\nlabel selector matches no objects.",
+                    "description": "InstanceSelector selects Perses instances where this datasource will be created",
                     "properties": {
                       "matchExpressions": {
                         "description": "matchExpressions is a list of label selector requirements. The requirements are ANDed.",
@@ -681,6 +684,7 @@
                 "description": "PersesDatasourceStatus defines the observed state of PersesDatasource",
                 "properties": {
                   "conditions": {
+                    "description": "Conditions represent the latest observations of the PersesDatasource resource state",
                     "items": {
                       "description": "Condition contains details for one aspect of the current state of this API Resource.",
                       "properties": {

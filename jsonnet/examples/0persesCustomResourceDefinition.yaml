@@ -3664,6 +3664,7 @@ spec:
                     type: object
                 type: object
               config:
+                description: Perses server configuration
                 properties:
                   api_prefix:
                     description: Use it in case you want to prefix the API path.
@@ -4839,15 +4840,18 @@ spec:
                   annotations:
                     additionalProperties:
                       type: string
+                    description: Annotations are key/value pairs attached to pods for non-identifying metadata
                     type: object
                   labels:
                     additionalProperties:
                       type: string
+                    description: Labels are key/value pairs attached to pods
                     type: object
                 type: object
               nodeSelector:
                 additionalProperties:
                   type: string
+                description: NodeSelector constrains pods to nodes with matching labels
                 type: object
               podSecurityContext:
                 description: |-
@@ -5295,8 +5299,10 @@ spec:
                   annotations:
                     additionalProperties:
                       type: string
+                    description: Annotations attached to the service for non-identifying metadata
                     type: object
                   name:
+                    description: Name of the Kubernetes service
                     type: string
                 type: object
               serviceAccountName:
@@ -5431,6 +5437,7 @@ spec:
             description: PersesStatus defines the observed state of Perses
             properties:
               conditions:
+                description: Conditions represent the latest observations of the Perses resource state
                 items:
                   description: Condition contains details for one aspect of the current state of this API Resource.
                   properties:
