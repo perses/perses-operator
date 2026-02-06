@@ -63,8 +63,8 @@ var _ = Describe("API Validation", func() {
 			Expect(errors.IsInvalid(err)).To(BeTrue())
 		})
 
-		It("should reject BasicAuth with empty password_path", func() {
-			By("Creating a Perses resource with empty BasicAuth password_path")
+		It("should reject BasicAuth with empty passwordPath", func() {
+			By("Creating a Perses resource with empty BasicAuth passwordPath")
 			perses := &persesv1alpha2.Perses{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "invalid-basicauth-no-password",

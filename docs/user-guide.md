@@ -283,7 +283,7 @@ spec:
       name: k8s-basicauth-secret-name
       namespace: optional-namespacename # if the secret resides in another namespace
       username: "actual-username"
-      password_path: "password-key-in-secret" # or an actual path if type is `file`
+      passwordPath: "password-key-in-secret" # or an actual path if type is `file`
     oauth:
       type: secret
       name: k8s-oauth-secret-name

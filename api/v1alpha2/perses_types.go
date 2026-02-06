@@ -159,7 +159,7 @@ type BasicAuth struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:validation:MinLength=1
 	// Path to password
-	PasswordPath string `json:"password_path"`
+	PasswordPath string `json:"passwordPath"`
 }
 
 type OAuth struct {

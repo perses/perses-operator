@@ -8,6 +8,12 @@ import (
 )
 
 // ConvertTo converts PersesDatasource (v1alpha1) to the Hub version (v1alpha2)
+//
+// NOTE: BasicAuth.PasswordPath uses different JSON field names between versions:
+//   - v1alpha1: "password_path" (snake_case for backward compatibility)
+//   - v1alpha2: "passwordPath" (camelCase per Kubernetes conventions)
+//
+// The conversion is handled automatically since the Go field name is identical.
 func (src *PersesDatasource) ConvertTo(dstRaw conv.Hub) error {
 	dst := dstRaw.(*v1alpha2.PersesDatasource)
 
