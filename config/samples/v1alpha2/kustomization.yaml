@@ -1,0 +1,6 @@
+## v1alpha2 API samples (current version)
+resources:
+  - perses.yaml
+  - persesdashboard.yaml
+  - persesdatasource.yaml
+  - persesglobaldatasource.yaml
