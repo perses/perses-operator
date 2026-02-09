@@ -64,7 +64,7 @@ kubectl -n perses-dev port-forward svc/perses-sample 8080:8080
 To delete the CRDs from the cluster:
 
 ```sh
-make uninstall
+make uninstall-crds
 ```
 
 ### Undeploy controller
@@ -78,6 +78,7 @@ make undeploy
 ## Docs
 
 - [API Docs](docs/api.md)
+- [Metrics Documentation](docs/metrics.md)
 - [Developer Docs](docs/dev.md)
 - Sample CRDs
   - [Kubernetes](config/samples)

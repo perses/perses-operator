@@ -31,6 +31,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
@@ -40,6 +41,7 @@ import (
 	datasourcecontroller "github.com/perses/perses-operator/controllers/datasources"
 	globaldatasourcecontroller "github.com/perses/perses-operator/controllers/globaldatasources"
 	persescontroller "github.com/perses/perses-operator/controllers/perses"
+	operatormetrics "github.com/perses/perses-operator/internal/metrics"
 	"github.com/perses/perses-operator/internal/perses/common"
 	//+kubebuilder:scaffold:imports
 )
@@ -125,9 +127,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Initialize operator metrics
+	setupLog.Info("initializing operator metrics")
+	opMetrics := operatormetrics.NewMetrics()
+	reconciliationTracker := operatormetrics.NewReconciliationTracker(ctrlmetrics.Registry)
+
 	if err = (&persescontroller.PersesReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:                mgr.GetClient(),
+		Scheme:                mgr.GetScheme(),
+		Metrics:               opMetrics,
+		ReconciliationTracker: reconciliationTracker,
 		Config: persescontroller.Config{
 			PersesImage: persesImage,
 		},
@@ -137,27 +146,33 @@ func main() {
 	}
 
 	if err = (&dashboardcontroller.PersesDashboardReconciler{
-		Client:        mgr.GetClient(),
-		Scheme:        mgr.GetScheme(),
-		ClientFactory: common.NewWithConfig(),
+		Client:                mgr.GetClient(),
+		Scheme:                mgr.GetScheme(),
+		Metrics:               opMetrics,
+		ReconciliationTracker: reconciliationTracker,
+		ClientFactory:         common.NewWithConfig(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PersesDashboard")
 		os.Exit(1)
 	}
 
 	if err = (&datasourcecontroller.PersesDatasourceReconciler{
-		Client:        mgr.GetClient(),
-		Scheme:        mgr.GetScheme(),
-		ClientFactory: common.NewWithConfig(),
+		Client:                mgr.GetClient(),
+		Scheme:                mgr.GetScheme(),
+		Metrics:               opMetrics,
+		ReconciliationTracker: reconciliationTracker,
+		ClientFactory:         common.NewWithConfig(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PersesDatasource")
 		os.Exit(1)
 	}
 
 	if err = (&globaldatasourcecontroller.PersesGlobalDatasourceReconciler{
-		Client:        mgr.GetClient(),
-		Scheme:        mgr.GetScheme(),
-		ClientFactory: common.NewWithConfig(),
+		Client:                mgr.GetClient(),
+		Scheme:                mgr.GetScheme(),
+		Metrics:               opMetrics,
+		ReconciliationTracker: reconciliationTracker,
+		ClientFactory:         common.NewWithConfig(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PersesGlobalDatasource")
 		os.Exit(1)
@@ -189,6 +204,9 @@ func main() {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
 	}
+
+	// Mark operator as ready
+	opMetrics.Ready().Set(1)
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

@@ -19,6 +19,7 @@ package dashboards
 import (
 	"context"
 	"fmt"
+	"time"
 
 	logger "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -32,6 +33,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
+	operatormetrics "github.com/perses/perses-operator/internal/metrics"
 	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
 )
@@ -52,9 +54,11 @@ func dashboardFromContext(ctx context.Context) (*persesv1alpha2.PersesDashboard,
 // PersesDashboardReconciler reconciles a PersesDashboard object
 type PersesDashboardReconciler struct {
 	client.Client
-	Scheme        *runtime.Scheme
-	Recorder      record.EventRecorder
-	ClientFactory common.PersesClientFactory
+	Scheme                *runtime.Scheme
+	Recorder              record.EventRecorder
+	ClientFactory         common.PersesClientFactory
+	Metrics               *operatormetrics.Metrics
+	ReconciliationTracker *operatormetrics.ReconciliationTracker
 }
 
 var log = logger.WithField("module", "perses_dashboards_controller")
@@ -63,6 +67,9 @@ var log = logger.WithField("module", "perses_dashboards_controller")
 // +kubebuilder:rbac:groups=perses.dev,resources=persesdashboards/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=perses.dev,resources=persesdashboards/finalizers,verbs=update
 func (r *PersesDashboardReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	start := time.Now()
+	objKey := req.String()
+
 	log.Infof("Reconciling PersesDashboard: %s/%s", req.Namespace, req.Name)
 
 	// Find once and store in context for all sub-reconcilers, handle deletion if not found
@@ -70,9 +77,15 @@ func (r *PersesDashboardReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	if err := r.Get(ctx, req.NamespacedName, dashboard); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Infof("perses dashboard resource not found. Deleting '%s' in '%s'", req.Name, req.Namespace)
+			if r.ReconciliationTracker != nil {
+				r.ReconciliationTracker.ForgetObject(objKey)
+			}
 			return subreconciler.Evaluate(r.deleteDashboardInAllInstances(ctx, req, req.Namespace, req.Name))
 		}
 		log.WithError(err).Error("Failed to get perses dashboard")
+		if r.Metrics != nil {
+			r.Metrics.ReconcileErrors("persesdashboard", "get_failed").Inc()
+		}
 		return subreconciler.Evaluate(subreconciler.RequeueWithError(err))
 	}
 
@@ -84,12 +97,37 @@ func (r *PersesDashboardReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		r.setStatusToComplete,
 	}
 
+	var reconcileErr error
 	for _, f := range subreconcilersForPerses {
 		if r, err := f(ctx, req); subreconciler.ShouldHaltOrRequeue(r, err) {
-			return subreconciler.Evaluate(r, err)
+			reconcileErr = err
+			break
 		}
 	}
 
+	// Track reconciliation status
+	if r.ReconciliationTracker != nil {
+		r.ReconciliationTracker.SetStatus(objKey, reconcileErr)
+		if reconcileErr == nil {
+			r.ReconciliationTracker.SetReasonAndMessage(objKey, "ReconciliationSuccessful", "Dashboard reconciled successfully")
+		}
+	}
+
+	// Track metrics
+	if r.Metrics != nil {
+		if reconcileErr != nil {
+			r.Metrics.ReconcileErrors("persesdashboard", "reconciliation_failed").Inc()
+			r.Metrics.SetFailedResources(objKey, "dashboard", 1)
+		} else {
+			r.Metrics.SetSyncedResources(objKey, "dashboard", 1)
+		}
+	}
+
+	if reconcileErr != nil {
+		return subreconciler.Evaluate(subreconciler.RequeueWithError(reconcileErr))
+	}
+
+	log.WithField("duration", time.Since(start)).Debug("dashboard reconciliation completed")
 	return subreconciler.Evaluate(subreconciler.DoNotRequeue())
 }
 

@@ -26,3 +26,5 @@ jobs:
           enable_go: true
       - name: check API docs are up-to-date
         run: make check-api-docs
+      - name: check metrics docs are up-to-date
+        run: make check-metrics-docs
