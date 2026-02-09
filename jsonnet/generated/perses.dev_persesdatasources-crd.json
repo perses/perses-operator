@@ -396,7 +396,7 @@
                             "description": "Namespace of certificate k8s resource (when type is secret or configmap)",
                             "type": "string"
                           },
-                          "password_path": {
+                          "passwordPath": {
                             "description": "Path to password",
                             "minLength": 1,
                             "type": "string"
@@ -417,7 +417,7 @@
                           }
                         },
                         "required": [
-                          "password_path",
+                          "passwordPath",
                           "type",
                           "username"
                         ],

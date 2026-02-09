@@ -33,7 +33,7 @@ _Appears in:_
 | `name` _string_ | Name of basic auth k8s resource (when type is secret or configmap) |  | Optional: \{\} <br /> |
 | `namespace` _string_ | Namespace of certificate k8s resource (when type is secret or configmap) |  | Optional: \{\} <br /> |
 | `username` _string_ | Username for basic auth |  | MinLength: 1 <br />Required: \{\} <br /> |
-| `password_path` _string_ | Path to password |  | MinLength: 1 <br />Required: \{\} <br /> |
+| `passwordPath` _string_ | Path to password |  | MinLength: 1 <br />Required: \{\} <br /> |
 
 
 #### Certificate
