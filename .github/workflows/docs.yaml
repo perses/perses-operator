@@ -8,6 +8,7 @@ on:
     tags:
       - v*
   pull_request:
+  merge_group:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,7 +16,7 @@ concurrency:
 
 jobs:
   check-api-docs:
-    name: "check API docs are up-to-date"
+    name: 'check API docs are up-to-date'
     runs-on: ubuntu-latest
     steps:
       - name: checkout

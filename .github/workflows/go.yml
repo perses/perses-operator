@@ -8,6 +8,7 @@ on:
     tags:
       - v*
   pull_request:
+  merge_group:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,7 +16,7 @@ concurrency:
 
 jobs:
   gofmt:
-    name: "check code format"
+    name: 'check code format'
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -29,7 +30,7 @@ jobs:
       - name: check go.mod
         run: make checkunused
   test:
-    name: "tests"
+    name: 'tests'
     runs-on: ubuntu-latest
     steps:
       - name: checkout
