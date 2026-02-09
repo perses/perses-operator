@@ -1,0 +1,201 @@
+## Makefile.tools
+## This file contains all tool installation targets and version definitions.
+## It is included by the main Makefile and serves as the single source of truth for tool versions.
+##
+##
+## Usage:
+##   make build-tools     - Install all tools
+##   make controller-gen  - Install a specific tool
+##   make clean-tools     - Remove all installed tools
+##   make validate-tools  - Verify all tools are working
+
+SHELL=/usr/bin/env bash -o pipefail
+
+## Tools Configuration
+
+## Location to install dependencies to
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
+## Tool Binaries
+KUSTOMIZE = $(LOCALBIN)/kustomize
+KUSTOMIZE_VERSION = v3.8.7
+
+CONTROLLER_GEN = $(LOCALBIN)/controller-gen
+CONTROLLER_TOOLS_VERSION = v0.19.0
+
+GOJSONTOYAML_BINARY = $(LOCALBIN)/gojsontoyaml
+GOJSONTOYAML_VERSION = v0.1.0
+
+ENVTEST = $(LOCALBIN)/setup-envtest
+ENVTEST_VERSION = release-0.19  # Version of setup-envtest binary
+ENVTEST_K8S_VERSION = 1.31.0    # Kubernetes version for test assets
+
+JSONNET_BINARY = $(LOCALBIN)/jsonnet
+JSONNET_VERSION = v0.21.0
+
+JSONNETFMT_BINARY = $(LOCALBIN)/jsonnetfmt
+JSONNETFMT_VERSION = v0.21.0
+
+JSONNETLINT_BINARY = $(LOCALBIN)/jsonnet-lint
+JSONNETLINT_VERSION = v0.21.0
+
+CONVERSION_GEN = $(LOCALBIN)/conversion-gen
+CONVERSION_GEN_VERSION = v0.33.0
+
+YQ = $(LOCALBIN)/yq
+YQ_VERSION = v4.45.4
+
+CRD_REF_DOCS = $(LOCALBIN)/crd-ref-docs
+CRD_REF_DOCS_VERSION = v0.3.0
+
+OPERATOR_SDK = $(LOCALBIN)/operator-sdk
+OPERATOR_SDK_VERSION = v1.42.0
+
+OPM = $(LOCALBIN)/opm
+OPM_VERSION = v1.23.0
+
+## Kustomize - uses custom install script
+KUSTOMIZE_INSTALL_SCRIPT = https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh
+.PHONY: kustomize
+$(KUSTOMIZE) kustomize: $(LOCALBIN) ## Install kustomize locally if necessary.
+	@{ \
+		set -ex ;\
+		[[ -f $(KUSTOMIZE) ]] && exit 0 ;\
+		curl -Ss $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s -- $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN) ;\
+	}
+
+## Go-based tools - use go install
+.PHONY: controller-gen
+$(CONTROLLER_GEN) controller-gen: $(LOCALBIN) ## Install controller-gen locally if necessary.
+	@{ \
+		set -ex ;\
+		[[ -f $(CONTROLLER_GEN) ]] && exit 0 ;\
+		GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION) ;\
+	}
+
+.PHONY: gojsontoyaml
+$(GOJSONTOYAML_BINARY) gojsontoyaml: $(LOCALBIN) ## Install gojsontoyaml locally if necessary.
+	@{ \
+		set -ex ;\
+		[[ -f $(GOJSONTOYAML_BINARY) ]] && exit 0 ;\
+		GOBIN=$(LOCALBIN) go install github.com/brancz/gojsontoyaml@$(GOJSONTOYAML_VERSION) ;\
+	}
+
+.PHONY: jsonnet
+$(JSONNET_BINARY) jsonnet: $(LOCALBIN) ## Install jsonnet locally if necessary.
+	@{ \
+		set -ex ;\
+		[[ -f $(JSONNET_BINARY) ]] && exit 0 ;\
+		GOBIN=$(LOCALBIN) go install github.com/google/go-jsonnet/cmd/jsonnet@$(JSONNET_VERSION) ;\
+	}
+
+.PHONY: jsonnetfmt
+$(JSONNETFMT_BINARY) jsonnetfmt: $(LOCALBIN) ## Install jsonnetfmt locally if necessary.
+	@{ \
+		set -ex ;\
+		[[ -f $(JSONNETFMT_BINARY) ]] && exit 0 ;\
+		GOBIN=$(LOCALBIN) go install github.com/google/go-jsonnet/cmd/jsonnetfmt@$(JSONNETFMT_VERSION) ;\
+	}
+
+.PHONY: jsonnet-lint
+$(JSONNETLINT_BINARY) jsonnet-lint: $(LOCALBIN) ## Install jsonnet-lint locally if necessary.
+	@{ \
+		set -ex ;\
+		[[ -f $(JSONNETLINT_BINARY) ]] && exit 0 ;\
+		GOBIN=$(LOCALBIN) go install github.com/google/go-jsonnet/cmd/jsonnet-lint@$(JSONNETLINT_VERSION) ;\
+	}
+
+.PHONY: conversion-gen
+$(CONVERSION_GEN) conversion-gen: $(LOCALBIN) ## Install conversion-gen locally if necessary.
+	@{ \
+		set -ex ;\
+		[[ -f $(CONVERSION_GEN) ]] && exit 0 ;\
+		GOBIN=$(LOCALBIN) go install k8s.io/code-generator/cmd/conversion-gen@$(CONVERSION_GEN_VERSION) ;\
+	}
+
+.PHONY: yq
+$(YQ) yq: $(LOCALBIN) ## Install yq locally if necessary.
+	@{ \
+		set -ex ;\
+		[[ -f $(YQ) ]] && exit 0 ;\
+		GOBIN=$(LOCALBIN) go install github.com/mikefarah/yq/v4@$(YQ_VERSION) ;\
+	}
+
+.PHONY: crd-ref-docs
+$(CRD_REF_DOCS) crd-ref-docs: $(LOCALBIN) ## Install crd-ref-docs locally if necessary.
+	@{ \
+		set -ex ;\
+		[[ -f $(CRD_REF_DOCS) ]] && exit 0 ;\
+		GOBIN=$(LOCALBIN) go install github.com/elastic/crd-ref-docs@$(CRD_REF_DOCS_VERSION) ;\
+	}
+
+.PHONY: envtest
+$(ENVTEST) envtest: $(LOCALBIN) ## Install setup-envtest locally if necessary.
+	@{ \
+		set -ex ;\
+		[[ -f $(ENVTEST) ]] && exit 0 ;\
+		GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(ENVTEST_VERSION) ;\
+	}
+
+.PHONY: operator-sdk
+$(OPERATOR_SDK) operator-sdk: $(LOCALBIN) ## Install operator-sdk locally if necessary.
+	@{ \
+		set -ex ;\
+		[[ -f $(OPERATOR_SDK) ]] && \
+		[[ "$$($(OPERATOR_SDK) version | awk '{print $$3}' | tr -d ,)" == $(OPERATOR_SDK_VERSION) ]] && { \
+			echo "operator-sdk up to date" ;\
+			exit 0 ;\
+		} ;\
+		OS=$$(go env GOOS) && ARCH=$$(go env GOARCH) && \
+		curl -sSLo $(OPERATOR_SDK) https://github.com/operator-framework/operator-sdk/releases/download/$(OPERATOR_SDK_VERSION)/operator-sdk_$${OS}_$${ARCH} ;\
+		chmod +x $(OPERATOR_SDK) ;\
+	}
+
+.PHONY: opm
+$(OPM) opm: $(LOCALBIN) ## Install opm locally if necessary.
+	@{ \
+		set -ex ;\
+		[[ -f $(OPM) ]] && exit 0 ;\
+		OS=$$(go env GOOS) && ARCH=$$(go env GOARCH) && \
+		curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/$(OPM_VERSION)/$${OS}-$${ARCH}-opm ;\
+		chmod +x $(OPM) ;\
+	}
+
+.PHONY: build-tools
+build-tools: ## Install all tools.
+build-tools: $(KUSTOMIZE) \
+		$(CONTROLLER_GEN) \
+		$(GOJSONTOYAML_BINARY) \
+		$(JSONNET_BINARY) \
+		$(JSONNETFMT_BINARY) \
+		$(JSONNETLINT_BINARY) \
+		$(CONVERSION_GEN) \
+		$(YQ) \
+		$(CRD_REF_DOCS) \
+		$(ENVTEST) \
+		$(OPERATOR_SDK) \
+		$(OPM)
+
+
+.PHONY: clean-tools
+clean-tools: ## Remove all installed tools.
+	rm -rf $(LOCALBIN)
+
+.PHONY: validate-tools
+validate-tools: build-tools ## Validate that all tools are installed and working.
+	@echo "Validating tools..."
+	@echo -n "  kustomize: " && $(KUSTOMIZE) version | head -n 1
+	@echo -n "  controller-gen: " && $(CONTROLLER_GEN) --version 2>&1 | head -n 1
+	@echo -n "  gojsontoyaml: " && [ -x $(GOJSONTOYAML_BINARY) ] && echo "installed" || echo "missing"
+	@echo -n "  jsonnet: " && $(JSONNET_BINARY) --version 2>&1 | head -n 1
+	@echo -n "  jsonnetfmt: " && $(JSONNETFMT_BINARY) --version 2>&1 | head -n 1
+	@echo -n "  jsonnet-lint: " && $(JSONNETLINT_BINARY) --version 2>&1 | head -n 1
+	@echo -n "  conversion-gen: " && [ -x $(CONVERSION_GEN) ] && echo "installed" || echo "missing"
+	@echo -n "  yq: " && $(YQ) --version 2>&1 | head -n 1
+	@echo -n "  crd-ref-docs: " && $(CRD_REF_DOCS) --version 2>&1 | head -n 1
+	@echo -n "  setup-envtest: " && [ -x $(ENVTEST) ] && echo "installed" || echo "missing"
+	@echo -n "  operator-sdk: " && $(OPERATOR_SDK) version 2>&1 | head -n 1
+	@echo -n "  opm: " && $(OPM) version 2>&1 | head -n 1
+	@echo "✅ All tools validated successfully!"
