@@ -4,13 +4,11 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
-	persescontroller "github.com/perses/perses-operator/controllers/perses"
-	"github.com/perses/perses-operator/internal/perses/common"
 	persesconfig "github.com/perses/perses/pkg/model/api/config"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -19,6 +17,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
+	persescontroller "github.com/perses/perses-operator/controllers/perses"
+	"github.com/perses/perses-operator/internal/perses/common"
 )
 
 var _ = Describe("Perses controller", func() {
@@ -66,8 +68,13 @@ var _ = Describe("Perses controller", func() {
 						},
 						ServiceAccountName: "perses-service-account",
 						Replicas:           &replicas,
-						ContainerPort:      8080,
-						Image:              persesImage,
+						Resources: &corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceMemory: resource.MustParse("128Mi"),
+							},
+						},
+						ContainerPort: 8080,
+						Image:         persesImage,
 						Service: &persesv1alpha2.PersesService{
 							Name: persesServiceName,
 							Annotations: map[string]string{
@@ -103,6 +110,7 @@ var _ = Describe("Perses controller", func() {
 			}
 
 			// Errors might arise during reconciliation, but we are checking the final state of the resources
+			//nolint:ineffassign
 			_, err = persesReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: typeNamespaceName,
 			})
@@ -184,6 +192,10 @@ var _ = Describe("Perses controller", func() {
 						if value != PersesName {
 							return fmt.Errorf("The label in the StatefulSet is not the one defined in the custom resource")
 						}
+					}
+					if found.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().String() != "128Mi" {
+						return fmt.Errorf("The resources requests in the StatefulSet is not the one defined in the custom resource")
+
 					}
 				}
 
@@ -383,6 +395,89 @@ var _ = Describe("Perses controller", func() {
 				}
 				return nil
 			}, time.Minute, time.Second).Should(Succeed())
+		})
+
+		It("should successfully delete Perses and remove the finalizer", func() {
+			PersesDeleteName := "perses-delete-test"
+			typeNamespaceName := types.NamespacedName{Name: PersesDeleteName, Namespace: persesNamespace}
+
+			By("Creating the custom resource for the Kind Perses")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      PersesDeleteName,
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					Image: persesImage,
+					Config: persesv1alpha2.PersesConfig{
+						Config: persesconfig.Config{
+							Database: persesconfig.Database{
+								File: &persesconfig.File{
+									Folder: "/etc/perses/storage",
+								},
+							},
+						},
+					},
+				},
+			}
+			err := k8sClient.Create(ctx, perses)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Checking if the custom resource was successfully created")
+			Eventually(func() error {
+				found := &persesv1alpha2.Perses{}
+				return k8sClient.Get(ctx, typeNamespaceName, found)
+			}, time.Minute, time.Second).Should(Succeed())
+
+			persesReconciler := &persescontroller.PersesReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+
+			By("Reconciling to add the finalizer")
+			// First reconcile sets status to unknown
+			_, err = persesReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespaceName,
+			})
+			Expect(err).To(Not(HaveOccurred()))
+
+			// Second reconcile adds the finalizer and creates resources
+			_, err = persesReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespaceName,
+			})
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Checking if the finalizer was added")
+			Eventually(func() bool {
+				found := &persesv1alpha2.Perses{}
+				err := k8sClient.Get(ctx, typeNamespaceName, found)
+				if err != nil {
+					return false
+				}
+				return slices.Contains(found.Finalizers, common.PersesFinalizer)
+			}, time.Minute, time.Second).Should(BeTrue())
+
+			By("Deleting the custom resource")
+			persesToDelete := &persesv1alpha2.Perses{}
+			err = k8sClient.Get(ctx, typeNamespaceName, persesToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+			err = k8sClient.Delete(ctx, persesToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Reconciling after deletion to trigger finalizer removal")
+			//nolint:staticcheck,ineffassign
+			_, err = persesReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespaceName,
+			})
+			// Error is expected if the resource is already gone, or nil if handleDelete succeeded
+			// We just care that the reconcile doesn't panic
+
+			By("Checking if the Perses resource was fully deleted (finalizer removed)")
+			Eventually(func() bool {
+				found := &persesv1alpha2.Perses{}
+				err := k8sClient.Get(ctx, typeNamespaceName, found)
+				return errors.IsNotFound(err)
+			}, time.Minute, time.Second).Should(BeTrue(), "Perses resource should be deleted after finalizer removal")
 		})
 	})
 })

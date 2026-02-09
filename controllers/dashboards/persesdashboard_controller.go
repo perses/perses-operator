@@ -25,6 +25,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -34,6 +35,19 @@ import (
 	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
 )
+
+type dashboardContextKey string
+
+const contextKey dashboardContextKey = "dashboard"
+
+func withDashboard(ctx context.Context, db *persesv1alpha2.PersesDashboard) context.Context {
+	return context.WithValue(ctx, contextKey, db)
+}
+
+func dashboardFromContext(ctx context.Context) (*persesv1alpha2.PersesDashboard, bool) {
+	db, ok := ctx.Value(contextKey).(*persesv1alpha2.PersesDashboard)
+	return db, ok
+}
 
 // PersesDashboardReconciler reconciles a PersesDashboard object
 type PersesDashboardReconciler struct {
@@ -50,8 +64,21 @@ var log = logger.WithField("module", "perses_dashboards_controller")
 // +kubebuilder:rbac:groups=perses.dev,resources=persesdashboards/finalizers,verbs=update
 func (r *PersesDashboardReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log.Infof("Reconciling PersesDashboard: %s/%s", req.Namespace, req.Name)
+
+	// Find once and store in context for all sub-reconcilers, handle deletion if not found
+	dashboard := &persesv1alpha2.PersesDashboard{}
+	if err := r.Get(ctx, req.NamespacedName, dashboard); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Infof("perses dashboard resource not found. Deleting '%s' in '%s'", req.Name, req.Namespace)
+			return subreconciler.Evaluate(r.deleteDashboardInAllInstances(ctx, req, req.Namespace, req.Name))
+		}
+		log.WithError(err).Error("Failed to get perses dashboard")
+		return subreconciler.Evaluate(subreconciler.RequeueWithError(err))
+	}
+
+	ctx = withDashboard(ctx, dashboard)
+
 	subreconcilersForPerses := []subreconciler.FnWithRequest{
-		r.handleDelete,
 		r.setStatusToUnknown,
 		r.reconcileDashboardInAllInstances,
 		r.setStatusToComplete,
@@ -66,71 +93,54 @@ func (r *PersesDashboardReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return subreconciler.Evaluate(subreconciler.DoNotRequeue())
 }
 
-func (r *PersesDashboardReconciler) getLatestPersesDashboard(ctx context.Context, req ctrl.Request, dashboard *persesv1alpha2.PersesDashboard) (*ctrl.Result, error) {
-	if err := r.Get(ctx, req.NamespacedName, dashboard); err != nil {
+func (r *PersesDashboardReconciler) updateDashboardStatus(
+	ctx context.Context,
+	req ctrl.Request,
+	updateFn func(*persesv1alpha2.PersesDashboard),
+) (*ctrl.Result, error) {
+	_, ok := dashboardFromContext(ctx)
+	if !ok {
+		log.Error("dashboard not found in context")
+		return subreconciler.RequeueWithError(fmt.Errorf("dashboard not found in context"))
+	}
+
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		fresh := &persesv1alpha2.PersesDashboard{}
+		if err := r.Get(ctx, req.NamespacedName, fresh); err != nil {
+			return err
+		}
+		updateFn(fresh)
+		return r.Status().Update(ctx, fresh)
+	})
+
+	if err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("perses dashboard resource not found. Ignoring since object must be deleted")
 			return subreconciler.DoNotRequeue()
 		}
-		log.WithError(err).Error("Failed to get perses dashboard")
+		log.WithError(err).Error("Failed to update Perses dashboard status")
 		return subreconciler.RequeueWithError(err)
-	}
-
-	return subreconciler.ContinueReconciling()
-}
-
-func (r *PersesDashboardReconciler) handleDelete(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	dashboard := &persesv1alpha2.PersesDashboard{}
-
-	if err := r.Get(ctx, req.NamespacedName, dashboard); err != nil {
-		if !apierrors.IsNotFound(err) {
-			log.WithError(err).Error("Failed to get perses dashboard")
-			return subreconciler.RequeueWithError(err)
-		}
-
-		log.Infof("perses dashboard resource not found. Deleting '%s' in '%s'", req.Name, req.Namespace)
-
-		return r.deleteDashboardInAllInstances(ctx, req, req.Namespace, req.Name)
 	}
 
 	return subreconciler.ContinueReconciling()
 }
 
 func (r *PersesDashboardReconciler) setStatusToUnknown(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	dashboard := &persesv1alpha2.PersesDashboard{}
-
-	if r, err := r.getLatestPersesDashboard(ctx, req, dashboard); subreconciler.ShouldHaltOrRequeue(r, err) {
-		return r, err
-	}
-
-	if len(dashboard.Status.Conditions) == 0 {
-		meta.SetStatusCondition(&dashboard.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses, Status: metav1.ConditionUnknown, Reason: "Reconciling", Message: "Starting reconciliation"})
-		if err := r.Status().Update(ctx, dashboard); err != nil {
-			log.WithError(err).Error("Failed to update Perses dashboard status")
-			return subreconciler.RequeueWithError(err)
+	return r.updateDashboardStatus(ctx, req, func(dashboard *persesv1alpha2.PersesDashboard) {
+		if len(dashboard.Status.Conditions) == 0 {
+			meta.SetStatusCondition(&dashboard.Status.Conditions, metav1.Condition{
+				Type: common.TypeAvailablePerses, Status: metav1.ConditionUnknown,
+				Reason: "Reconciling", Message: "Starting reconciliation"})
 		}
-	}
-
-	return subreconciler.ContinueReconciling()
+	})
 }
 
 func (r *PersesDashboardReconciler) setStatusToComplete(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	dashboard := &persesv1alpha2.PersesDashboard{}
-
-	if r, err := r.getLatestPersesDashboard(ctx, req, dashboard); subreconciler.ShouldHaltOrRequeue(r, err) {
-		return r, err
-	}
-
-	meta.SetStatusCondition(&dashboard.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses,
-		Status: metav1.ConditionTrue, Reason: "Reconciled",
-		Message: fmt.Sprintf("Dashboard (%s) created successfully", dashboard.Name)})
-
-	if err := r.Status().Update(ctx, dashboard); err != nil {
-		log.WithError(err).Error("Failed to update Perses dashboard status")
-		return subreconciler.RequeueWithError(err)
-	}
-
-	return subreconciler.ContinueReconciling()
+	return r.updateDashboardStatus(ctx, req, func(dashboard *persesv1alpha2.PersesDashboard) {
+		meta.SetStatusCondition(&dashboard.Status.Conditions, metav1.Condition{
+			Type: common.TypeAvailablePerses, Status: metav1.ConditionTrue,
+			Reason: "Reconciled", Message: fmt.Sprintf("Dashboard (%s) created successfully", dashboard.Name)})
+	})
 }
 
 func (r *PersesDashboardReconciler) setStatusToDegraded(
@@ -140,26 +150,16 @@ func (r *PersesDashboardReconciler) setStatusToDegraded(
 	degradedReason common.ConditionStatusReason,
 	degradedError error,
 ) (*ctrl.Result, error) {
-	// Attempt to update the dashboard CR status, setting it to degraded
-	// If updating the dashboard CR fails then return the info from the update
-	// rather than the main logic flow's, forcing a requeue
-	dashboard := &persesv1alpha2.PersesDashboard{}
+	result, err := r.updateDashboardStatus(ctx, req, func(dashboard *persesv1alpha2.PersesDashboard) {
+		meta.SetStatusCondition(&dashboard.Status.Conditions, metav1.Condition{
+			Type: common.TypeDegradedPerses, Status: metav1.ConditionTrue,
+			Reason: string(degradedReason), Message: degradedError.Error()})
+	})
 
-	if res, err := r.getLatestPersesDashboard(ctx, req, dashboard); subreconciler.ShouldHaltOrRequeue(res, err) {
-		return res, err
+	if err != nil {
+		return result, err
 	}
 
-	meta.SetStatusCondition(&dashboard.Status.Conditions, metav1.Condition{Type: common.TypeDegradedPerses,
-		Status: metav1.ConditionTrue, Reason: string(degradedReason),
-		Message: degradedError.Error()})
-
-	if err := r.Status().Update(ctx, dashboard); err != nil {
-		log.WithError(err).Error("Failed to update Perses dashboard status")
-		return subreconciler.RequeueWithError(err)
-	}
-
-	// If the status was able to be set to degraded perform the main logic loop's
-	// handling of the result and error
 	return degradedResult, degradedError
 }
 

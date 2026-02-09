@@ -23,18 +23,23 @@ import (
 // PersesDatasourceStatus defines the observed state of PersesDatasource
 type PersesDatasourceStatus struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// Conditions represent the latest observations of the PersesDatasource resource state
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 
+// DatasourceSpec defines the desired state of a Perses datasource
 type DatasourceSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +kubebuilder:validation:Required
+	// Perses datasource configuration
 	Config Datasource `json:"config"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
+	// Client authentication and TLS configuration for the datasource
 	Client *Client `json:"client,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
+	// InstanceSelector selects Perses instances where this datasource will be created
 	InstanceSelector *metav1.LabelSelector `json:"instanceSelector,omitempty"`
 }
 

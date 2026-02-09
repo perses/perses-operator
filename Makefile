@@ -76,7 +76,7 @@ endif
 
 # Set the Operator SDK version to use. By default, what is installed on the system is used.
 # This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
-OPERATOR_SDK_VERSION ?= v1.40.0
+OPERATOR_SDK_VERSION ?= v1.42.0
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.31.0
 # ENVTEST_VERSION refers to the version of the envtest binary.
@@ -189,6 +189,31 @@ generate: controller-gen conversion-gen ## Generate code containing DeepCopy, De
 		--go-header-file=./hack/boilerplate.go.txt \
 		--skip-unsafe=true \
 		./api/v1alpha1
+
+TYPES_V1ALPHA2_TARGET := api/v1alpha2/perses_types.go
+TYPES_V1ALPHA2_TARGET += api/v1alpha2/persesdashboard_types.go
+TYPES_V1ALPHA2_TARGET += api/v1alpha2/persesdatasource_types.go
+TYPES_V1ALPHA2_TARGET += api/v1alpha2/persesglobaldatasource_types.go
+
+# Extract Kubernetes API version from go.mod (e.g. v0.34.0 -> 1.34)
+K8S_API_VERSION := $(shell grep 'k8s.io/api ' go.mod | awk '{print $$2}' | sed 's/v0\.\([0-9]*\)\..*/1.\1/')
+
+.PHONY: generate-api-docs
+generate-api-docs: crd-ref-docs $(TYPES_V1ALPHA2_TARGET) ## Generate API reference documentation from Go types.
+	sed 's/K8S_API_VERSION/$(K8S_API_VERSION)/' docs/config/api-docs-config.yaml > docs/config/api-docs-config-resolved.yaml
+	$(CRD_REF_DOCS) \
+		--source-path=./api/v1alpha2 \
+		--config=./docs/config/api-docs-config-resolved.yaml \
+		--renderer=markdown \
+		--output-path=./docs/api.md
+	rm -f docs/config/api-docs-config-resolved.yaml
+
+.PHONY: check-api-docs
+check-api-docs: generate-api-docs ## Verify that generated API docs are up-to-date.
+	@if ! git diff --quiet --exit-code docs/api.md; then \
+		echo "docs/api.md is out of date. Please run 'make generate-api-docs' and commit the result."; \
+		git diff docs/api.md --exit-code; \
+	fi
 
 .PHONY: fmt
 fmt: jsonnet-format ## Run go fmt against code.
@@ -324,6 +349,9 @@ LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
+## Tools directory
+TOOLS_DIR := hack/tools
+
 ## Tool Binaries
 KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
@@ -334,6 +362,7 @@ JSONNETFMT_BINARY ?= $(LOCALBIN)/jsonnetfmt
 JSONNETLINT_BINARY ?= $(LOCALBIN)/jsonnet-lint
 CONVERSION_GEN ?= $(LOCALBIN)/conversion-gen
 YQ ?= $(LOCALBIN)/yq
+CRD_REF_DOCS ?= $(LOCALBIN)/crd-ref-docs
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v3.8.7
@@ -396,6 +425,11 @@ $(YQ): $(LOCALBIN)
 	test -s $(LOCALBIN)/yq && $(LOCALBIN)/yq version | grep -q $(YQ_VERSION) || \
 	GOBIN=$(LOCALBIN) go install github.com/mikefarah/yq/v4@$(YQ_VERSION)
 
+.PHONY: crd-ref-docs
+crd-ref-docs: $(CRD_REF_DOCS) ## Download crd-ref-docs locally if necessary.
+$(CRD_REF_DOCS): $(TOOLS_DIR)/go.mod | $(LOCALBIN)
+	cd $(TOOLS_DIR) && go mod tidy && go build -o $(LOCALBIN)/crd-ref-docs github.com/elastic/crd-ref-docs
+
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
 $(ENVTEST): $(LOCALBIN)
@@ -419,7 +453,7 @@ endif
 endif
 
 .PHONY: build-tools
-build-tools: kustomize controller-gen gojsontoyaml jsonnet conversion-gen
+build-tools: kustomize controller-gen gojsontoyaml jsonnet conversion-gen crd-ref-docs
 
 .PHONY: bundle
 bundle: manifests kustomize operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
@@ -430,7 +464,7 @@ bundle: manifests kustomize operator-sdk ## Generate bundle manifests and metada
 
 .PHONY: bundle-check
 bundle-check: bundle
-	git diff --exit-code bundle config
+	git diff --exit-code bundle config jsonnet/generated jsonnet/examples
 
 .PHONY: bundle-build
 bundle-build: generate bundle ## Build the bundle image.

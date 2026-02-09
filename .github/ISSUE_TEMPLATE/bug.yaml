@@ -1,0 +1,99 @@
+name: 🐞 Bug
+description: Report a bug related to the Perses operator
+labels: ["kind/bug", "needs-triage"]
+body:
+  - type: checkboxes
+    attributes:
+      label: Is there an existing issue for this?
+      description: |
+        Before filing a bug, please search through [existing bugs](https://github.com/perses/perses-operator/issues?q=is%3Aopen+is%3Aissue+label%3Akind%2Fbug).
+      options:
+        - label: I have searched the existing issues
+          required: true
+  - type: textarea
+    attributes:
+      label: What happened?
+      description: A concise description of what you're experiencing.
+      value: |
+        ## Description
+
+        ## Steps to Reproduce
+
+        ## Expected Result
+
+        ## Actual Result
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Perses Operator Version
+      description: |
+        Provide the perses-operator version used.
+        This will be automatically formatted into code, so no need for backticks.
+      placeholder: |
+        Try kubectl -n <namespace> describe deployment/perses-operator-controller-manager
+        # paste output here
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Kubernetes Version
+      description: |
+        Paste the output of `kubectl version -o yaml`
+        This will be automatically formatted into code, so no need for backticks.
+      render: yaml
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: Kubernetes Cluster Type
+      description: Select Kubernetes cluster type
+      options:
+        - kind
+        - minikube
+        - kubeadm
+        - OpenShift
+        - EKS
+        - GKE
+        - AKS
+        - Rancher
+        - Other (please comment)
+    validations:
+      required: true
+  - type: dropdown
+    attributes:
+      label: How did you deploy Perses-Operator?
+      description: Select the method how you deployed perses-operator
+      options:
+        - yaml manifests
+        - Other (please comment)
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Manifests
+      description: |
+        Insert manifests relevant to the issue.
+        This will be automatically formatted into code, so no need for backticks.
+      render: yaml
+    validations:
+      required: false
+  - type: textarea
+    attributes:
+      label: Perses-operator log output
+      description: |
+        Please provide perses-operator log output.
+        This will be automatically formatted into code, so no need for backticks.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Anything else?
+      description: |
+        Links? References? Anything that will give us more context about the issue you are encountering!
+
+        Tip: You can attach images or any other relevant log files by clicking this area to highlight it and then dragging files in.
+    validations:
+      required: false

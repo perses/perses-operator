@@ -8,7 +8,7 @@ import (
 
 // GetPersesArgs returns the command line arguments for the Perses server.
 // It includes the configuration file path, TLS settings if enabled,
-// and any additional user-specified arguments.
+// log settings, and any additional user-specified arguments.
 func GetPersesArgs(perses *v1alpha2.Perses) []string {
 	args := []string{fmt.Sprintf("--config=%s", defaultConfigPath)}
 
@@ -18,6 +18,16 @@ func GetPersesArgs(perses *v1alpha2.Perses) []string {
 			tlsCertMountPath, perses.Spec.TLS.UserCert.CertPath))
 		args = append(args, fmt.Sprintf("--web.tls-key-file=%s/%s",
 			tlsCertMountPath, perses.Spec.TLS.UserCert.PrivateKeyPath))
+	}
+
+	// Append log level if specified
+	if perses.Spec.LogLevel != nil {
+		args = append(args, fmt.Sprintf("--log.level=%s", *perses.Spec.LogLevel))
+	}
+
+	// Append log method trace if enabled
+	if perses.Spec.LogMethodTrace != nil && *perses.Spec.LogMethodTrace {
+		args = append(args, "--log.method-trace")
 	}
 
 	// Append user provided args

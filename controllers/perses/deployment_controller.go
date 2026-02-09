@@ -40,14 +40,14 @@ import (
 var dlog = logger.WithField("module", "deployment_controller")
 
 func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	perses := &v1alpha2.Perses{}
-
-	if result, err := r.getLatestPerses(ctx, req, perses); subreconciler.ShouldHaltOrRequeue(result, err) {
-		return result, err
+	perses, ok := persesFromContext(ctx)
+	if !ok {
+		dlog.Error("perses not found in context")
+		return subreconciler.RequeueWithError(fmt.Errorf("perses not found in context"))
 	}
 
 	if perses.Spec.Config.Database.SQL == nil {
-		dlog.Info("Database SQL configuration is not set, skipping Deployment creation")
+		dlog.Debug("Database SQL configuration is not set, skipping Deployment creation")
 
 		found := &appsv1.Deployment{}
 		err := r.Get(ctx, types.NamespacedName{Name: perses.Name, Namespace: perses.Namespace}, found)
@@ -196,6 +196,10 @@ func (r *PersesReconciler) createPersesDeployment(
 				},
 			},
 		},
+	}
+
+	if perses.Spec.Resources != nil {
+		dep.Spec.Template.Spec.Containers[0].Resources = *perses.Spec.Resources
 	}
 
 	if perses.Spec.ServiceAccountName != "" {

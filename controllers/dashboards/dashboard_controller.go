@@ -19,6 +19,7 @@ package dashboards
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/perses/perses/pkg/client/perseshttp"
@@ -53,9 +54,10 @@ func (r *PersesDashboardReconciler) reconcileDashboardInAllInstances(ctx context
 
 	}
 
-	dashboard := &persesv1alpha2.PersesDashboard{}
-
-	if res, err := r.getLatestPersesDashboard(ctx, req, dashboard); subreconciler.ShouldHaltOrRequeue(res, err) {
+	dashboard, ok := dashboardFromContext(ctx)
+	if !ok {
+		dlog.Error("dashboard not found in context")
+		res, err := subreconciler.RequeueWithError(fmt.Errorf("dashboard not found in context"))
 		return r.setStatusToDegraded(ctx, req, res, common.ReasonMissingResource, err)
 	}
 

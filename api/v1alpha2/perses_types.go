@@ -25,22 +25,34 @@ import (
 // PersesSpec defines the desired state of Perses
 type PersesSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// Metadata to add to deployed pods
 	Metadata *Metadata `json:"metadata,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	// Perses client configuration
 	Client *Client `json:"client,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// Perses server configuration
 	Config PersesConfig `json:"config,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// Args extra arguments to pass to perses
 	Args []string `json:"args,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	// +kubebuilder:default=8080
 	ContainerPort int32 `json:"containerPort,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
+
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	// Resources defines the compute resources configured for the container.
+	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// NodeSelector constrains pods to nodes with matching labels
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
@@ -83,20 +95,37 @@ type PersesSpec struct {
 	// PodSecurityContext holds pod-level security attributes and common container settings.
 	// If not specified, defaults to fsGroup: 65534 to ensure proper volume permissions for the nobody user.
 	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +kubebuilder:validation:Enum=panic;fatal;error;warning;info;debug;trace
+	// +optional
+	// LogLevel defines the log level for Perses.
+	LogLevel *string `json:"logLevel,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	// LogMethodTrace when true, includes the calling method as a field in the log.
+	// It can be useful to see immediately where the log comes from.
+	LogMethodTrace *bool `json:"logMethodTrace,omitempty"`
 }
 
 // Metadata to add to deployed pods
 type Metadata struct {
-	Labels      map[string]string `json:"labels,omitempty"`
+	// Labels are key/value pairs attached to pods
+	Labels map[string]string `json:"labels,omitempty"`
+	// Annotations are key/value pairs attached to pods for non-identifying metadata
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
+// PersesService defines service configuration for Perses
 type PersesService struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
+	// Name of the Kubernetes service
 	Name string `json:"name,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
+	// Annotations attached to the service for non-identifying metadata
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
@@ -222,6 +251,7 @@ type StorageConfiguration struct {
 // PersesStatus defines the observed state of Perses
 type PersesStatus struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// Conditions represent the latest observations of the Perses resource state
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 

@@ -26,6 +26,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -33,6 +34,19 @@ import (
 	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
 )
+
+type datasourceContextKey string
+
+const contextKey datasourceContextKey = "datasource"
+
+func withDatasource(ctx context.Context, ds *persesv1alpha2.PersesDatasource) context.Context {
+	return context.WithValue(ctx, contextKey, ds)
+}
+
+func datasourceFromContext(ctx context.Context) (*persesv1alpha2.PersesDatasource, bool) {
+	ds, ok := ctx.Value(contextKey).(*persesv1alpha2.PersesDatasource)
+	return ds, ok
+}
 
 // PersesDatasourceReconciler reconciles a PersesDatasource object
 type PersesDatasourceReconciler struct {
@@ -50,8 +64,21 @@ var log = logger.WithField("module", "perses_datasource_controller")
 // +kubebuilder:rbac:groups="",resources=configmaps;secrets,verbs=watch;get
 func (r *PersesDatasourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log.Infof("Reconciling PersesDatasource: %s/%s", req.Namespace, req.Name)
+
+	// Find once and store in context for all sub-reconcilers, handle deletion if not found
+	datasource := &persesv1alpha2.PersesDatasource{}
+	if err := r.Get(ctx, req.NamespacedName, datasource); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Infof("perses datasource resource not found. Deleting '%s' in '%s'", req.Name, req.Namespace)
+			return subreconciler.Evaluate(r.deleteDatasourceInAllInstances(ctx, req.Namespace, req.Name))
+		}
+		log.WithError(err).Error("Failed to get perses datasource")
+		return subreconciler.Evaluate(subreconciler.RequeueWithError(err))
+	}
+
+	ctx = withDatasource(ctx, datasource)
+
 	subreconcilersForPerses := []subreconciler.FnWithRequest{
-		r.handleDelete,
 		r.setStatusToUnknown,
 		r.reconcileDatasourcesInAllInstances,
 		r.setStatusToComplete,
@@ -66,71 +93,54 @@ func (r *PersesDatasourceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	return subreconciler.Evaluate(subreconciler.DoNotRequeue())
 }
 
-func (r *PersesDatasourceReconciler) getLatestPersesDatasource(ctx context.Context, req ctrl.Request, datasource *persesv1alpha2.PersesDatasource) (*ctrl.Result, error) {
-	if err := r.Get(ctx, req.NamespacedName, datasource); err != nil {
+func (r *PersesDatasourceReconciler) updateDatasourceStatus(
+	ctx context.Context,
+	req ctrl.Request,
+	updateFn func(*persesv1alpha2.PersesDatasource),
+) (*ctrl.Result, error) {
+	_, ok := datasourceFromContext(ctx)
+	if !ok {
+		log.Error("datasource not found in context")
+		return subreconciler.RequeueWithError(fmt.Errorf("datasource not found in context"))
+	}
+
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		fresh := &persesv1alpha2.PersesDatasource{}
+		if err := r.Get(ctx, req.NamespacedName, fresh); err != nil {
+			return err
+		}
+		updateFn(fresh)
+		return r.Status().Update(ctx, fresh)
+	})
+
+	if err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("perses datasource resource not found. Ignoring since object must be deleted")
 			return subreconciler.DoNotRequeue()
 		}
-		log.WithError(err).Error("Failed to get perses datasource")
+		log.WithError(err).Error("Failed to update Perses datasource status")
 		return subreconciler.RequeueWithError(err)
-	}
-
-	return subreconciler.ContinueReconciling()
-}
-
-func (r *PersesDatasourceReconciler) handleDelete(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	datasource := &persesv1alpha2.PersesDatasource{}
-
-	if err := r.Get(ctx, req.NamespacedName, datasource); err != nil {
-		if !apierrors.IsNotFound(err) {
-			log.WithError(err).Error("Failed to get perses datasource")
-			return subreconciler.RequeueWithError(err)
-		}
-
-		log.Infof("perses datasource resource not found. Deleting '%s' in '%s'", req.Name, req.Namespace)
-
-		return r.deleteDatasourceInAllInstances(ctx, req.Namespace, req.Name)
 	}
 
 	return subreconciler.ContinueReconciling()
 }
 
 func (r *PersesDatasourceReconciler) setStatusToUnknown(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	datasource := &persesv1alpha2.PersesDatasource{}
-
-	if r, err := r.getLatestPersesDatasource(ctx, req, datasource); subreconciler.ShouldHaltOrRequeue(r, err) {
-		return r, err
-	}
-
-	if len(datasource.Status.Conditions) == 0 {
-		meta.SetStatusCondition(&datasource.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses, Status: metav1.ConditionUnknown, Reason: "Reconciling", Message: "Starting reconciliation"})
-		if err := r.Status().Update(ctx, datasource); err != nil {
-			log.WithError(err).Error("Failed to update Perses datasource status")
-			return subreconciler.RequeueWithError(err)
+	return r.updateDatasourceStatus(ctx, req, func(datasource *persesv1alpha2.PersesDatasource) {
+		if len(datasource.Status.Conditions) == 0 {
+			meta.SetStatusCondition(&datasource.Status.Conditions, metav1.Condition{
+				Type: common.TypeAvailablePerses, Status: metav1.ConditionUnknown,
+				Reason: "Reconciling", Message: "Starting reconciliation"})
 		}
-	}
-
-	return subreconciler.ContinueReconciling()
+	})
 }
 
 func (r *PersesDatasourceReconciler) setStatusToComplete(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	datasource := &persesv1alpha2.PersesDatasource{}
-
-	if r, err := r.getLatestPersesDatasource(ctx, req, datasource); subreconciler.ShouldHaltOrRequeue(r, err) {
-		return r, err
-	}
-
-	meta.SetStatusCondition(&datasource.Status.Conditions, metav1.Condition{Type: common.TypeAvailablePerses,
-		Status: metav1.ConditionTrue, Reason: "Reconciled",
-		Message: fmt.Sprintf("Datasource (%s) created successfully", datasource.Name)})
-
-	if err := r.Status().Update(ctx, datasource); err != nil {
-		log.WithError(err).Error("Failed to update Perses datasource status")
-		return subreconciler.RequeueWithError(err)
-	}
-
-	return subreconciler.ContinueReconciling()
+	return r.updateDatasourceStatus(ctx, req, func(datasource *persesv1alpha2.PersesDatasource) {
+		meta.SetStatusCondition(&datasource.Status.Conditions, metav1.Condition{
+			Type: common.TypeAvailablePerses, Status: metav1.ConditionTrue,
+			Reason: "Reconciled", Message: fmt.Sprintf("Datasource (%s) created successfully", datasource.Name)})
+	})
 }
 
 func (r *PersesDatasourceReconciler) setStatusToDegraded(
@@ -140,26 +150,16 @@ func (r *PersesDatasourceReconciler) setStatusToDegraded(
 	degradedReason common.ConditionStatusReason,
 	degradedError error,
 ) (*ctrl.Result, error) {
-	// Attempt to update the datasource CR status, setting it to degraded
-	// If updating the datasource CR fails then return the info from the update
-	// rather than the main logic flow's, forcing a requeue
-	datasource := &persesv1alpha2.PersesDatasource{}
+	result, err := r.updateDatasourceStatus(ctx, req, func(datasource *persesv1alpha2.PersesDatasource) {
+		meta.SetStatusCondition(&datasource.Status.Conditions, metav1.Condition{
+			Type: common.TypeDegradedPerses, Status: metav1.ConditionTrue,
+			Reason: string(degradedReason), Message: degradedError.Error()})
+	})
 
-	if res, err := r.getLatestPersesDatasource(ctx, req, datasource); subreconciler.ShouldHaltOrRequeue(res, err) {
-		return res, err
+	if err != nil {
+		return result, err
 	}
 
-	meta.SetStatusCondition(&datasource.Status.Conditions, metav1.Condition{Type: common.TypeDegradedPerses,
-		Status: metav1.ConditionTrue, Reason: string(degradedReason),
-		Message: degradedError.Error()})
-
-	if err := r.Status().Update(ctx, datasource); err != nil {
-		log.WithError(err).Error("Failed to update Perses datasource status")
-		return subreconciler.RequeueWithError(err)
-	}
-
-	// If the status was able to be set to degraded perform the main logic loop's
-	// handling of the result and error
 	return degradedResult, degradedError
 }
 

@@ -12,15 +12,12 @@ spec:
       file:
         folder: '/perses'
         extension: 'yaml'
-    schemas:
-      panels_path: '/etc/perses/cue/schemas/panels'
-      queries_path: '/etc/perses/cue/schemas/queries'
-      datasources_path: '/etc/perses/cue/schemas/datasources'
-      variables_path: '/etc/perses/cue/schemas/variables'
     ephemeral_dashboard:
       enable: false
       cleanup_interval: '1s'
   containerPort: 8080
+  logLevel: debug
+  logMethodTrace: true
   livenessProbe:
     initialDelaySeconds: 10
     periodSeconds: 10
@@ -33,3 +30,6 @@ spec:
     timeoutSeconds: 5
     successThreshold: 1
     failureThreshold: 5
+  resources:
+    requests:
+      memory: 128Mi

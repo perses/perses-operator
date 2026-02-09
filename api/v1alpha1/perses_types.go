@@ -36,6 +36,9 @@ type PersesSpec struct {
 	// Args extra arguments to pass to perses
 	Args []string `json:"args,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	// +kubebuilder:default=8080
 	ContainerPort int32 `json:"containerPort,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional

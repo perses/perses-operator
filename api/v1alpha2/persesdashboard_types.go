@@ -23,15 +23,19 @@ import (
 // PersesDashboardStatus defines the observed state of PersesDashboard
 type PersesDashboardStatus struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// Conditions represent the latest observations of the PersesDashboard resource state
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 
+// PersesDashboardSpec defines the desired state of PersesDashboard
 type PersesDashboardSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +kubebuilder:validation:Required
+	// Perses dashboard configuration
 	Config Dashboard `json:"config"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
+	// InstanceSelector selects Perses instances where this dashboard will be created
 	InstanceSelector *metav1.LabelSelector `json:"instanceSelector,omitempty"`
 }
 

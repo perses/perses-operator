@@ -7,6 +7,8 @@ import (
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 )
 
+// Dashboard represents the Perses dashboard configuration including
+// display settings, datasources, variables, panels, layouts, and time ranges.
 type Dashboard struct {
 	persesv1.DashboardSpec `json:",inline"`
 }
