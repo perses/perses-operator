@@ -8,6 +8,7 @@ on:
     tags:
       - v*
   pull_request:
+  merge_group:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,13 +16,13 @@ concurrency:
 
 jobs:
   build:
-    name: "go and github release"
+    name: 'go and github release'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     env:
       # This env is required for the docker manifest command to work
-      DOCKER_CLI_EXPERIMENTAL: "enabled"
+      DOCKER_CLI_EXPERIMENTAL: 'enabled'
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -49,7 +50,7 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          registry: "docker.io"
+          registry: 'docker.io'
       - name: install goreleaser
         uses: goreleaser/goreleaser-action@v6
         with:
