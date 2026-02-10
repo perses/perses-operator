@@ -76,10 +76,10 @@ func parseMetrics() []Metric {
 			Labels: []string{"controller", "reason"},
 		},
 		{
-			Name:   "perses_operator_perses_instances",
+			Name:   "perses_operator_managed_perses_instances",
 			Type:   "Gauge",
-			Help:   "Number of Perses instances per namespace",
-			Labels: []string{"namespace"},
+			Help:   "Number of Perses instances managed by the operator",
+			Labels: []string{"resource_namespace"},
 		},
 		{
 			Name:   "perses_operator_ready",

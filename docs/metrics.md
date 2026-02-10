@@ -58,14 +58,14 @@ Total number of reconciliation errors by controller and reason
 
 ---
 
-### `perses_operator_perses_instances`
+### `perses_operator_managed_perses_instances`
 
-Number of Perses instances per namespace
+Number of Perses instances managed by the operator
 
 **Type:** Gauge  
 **Labels:**
 
-- `namespace`
+- `resource_namespace`
 
 
 

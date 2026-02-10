@@ -82,10 +82,10 @@ func NewMetrics() *Metrics {
 		),
 		persesInstances: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
-				Name: "perses_operator_perses_instances",
-				Help: "Number of Perses instances per namespace",
+				Name: "perses_operator_managed_perses_instances",
+				Help: "Number of Perses instances managed by the operator",
 			},
-			[]string{"namespace"},
+			[]string{"resource_namespace"},
 		),
 		ready: prometheus.NewGauge(
 			prometheus.GaugeOpts{
@@ -114,7 +114,7 @@ func (m *Metrics) ReconcileErrors(controller, reason string) prometheus.Counter 
 
 // PersesInstances returns a gauge to track Perses instance count.
 func (m *Metrics) PersesInstances(namespace string) prometheus.Gauge {
-	return m.persesInstances.With(prometheus.Labels{"namespace": namespace})
+	return m.persesInstances.With(prometheus.Labels{"resource_namespace": namespace})
 }
 
 // Ready returns a gauge to track operator readiness.
