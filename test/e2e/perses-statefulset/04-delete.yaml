@@ -1,0 +1,15 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+delete:
+  - apiVersion: perses.dev/v1alpha2
+    kind: PersesDashboard
+    metadata:
+      name: e2e-dashboard
+  - apiVersion: perses.dev/v1alpha2
+    kind: PersesDatasource
+    metadata:
+      name: e2e-datasource
+  - apiVersion: perses.dev/v1alpha2
+    kind: Perses
+    metadata:
+      name: perses-e2e-test

@@ -1,0 +1,52 @@
+name: e2e
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - release/*
+      - snapshot/*
+  merge_group:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' || github.ref_name != 'main' }}
+
+jobs:
+  e2e:
+    name: "kuttl e2e tests"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: perses/github-actions@v0.11.0
+      - uses: ./.github/perses-ci/actions/setup_environment
+        with:
+          enable_go: true
+      - name: Create kind cluster
+        uses: helm/kind-action@v1.13.0
+        with:
+          cluster_name: kuttl-e2e
+          node_image: kindest/node:v1.34.3@sha256:08497ee19eace7b4b5348db5c6a1591d7752b164530a36f855cb0f2bdcbadd48
+          wait: 5m
+      - name: Deploy operator
+        run: make e2e-deploy
+      - name: Run e2e tests
+        run: make test-e2e
+      - name: Collect debug info on failure
+        if: failure()
+        run: |
+          echo "=== Operator logs ==="
+          kubectl logs -n perses-operator-system deployment/perses-operator-controller-manager --tail=200 || true
+          echo ""
+          echo "=== Events ==="
+          kubectl get events -A --sort-by='.lastTimestamp' | tail -50 || true
+          echo ""
+          echo "=== Perses resources ==="
+          kubectl get perses,persesdashboard,persesdatasource,persesglobaldatasource -A -o wide || true
+          echo ""
+          echo "=== Pods ==="
+          kubectl get pods -A || true

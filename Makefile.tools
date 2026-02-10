@@ -23,14 +23,14 @@ KUSTOMIZE = $(LOCALBIN)/kustomize
 KUSTOMIZE_VERSION = v3.8.7
 
 CONTROLLER_GEN = $(LOCALBIN)/controller-gen
-CONTROLLER_TOOLS_VERSION = v0.19.0
+CONTROLLER_TOOLS_VERSION = v0.20.0
 
 GOJSONTOYAML_BINARY = $(LOCALBIN)/gojsontoyaml
 GOJSONTOYAML_VERSION = v0.1.0
 
 ENVTEST = $(LOCALBIN)/setup-envtest
-ENVTEST_VERSION = release-0.19  # Version of setup-envtest binary
-ENVTEST_K8S_VERSION = 1.31.0    # Kubernetes version for test assets
+ENVTEST_VERSION = release-0.22  # Version of setup-envtest binary
+ENVTEST_K8S_VERSION = 1.34.0    # Kubernetes version for test assets
 
 JSONNET_BINARY = $(LOCALBIN)/jsonnet
 JSONNET_VERSION = v0.21.0
@@ -55,6 +55,9 @@ OPERATOR_SDK_VERSION = v1.42.0
 
 OPM = $(LOCALBIN)/opm
 OPM_VERSION = v1.23.0
+
+KUTTL = $(LOCALBIN)/kubectl-kuttl
+KUTTL_VERSION = 0.19.0
 
 ## Kustomize - uses custom install script
 KUSTOMIZE_INSTALL_SCRIPT = https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh
@@ -163,6 +166,17 @@ $(OPM) opm: $(LOCALBIN) ## Install opm locally if necessary.
 		chmod +x $(OPM) ;\
 	}
 
+.PHONY: kuttl
+$(KUTTL) kuttl: $(LOCALBIN) ## Install kubectl-kuttl locally if necessary.
+	@{ \
+		set -ex ;\
+		[[ -f $(KUTTL) ]] && exit 0 ;\
+		OS=$$(go env GOOS) && ARCH=$$(go env GOARCH) && \
+		[ "$${ARCH}" = "amd64" ] && ARCH="x86_64" ;\
+		curl -sSLo $(KUTTL) https://github.com/kudobuilder/kuttl/releases/download/v$(KUTTL_VERSION)/kubectl-kuttl_$(KUTTL_VERSION)_$${OS}_$${ARCH} ;\
+		chmod +x $(KUTTL) ;\
+	}
+
 .PHONY: build-tools
 build-tools: ## Install all tools.
 build-tools: $(KUSTOMIZE) \
@@ -176,7 +190,8 @@ build-tools: $(KUSTOMIZE) \
 		$(CRD_REF_DOCS) \
 		$(ENVTEST) \
 		$(OPERATOR_SDK) \
-		$(OPM)
+		$(OPM) \
+		$(KUTTL)
 
 
 .PHONY: clean-tools
@@ -198,4 +213,5 @@ validate-tools: build-tools ## Validate that all tools are installed and working
 	@echo -n "  setup-envtest: " && [ -x $(ENVTEST) ] && echo "installed" || echo "missing"
 	@echo -n "  operator-sdk: " && $(OPERATOR_SDK) version 2>&1 | head -n 1
 	@echo -n "  opm: " && $(OPM) version 2>&1 | head -n 1
+	@echo -n "  kuttl: " && $(KUTTL) version 2>&1 | head -n 1
 	@echo "✅ All tools validated successfully!"

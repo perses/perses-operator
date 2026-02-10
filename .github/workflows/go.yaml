@@ -29,8 +29,8 @@ jobs:
         run: make checkformat
       - name: check go.mod
         run: make checkunused
-  test:
-    name: 'tests'
+  test-unit:
+    name: 'unit tests'
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -39,8 +39,20 @@ jobs:
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
-      - name: test
-        run: make test
+      - name: unit tests
+        run: make test-unit
+  test-integration:
+    name: 'integration tests'
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - uses: perses/github-actions@v0.11.0
+      - uses: ./.github/perses-ci/actions/setup_environment
+        with:
+          enable_go: true
+      - name: integration tests
+        run: make test-integration
   golangci:
     name: lint
     runs-on: ubuntu-latest

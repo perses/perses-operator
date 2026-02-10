@@ -1,0 +1,42 @@
+apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  name: e2e-dashboard
+spec:
+  instanceSelector:
+    matchLabels:
+      app.kubernetes.io/instance: perses-e2e-test
+  config:
+    display:
+      name: E2E Test Dashboard
+    duration: 5m
+    panels:
+      testPanel:
+        kind: Panel
+        spec:
+          display:
+            name: Test Panel
+          plugin:
+            kind: TimeSeriesChart
+            spec: {}
+          queries:
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: up
+    layouts:
+      - kind: Grid
+        spec:
+          display:
+            title: Row 1
+            collapse:
+              open: true
+          items:
+            - x: 0
+              "y": 0
+              width: 24
+              height: 6
+              content:
+                "$ref": "#/spec/panels/testPanel"
