@@ -40,10 +40,10 @@ func TestNewMetrics(t *testing.T) {
 		),
 		persesInstances: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
-				Name: "perses_operator_perses_instances",
-				Help: "Number of Perses instances per namespace",
+				Name: "perses_operator_managed_perses_instances",
+				Help: "Number of Perses instances managed by the operator",
 			},
-			[]string{"namespace"},
+			[]string{"resource_namespace"},
 		),
 		ready: prometheus.NewGauge(
 			prometheus.GaugeOpts{
@@ -69,7 +69,7 @@ func TestNewMetrics(t *testing.T) {
 	// Check that expected metrics exist
 	metricNames := []string{
 		"perses_operator_reconcile_errors_total",
-		"perses_operator_perses_instances",
+		"perses_operator_managed_perses_instances",
 		"perses_operator_ready",
 	}
 
@@ -118,10 +118,10 @@ func TestPersesInstancesGauge(t *testing.T) {
 	m := &Metrics{
 		persesInstances: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
-				Name: "perses_operator_perses_instances",
-				Help: "Number of Perses instances per namespace",
+				Name: "perses_operator_managed_perses_instances",
+				Help: "Number of Perses instances managed by the operator",
 			},
-			[]string{"namespace"},
+			[]string{"resource_namespace"},
 		),
 		resources: make(map[resourceKey]map[string]int),
 	}
@@ -133,10 +133,10 @@ func TestPersesInstancesGauge(t *testing.T) {
 
 	// Verify values
 	expected := `
-		# HELP perses_operator_perses_instances Number of Perses instances per namespace
-		# TYPE perses_operator_perses_instances gauge
-		perses_operator_perses_instances{namespace="perses-dev"} 1
-		perses_operator_perses_instances{namespace="production"} 3
+		# HELP perses_operator_managed_perses_instances Number of Perses instances managed by the operator
+		# TYPE perses_operator_managed_perses_instances gauge
+		perses_operator_managed_perses_instances{resource_namespace="perses-dev"} 1
+		perses_operator_managed_perses_instances{resource_namespace="production"} 3
 	`
 	err := testutil.CollectAndCompare(m.persesInstances, strings.NewReader(expected))
 	assert.NoError(t, err)
