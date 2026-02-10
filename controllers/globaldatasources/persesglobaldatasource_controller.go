@@ -19,6 +19,7 @@ package globaldatasources
 import (
 	"context"
 	"fmt"
+	"time"
 
 	logger "github.com/sirupsen/logrus"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -31,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
+	operatormetrics "github.com/perses/perses-operator/internal/metrics"
 	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
 )
@@ -51,9 +53,11 @@ func globalDatasourceFromContext(ctx context.Context) (*persesv1alpha2.PersesGlo
 // PersesGlobalDatasourceReconciler reconciles a PersesDatasource object
 type PersesGlobalDatasourceReconciler struct {
 	client.Client
-	Scheme        *runtime.Scheme
-	Recorder      record.EventRecorder
-	ClientFactory common.PersesClientFactory
+	Scheme                *runtime.Scheme
+	Recorder              record.EventRecorder
+	ClientFactory         common.PersesClientFactory
+	Metrics               *operatormetrics.Metrics
+	ReconciliationTracker *operatormetrics.ReconciliationTracker
 }
 
 var log = logger.WithField("module", "perses_globaldatasource_controller")
@@ -63,15 +67,24 @@ var log = logger.WithField("module", "perses_globaldatasource_controller")
 // +kubebuilder:rbac:groups=perses.dev,resources=persesglobaldatasources/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=configmaps;secrets,verbs=watch;get
 func (r *PersesGlobalDatasourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	start := time.Now()
+	objKey := req.String()
+
 	log.Infof("Reconciling PersesGlobalDatasource: %s", req.Name)
 
 	globaldatasource := &persesv1alpha2.PersesGlobalDatasource{}
 	if err := r.Get(ctx, req.NamespacedName, globaldatasource); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Infof("perses globaldatasource resource not found. Deleting '%s'", req.Name)
+			if r.ReconciliationTracker != nil {
+				r.ReconciliationTracker.ForgetObject(objKey)
+			}
 			return subreconciler.Evaluate(r.deleteGlobalDatasourceInAllInstances(ctx, req.Name))
 		}
 		log.WithError(err).Error("Failed to get perses globaldatasource")
+		if r.Metrics != nil {
+			r.Metrics.ReconcileErrors("persesglobaldatasource", "get_failed").Inc()
+		}
 		return subreconciler.Evaluate(subreconciler.RequeueWithError(err))
 	}
 
@@ -84,12 +97,37 @@ func (r *PersesGlobalDatasourceReconciler) Reconcile(ctx context.Context, req ct
 		r.setStatusToComplete,
 	}
 
+	var reconcileErr error
 	for _, f := range subreconcilersForPerses {
 		if r, err := f(ctx, req); subreconciler.ShouldHaltOrRequeue(r, err) {
-			return subreconciler.Evaluate(r, err)
+			reconcileErr = err
+			break
 		}
 	}
 
+	// Track reconciliation status
+	if r.ReconciliationTracker != nil {
+		r.ReconciliationTracker.SetStatus(objKey, reconcileErr)
+		if reconcileErr == nil {
+			r.ReconciliationTracker.SetReasonAndMessage(objKey, "ReconciliationSuccessful", "GlobalDatasource reconciled successfully")
+		}
+	}
+
+	// Track metrics
+	if r.Metrics != nil {
+		if reconcileErr != nil {
+			r.Metrics.ReconcileErrors("persesglobaldatasource", "reconciliation_failed").Inc()
+			r.Metrics.SetFailedResources(objKey, "globaldatasource", 1)
+		} else {
+			r.Metrics.SetSyncedResources(objKey, "globaldatasource", 1)
+		}
+	}
+
+	if reconcileErr != nil {
+		return subreconciler.Evaluate(subreconciler.RequeueWithError(reconcileErr))
+	}
+
+	log.WithField("duration", time.Since(start)).Debug("globaldatasource reconciliation completed")
 	return subreconciler.Evaluate(subreconciler.DoNotRequeue())
 }
 

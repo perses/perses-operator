@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/perses/perses-operator/api/v1alpha2"
+	operatormetrics "github.com/perses/perses-operator/internal/metrics"
 	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
 )
@@ -59,9 +60,11 @@ type Config struct {
 // PersesReconciler reconciles a Perses object
 type PersesReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Recorder record.EventRecorder
-	Config   Config
+	Scheme                *runtime.Scheme
+	Recorder              record.EventRecorder
+	Config                Config
+	Metrics               *operatormetrics.Metrics
+	ReconciliationTracker *operatormetrics.ReconciliationTracker
 }
 
 var log = logger.WithField("module", "perses_controller")
@@ -74,14 +77,28 @@ var log = logger.WithField("module", "perses_controller")
 // +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
 func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	start := time.Now()
+	objKey := req.String()
+
 	perses := &v1alpha2.Perses{}
 	if err := r.Get(ctx, req.NamespacedName, perses); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Info("perses resource not found. Ignoring since object must be deleted")
+			if r.ReconciliationTracker != nil {
+				r.ReconciliationTracker.ForgetObject(objKey)
+			}
 			return subreconciler.Evaluate(subreconciler.DoNotRequeue())
 		}
 		log.WithError(err).Error("Failed to get perses")
+		if r.Metrics != nil {
+			r.Metrics.ReconcileErrors("perses", "get_failed").Inc()
+		}
 		return subreconciler.Evaluate(subreconciler.RequeueWithError(err))
+	}
+
+	// Update Perses instance count
+	if r.Metrics != nil {
+		r.Metrics.PersesInstances(perses.Namespace).Set(1)
 	}
 
 	// Store perses in context for all sub-reconcilers
@@ -99,12 +116,37 @@ func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	// Run all subreconcilers sequentially
+	var reconcileErr error
 	for _, f := range subreconcilersForPerses {
 		if r, err := f(ctx, req); subreconciler.ShouldHaltOrRequeue(r, err) {
-			return subreconciler.Evaluate(r, err)
+			reconcileErr = err
+			break
 		}
 	}
 
+	// Track reconciliation status
+	if r.ReconciliationTracker != nil {
+		r.ReconciliationTracker.SetStatus(objKey, reconcileErr)
+		if reconcileErr == nil {
+			r.ReconciliationTracker.SetReasonAndMessage(objKey, "ReconciliationSuccessful", "Perses instance reconciled successfully")
+		}
+	}
+
+	// Track metrics
+	if r.Metrics != nil {
+		if reconcileErr != nil {
+			r.Metrics.ReconcileErrors("perses", "reconciliation_failed").Inc()
+			r.Metrics.SetFailedResources(objKey, "perses", 1)
+		} else {
+			r.Metrics.SetSyncedResources(objKey, "perses", 1)
+		}
+	}
+
+	if reconcileErr != nil {
+		return subreconciler.Evaluate(subreconciler.RequeueWithError(reconcileErr))
+	}
+
+	log.WithField("duration", time.Since(start)).Debug("reconciliation completed")
 	return subreconciler.Evaluate(subreconciler.DoNotRequeue())
 }
 

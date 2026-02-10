@@ -215,6 +215,18 @@ check-api-docs: generate-api-docs ## Verify that generated API docs are up-to-da
 		git diff docs/api.md --exit-code; \
 	fi
 
+.PHONY: generate-metrics-docs
+generate-metrics-docs: ## Generate metrics documentation from metrics code.
+	@echo "Generating metrics documentation..."
+	@go run ./scripts/generate-metrics-docs/main.go docs/metrics.md
+
+.PHONY: check-metrics-docs
+check-metrics-docs: generate-metrics-docs ## Verify that generated metrics docs are up-to-date.
+	@if ! git diff --quiet --exit-code docs/metrics.md; then \
+		echo "docs/metrics.md is out of date. Please run 'make generate-metrics-docs' and commit the result."; \
+		git diff docs/metrics.md --exit-code; \
+	fi
+
 .PHONY: fmt
 fmt: jsonnet-format ## Run go fmt against code.
 	go fmt ./...
