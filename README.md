@@ -80,6 +80,7 @@ make undeploy
 - [API Docs](docs/api.md)
 - [Metrics Documentation](docs/metrics.md)
 - [Developer Docs](docs/dev.md)
+- [Testing](docs/testing.md)
 - Sample CRDs
   - [Kubernetes](config/samples)
   - [OpenShift](config/samples/openshift)
@@ -87,7 +88,7 @@ make undeploy
 
 ## License
 
-Copyright 2025 The Perses Authors.
+Copyright The Perses Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

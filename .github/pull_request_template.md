@@ -26,6 +26,7 @@ Closes: #ISSUE-NUMBER
 
 - [ ] Unit tests added/updated
 - [ ] Integration tests added/updated
+- [ ] E2E tests added/updated
 - [ ] Manual testing performed
 
 ## Checklist

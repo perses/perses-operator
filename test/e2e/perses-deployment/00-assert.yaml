@@ -1,0 +1,24 @@
+apiVersion: perses.dev/v1alpha2
+kind: Perses
+metadata:
+  name: perses-sql-test
+status:
+  conditions:
+    - type: Available
+      status: "True"
+      reason: Reconciled
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: perses-sql-test-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: perses-sql-test
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: perses-sql-test

@@ -1,0 +1,24 @@
+apiVersion: perses.dev/v1alpha2
+kind: Perses
+metadata:
+  name: perses-e2e-test
+status:
+  conditions:
+    - type: Available
+      status: "True"
+      reason: Reconciled
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: perses-e2e-test-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: perses-e2e-test
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: perses-e2e-test

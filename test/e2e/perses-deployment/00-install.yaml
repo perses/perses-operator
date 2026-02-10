@@ -1,0 +1,38 @@
+apiVersion: perses.dev/v1alpha2
+kind: Perses
+metadata:
+  name: perses-sql-test
+spec:
+  metadata:
+    labels:
+      instance: perses-sql-test
+  config:
+    database:
+      sql:
+        user: "root"
+        password: "e2e-test-password"
+        db_name: "perses"
+        net: "tcp"
+        addr: "mysql:3306"
+        allow_all_files: false
+        allow_cleartext_passwords: false
+        allow_fallback_to_plaintext: false
+        allow_native_passwords: true
+        allow_old_passwords: false
+        case_sensitive: false
+        check_conn_liveness: true
+        client_found_rows: false
+        columns_with_alias: false
+        interpolate_params: false
+        max_allowed_packet: 67108864
+        multi_statements: false
+        parse_time: true
+        read_timeout: "30s"
+        reject_read_only: false
+        server_pub_key: ""
+        timeout: "10s"
+        write_timeout: "30s"
+  containerPort: 8080
+  resources:
+    requests:
+      memory: 128Mi

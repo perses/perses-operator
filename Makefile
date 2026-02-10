@@ -230,9 +230,13 @@ fmt: jsonnet-format ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
-.PHONY: test
-test: manifests generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)"  go test $(shell go list ./...) -v -coverprofile cover.out
+.PHONY: test-unit
+test-unit: fmt vet ## Run unit tests.
+	go test $(shell go list ./... | grep -v ./controllers) -v -coverprofile cover-unit.out
+
+.PHONY: test-integration
+test-integration: manifests generate fmt vet envtest ## Run integration tests using envtest.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./controllers/... -v -coverprofile cover-integration.out
 
 .PHONY: lint-jsonnet
 lint-jsonnet: $(JSONNETLINT_BINARY)
@@ -242,6 +246,50 @@ lint-jsonnet: $(JSONNETLINT_BINARY)
 .PHONY: lint
 lint: lint-jsonnet ## Run linting.
 	golangci-lint run
+
+##@ E2E Testing
+
+KIND_CLUSTER_NAME ?= kuttl-e2e
+E2E_TAG ?= $(shell git rev-parse --short HEAD)
+E2E_IMG ?= $(IMAGE_TAG_BASE):$(E2E_TAG)
+
+.PHONY: e2e-create-cluster
+e2e-create-cluster: ## Create a kind cluster for e2e tests.
+	@echo ">> Creating kind cluster..."
+	kind create cluster --name $(KIND_CLUSTER_NAME) --wait 5m 2>/dev/null || true
+
+.PHONY: e2e-deploy
+e2e-deploy: manifests generate kustomize check-container-runtime ## Build operator image, load into kind and deploy.
+	kubectl config use-context kind-$(KIND_CLUSTER_NAME)
+	@echo ">> Building operator image..."
+	$(CONTAINER_RUNTIME) build -f Dockerfile.dev -t $(E2E_IMG) .
+	@echo ">> Loading image into kind cluster..."
+ifeq ($(CONTAINER_RUNTIME),podman)
+	$(CONTAINER_RUNTIME) save -o /tmp/perses-operator-e2e.tar $(E2E_IMG)
+	kind load image-archive /tmp/perses-operator-e2e.tar --name $(KIND_CLUSTER_NAME)
+	rm -f /tmp/perses-operator-e2e.tar
+else
+	kind load docker-image $(E2E_IMG) --name $(KIND_CLUSTER_NAME)
+endif
+	@echo ">> Installing cert-manager..."
+	$(MAKE) install-cert-manager
+	@echo ">> Installing CRDs and deploying operator..."
+	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	kubectl set image -n perses-operator-system deployment/perses-operator-controller-manager manager=$(E2E_IMG)
+	kubectl patch deployment perses-operator-controller-manager -n perses-operator-system \
+		-p '{"spec":{"template":{"spec":{"containers":[{"name":"manager","imagePullPolicy":"IfNotPresent"}]}}}}'
+	kubectl wait --for=condition=Available --timeout=300s -n perses-operator-system deployment/perses-operator-controller-manager
+
+.PHONY: e2e-setup
+e2e-setup: e2e-create-cluster e2e-deploy ## Create kind cluster and deploy operator (local development).
+
+.PHONY: test-e2e
+test-e2e: kuttl ## Run e2e tests using kuttl (run e2e-setup first if cluster is not ready).
+	$(KUTTL) test --config test/e2e/kuttl-test.yaml
+
+.PHONY: e2e-cleanup
+e2e-cleanup: ## Delete the kind cluster used for e2e tests.
+	kind delete cluster --name $(KIND_CLUSTER_NAME)
 
 ##@ Build
 
@@ -262,11 +310,11 @@ run: generate-local-certs manifests generate fmt vet ## Run a controller from yo
 # (i.e. docker build --platform linux/arm64 ). However, you must enable docker buildKit for it.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: image-build
-image-build: check-container-runtime build test ## Build docker image with the manager.
+image-build: check-container-runtime build test-unit test-integration ## Build docker image with the manager.
 	${CONTAINER_RUNTIME} build -f Dockerfile -t ${IMG} .
 
 .PHONY: test-image-build
-test-image-build: check-container-runtime test ## Build a testing docker image with the manager.
+test-image-build: check-container-runtime test-unit test-integration ## Build a testing docker image with the manager.
 	${CONTAINER_RUNTIME} build -f Dockerfile.dev -t ${IMG} .
 
 .PHONY: image-push
@@ -281,7 +329,7 @@ image-push: ## Push docker image with the manager.
 # To properly provided solutions that supports more than one platform you should use this option.
 PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
 .PHONY: docker-buildx
-docker-buildx: test ## Build and push docker image for the manager for cross-platform support
+docker-buildx: test-unit test-integration ## Build and push docker image for the manager for cross-platform support
 	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
 	- docker buildx create --name project-v3-builder
@@ -291,7 +339,7 @@ docker-buildx: test ## Build and push docker image for the manager for cross-pla
 	rm Dockerfile.cross
 
 .PHONY: podman-cross-build
-podman-cross-build: test
+podman-cross-build: test-unit test-integration
 	podman manifest create -a ${IMG}
 	podman build --platform $(PLATFORMS) --manifest ${IMG} -f Dockerfile.dev
 	podman manifest push ${IMG}
