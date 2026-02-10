@@ -7,6 +7,9 @@ export DATE
 
 XARGS ?= $(shell which gxargs 2>/dev/null || which xargs)
 
+# Include tool installation targets and versions from Makefile.tools
+# See Makefile.tools for all tool versions and installation targets
+include Makefile.tools
 
 .PHONY: check-container-runtime
 check-container-runtime:
@@ -73,14 +76,6 @@ ifeq ($(USE_IMAGE_DIGESTS), true)
 endif
 
 ## Versions
-
-# Set the Operator SDK version to use. By default, what is installed on the system is used.
-# This is useful for CI or a project to utilize a specific version of the operator-sdk toolkit.
-OPERATOR_SDK_VERSION ?= v1.42.0
-# ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-ENVTEST_K8S_VERSION = 1.31.0
-# ENVTEST_VERSION refers to the version of the envtest binary.
-ENVTEST_VERSION ?= release-0.19
 
 # Image URL to use all building/pushing image targets
 IMG ?= $(IMAGE_TAG_BASE):v$(VERSION)
@@ -356,117 +351,6 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 ##@ Build Dependencies
 
-## Location to install dependencies to
-LOCALBIN ?= $(shell pwd)/bin
-$(LOCALBIN):
-	mkdir -p $(LOCALBIN)
-
-## Tools directory
-TOOLS_DIR := hack/tools
-
-## Tool Binaries
-KUSTOMIZE ?= $(LOCALBIN)/kustomize
-CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
-GOJSONTOYAML_BINARY ?= $(LOCALBIN)/gojsontoyaml
-ENVTEST ?= $(LOCALBIN)/setup-envtest-$(ENVTEST_VERSION)
-JSONNET_BINARY ?= $(LOCALBIN)/jsonnet
-JSONNETFMT_BINARY ?= $(LOCALBIN)/jsonnetfmt
-JSONNETLINT_BINARY ?= $(LOCALBIN)/jsonnet-lint
-CONVERSION_GEN ?= $(LOCALBIN)/conversion-gen
-YQ ?= $(LOCALBIN)/yq
-CRD_REF_DOCS ?= $(LOCALBIN)/crd-ref-docs
-
-## Tool Versions
-KUSTOMIZE_VERSION ?= v3.8.7
-CONTROLLER_TOOLS_VERSION ?= v0.19.0
-GOJSONTOYAML_VERSION ?= v0.1.0
-JSONNET_VERSION ?= v0.21.0
-JSONNETFMT_VERSION ?= v0.21.0
-JSONNETLINT_VERSION ?= v0.21.0
-CONVERSION_GEN_VERSION ?= v0.33.0
-YQ_VERSION ?= v4.45.4
-
-KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
-.PHONY: kustomize
-kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
-$(KUSTOMIZE): $(LOCALBIN)
-	@if test -x $(LOCALBIN)/kustomize && ! $(LOCALBIN)/kustomize version | grep -q $(KUSTOMIZE_VERSION); then \
-		echo "$(LOCALBIN)/kustomize version is not expected $(KUSTOMIZE_VERSION). Removing it before installing."; \
-		rm -rf $(LOCALBIN)/kustomize; \
-	fi
-	test -s $(LOCALBIN)/kustomize || { curl -Ss $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s -- $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN); }
-
-.PHONY: controller-gen
-controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary. If wrong version is installed, it will be overwritten.
-$(CONTROLLER_GEN): $(LOCALBIN)
-	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
-
-.PHONY: gojsontoyaml
-gojsontoyaml: $(GOJSONTOYAML_BINARY) ## Download gojsontoyaml locally if necessary. If wrong version is installed, it will be overwritten.
-$(GOJSONTOYAML_BINARY): $(LOCALBIN)
-	test -s $(LOCALBIN)/gojsontoyaml && $(LOCALBIN)/gojsontoyaml --version | grep -q $(GOJSONTOYAML_VERSION) || \
-	GOBIN=$(LOCALBIN) go install github.com/brancz/gojsontoyaml@$(GOJSONTOYAML_VERSION)
-
-.PHONY: jsonnet
-jsonnet: $(JSONNET_BINARY) ## Download jsonnet locally if necessary. If wrong version is installed, it will be overwritten.
-$(JSONNET_BINARY): $(LOCALBIN)
-	test -s $(LOCALBIN)/jsonnet && $(LOCALBIN)/jsonnet --version | grep -q $(JSONNET_VERSION) || \
-	GOBIN=$(LOCALBIN) go install github.com/google/go-jsonnet/cmd/jsonnet@$(JSONNET_VERSION)
-
-.PHONY: jsonnetfmt
-jsonnetfmt: $(JSONNETFMT_BINARY) ## Download jsonnetfmt locally if necessary. If wrong version is installed, it will be overwritten.
-$(JSONNETFMT_BINARY): $(LOCALBIN)
-	test -s $(LOCALBIN)/jsonnetfmt && $(LOCALBIN)/jsonnetfmt --version | grep -q $(JSONNETFMT_VERSION) || \
-	GOBIN=$(LOCALBIN) go install github.com/google/go-jsonnet/cmd/jsonnetfmt@$(JSONNETFMT_VERSION)
-
-.PHONY: jsonnet-lint
-jsonnet-lint: $(JSONNETLINT_BINARY) ## Download jsonnetlint locally if necessary. If wrong version is installed, it will be overwritten.
-$(JSONNETLINT_BINARY): $(LOCALBIN)
-	test -s $(LOCALBIN)/jsonnet-lint && $(LOCALBIN)/jsonnet-lint --version | grep -q $(JSONNETLINT_VERSION) || \
-	GOBIN=$(LOCALBIN) go install github.com/google/go-jsonnet/cmd/jsonnet-lint@$(JSONNETLINT_VERSION)
-
-.PHONY: conversion-gen
-conversion-gen: $(CONVERSION_GEN) ## Download conversion-gen locally if necessary. If wrong version is installed, it will be overwritten.
-$(CONVERSION_GEN): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install k8s.io/code-generator/cmd/conversion-gen@$(CONVERSION_GEN_VERSION)
-
-.PHONY: yq
-yq: $(YQ) ## Download conversion-gen locally if necessary. If wrong version is installed, it will be overwritten.
-$(YQ): $(LOCALBIN)
-	test -s $(LOCALBIN)/yq && $(LOCALBIN)/yq version | grep -q $(YQ_VERSION) || \
-	GOBIN=$(LOCALBIN) go install github.com/mikefarah/yq/v4@$(YQ_VERSION)
-
-.PHONY: crd-ref-docs
-crd-ref-docs: $(CRD_REF_DOCS) ## Download crd-ref-docs locally if necessary.
-$(CRD_REF_DOCS): $(TOOLS_DIR)/go.mod | $(LOCALBIN)
-	cd $(TOOLS_DIR) && go mod tidy && go build -o $(LOCALBIN)/crd-ref-docs github.com/elastic/crd-ref-docs
-
-.PHONY: envtest
-envtest: $(ENVTEST) ## Download setup-envtest locally if necessary.
-$(ENVTEST): $(LOCALBIN)
-	$(call go-install-tool,$(ENVTEST),sigs.k8s.io/controller-runtime/tools/setup-envtest,$(ENVTEST_VERSION))
-
-.PHONY: operator-sdk
-OPERATOR_SDK ?= $(LOCALBIN)/operator-sdk
-operator-sdk: ## Download operator-sdk locally if necessary.
-ifeq (,$(wildcard $(OPERATOR_SDK)))
-ifeq (, $(shell which operator-sdk 2>/dev/null))
-	@{ \
-	set -e ;\
-	mkdir -p $(dir $(OPERATOR_SDK)) ;\
-	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
-	curl -sSLo $(OPERATOR_SDK) https://github.com/operator-framework/operator-sdk/releases/download/$(OPERATOR_SDK_VERSION)/operator-sdk_$${OS}_$${ARCH} ;\
-	chmod +x $(OPERATOR_SDK) ;\
-	}
-else
-OPERATOR_SDK = $(shell which operator-sdk)
-endif
-endif
-
-.PHONY: build-tools
-build-tools: kustomize controller-gen gojsontoyaml jsonnet conversion-gen crd-ref-docs
-
 .PHONY: bundle
 bundle: manifests kustomize operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
 	$(OPERATOR_SDK) generate kustomize manifests -q
@@ -485,23 +369,6 @@ bundle-build: generate bundle ## Build the bundle image.
 .PHONY: bundle-push
 bundle-push: ## Push the bundle image.
 	$(MAKE) image-push IMG=$(BUNDLE_IMG)
-
-.PHONY: opm
-OPM = ./bin/opm
-opm: ## Download opm locally if necessary.
-ifeq (,$(wildcard $(OPM)))
-ifeq (,$(shell which opm 2>/dev/null))
-	@{ \
-	set -e ;\
-	mkdir -p $(dir $(OPM)) ;\
-	OS=$(shell go env GOOS) && ARCH=$(shell go env GOARCH) && \
-	curl -sSLo $(OPM) https://github.com/operator-framework/operator-registry/releases/download/v1.23.0/$${OS}-$${ARCH}-opm ;\
-	chmod +x $(OPM) ;\
-	}
-else
-OPM = $(shell which opm)
-endif
-endif
 
 # A comma-separated list of bundle images (e.g. make catalog-build BUNDLE_IMGS=example.com/operator-bundle:v0.1.0,example.com/operator-bundle:v0.2.0).
 # These images MUST exist in a registry and be pull-able.
@@ -526,20 +393,6 @@ catalog-build: check-container-runtime opm ## Build a catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) image-push IMG=$(CATALOG_IMG)
-	
-# go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
-# $1 - target path with name of binary (ideally with version)
-# $2 - package url which can be installed
-# $3 - specific version of package
-define go-install-tool
-@[ -f $(1) ] || { \
-set -e; \
-package=$(2)@$(3) ;\
-echo "Downloading $${package}" ;\
-GOBIN=$(LOCALBIN) go install $${package} ;\
-mv "$$(echo "$(1)" | sed "s/-$(3)$$//")" $(1) ;\
-}
-endef
 
 .PHONY: generate-goreleaser
 generate-goreleaser:

@@ -7,7 +7,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
-COPY Makefile ./
+COPY Makefile Makefile.tools ./
 RUN make build-tools
 
 COPY . .
