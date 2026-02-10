@@ -107,6 +107,11 @@ type PersesSpec struct {
 	// LogMethodTrace when true, includes the calling method as a field in the log.
 	// It can be useful to see immediately where the log comes from.
 	LogMethodTrace *bool `json:"logMethodTrace,omitempty"`
+
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	// Provisioning configuration for provisioning secrets
+	Provisioning *Provisioning `json:"provisioning,omitempty"`
 }
 
 // Metadata to add to deployed pods
@@ -253,6 +258,9 @@ type PersesStatus struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=status
 	// Conditions represent the latest observations of the Perses resource state
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// Provisioning secrets versions
+	Provisioning []SecretVersion `json:"provisioning,omitempty"`
 }
 
 //+kubebuilder:object:root=true

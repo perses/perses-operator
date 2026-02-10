@@ -19,20 +19,26 @@ package perses
 import (
 	"context"
 	"fmt"
+	"slices"
+	"sort"
 	"time"
 
 	logger "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/perses/perses-operator/api/v1alpha2"
 	operatormetrics "github.com/perses/perses-operator/internal/metrics"
@@ -108,6 +114,7 @@ func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		r.handleDelete,
 		r.setStatusToUnknown,
 		r.addFinalizer,
+		r.reconcileProvisioning,
 		r.reconcileService,
 		r.reconcileConfigMap,
 		r.reconcileDeployment,
@@ -350,6 +357,91 @@ func (r *PersesReconciler) setStatusToComplete(ctx context.Context, req ctrl.Req
 	})
 }
 
+func (r *PersesReconciler) reconcileProvisioning(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
+	perses, ok := persesFromContext(ctx)
+	if !ok {
+		log.Error("perses not found in context")
+		return subreconciler.RequeueWithError(fmt.Errorf("perses not found in context"))
+	}
+
+	if perses.Spec.Provisioning == nil || len(perses.Spec.Provisioning.SecretRefs) == 0 {
+		// If no provisioning secrets are defined, ensure the status is empty
+		return r.updatePersesStatus(ctx, req, func(p *v1alpha2.Perses) {
+			p.Status.Provisioning = []v1alpha2.SecretVersion{}
+		})
+	}
+
+	var newSecretVersions []v1alpha2.SecretVersion
+	for _, secretRef := range perses.Spec.Provisioning.SecretRefs {
+		secretName := types.NamespacedName{
+			Namespace: perses.Namespace,
+			Name:      secretRef.Name,
+		}
+
+		actualSecret := &corev1.Secret{}
+		err := r.Get(ctx, secretName, actualSecret)
+		if err != nil {
+			log.WithError(err).Errorf("Failed to get provisioning secret %s", secretName.String())
+			return subreconciler.RequeueWithError(err)
+		}
+		// provisioning secrets may be used more than once for different keys, so only add the secret once
+		if !slices.ContainsFunc(newSecretVersions, func(version v1alpha2.SecretVersion) bool { return version.Name == secretName.Name }) {
+			newSecretVersions = append(newSecretVersions, v1alpha2.SecretVersion{
+				Name:    secretRef.Name,
+				Version: actualSecret.ResourceVersion,
+			})
+		}
+	}
+
+	sort.Slice(newSecretVersions, func(i, j int) bool {
+		return newSecretVersions[i].Name < newSecretVersions[j].Name
+	})
+
+	if equality.Semantic.DeepEqual(newSecretVersions, perses.Status.Provisioning) {
+		return subreconciler.ContinueReconciling()
+	}
+
+	return r.updatePersesStatus(ctx, req, func(p *v1alpha2.Perses) {
+		p.Status.Provisioning = newSecretVersions
+	})
+}
+
+func (r *PersesReconciler) findPersesForSecret(ctx context.Context, obj client.Object) []reconcile.Request {
+	// only check for secrets
+	secret, ok := obj.(*corev1.Secret)
+	if !ok {
+		return nil
+	}
+
+	// List all Perses objects in the same namespace as the secret
+	persesList := &v1alpha2.PersesList{}
+	if err := r.List(ctx, persesList, client.InNamespace(secret.Namespace)); err != nil {
+		return nil
+	}
+
+	for _, perses := range persesList.Items {
+		if perses.Spec.Provisioning == nil || len(perses.Spec.Provisioning.SecretRefs) == 0 {
+			continue
+		}
+		// Check if this Perses instance references the changed secret
+		for _, ref := range perses.Spec.Provisioning.SecretRefs {
+			if ref.Name == secret.Name {
+				// only need to reconcile on the first secret that matches the Perses instance
+				return []reconcile.Request{
+					{
+						NamespacedName: types.NamespacedName{
+							Name:      perses.Name,
+							Namespace: perses.Namespace,
+						},
+					},
+				}
+			}
+		}
+	}
+
+	return []reconcile.Request{}
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *PersesReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
@@ -358,5 +450,9 @@ func (r *PersesReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Service{}).
+		Watches(
+			&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(r.findPersesForSecret),
+		).
 		Complete(r)
 }

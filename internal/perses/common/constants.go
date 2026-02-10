@@ -19,9 +19,11 @@ package common
 import "github.com/perses/perses-operator/api/v1alpha2"
 
 const (
-	PersesFinalizer     = "perses.dev/finalizer"
-	TypeAvailablePerses = "Available"
-	TypeDegradedPerses  = "Degraded"
+	PersesNamespaceDomain     = "perses.dev"
+	PersesFinalizer           = PersesNamespaceDomain + "/finalizer"
+	PersesProvisioningVersion = PersesNamespaceDomain + "/provisioning-version"
+	TypeAvailablePerses       = "Available"
+	TypeDegradedPerses        = "Degraded"
 
 	// Flags
 	PersesServerURLFlag = "perses-server-url"
@@ -38,6 +40,7 @@ const (
 
 	// Mount paths
 	storageMountPath  = "/perses"
+	secretsMountPath  = "/etc/perses/provisioning/secrets"
 	configMountPath   = "/etc/perses/config"
 	defaultConfigPath = configMountPath + "/config.yaml"
 

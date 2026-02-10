@@ -413,6 +413,7 @@ _Appears in:_
 | `podSecurityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#podsecuritycontext-v1-core)_ | PodSecurityContext holds pod-level security attributes and common container settings.<br />If not specified, defaults to fsGroup: 65534 to ensure proper volume permissions for the nobody user. |  | Optional: \{\} <br /> |
 | `logLevel` _string_ | LogLevel defines the log level for Perses. |  | Enum: [panic fatal error warning info debug trace] <br />Optional: \{\} <br /> |
 | `logMethodTrace` _boolean_ | LogMethodTrace when true, includes the calling method as a field in the log.<br />It can be useful to see immediately where the log comes from. |  | Optional: \{\} <br /> |
+| `provisioning` _[Provisioning](#provisioning)_ | Provisioning configuration for provisioning secrets |  | Optional: \{\} <br /> |
 
 
 #### PersesStatus
@@ -429,6 +430,41 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#condition-v1-meta) array_ | Conditions represent the latest observations of the Perses resource state |  |  |
+| `provisioning` _[SecretVersion](#secretversion) array_ | Provisioning secrets versions |  |  |
+
+
+#### Provisioning
+
+
+
+Provisioning configuration for provisioning secrets
+
+
+
+_Appears in:_
+- [PersesSpec](#persesspec)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `secretRefs` _[ProvisioningSecret](#provisioningsecret) array_ | SecretRefs is a list of references to Kubernetes secrets used for provisioning sensitive data. |  | Optional: \{\} <br /> |
+
+
+#### ProvisioningSecret
+
+
+
+
+
+
+
+_Appears in:_
+- [Provisioning](#provisioning)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ | Name of the referent.<br />This field is effectively required, but due to backwards compatibility is<br />allowed to be empty. Instances of this type with an empty value here are<br />almost certainly wrong.<br />More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names |  | Optional: \{\} <br /> |
+| `key` _string_ | The key of the secret to select from.  Must be a valid secret key. |  |  |
+| `optional` _boolean_ | Specify whether the Secret or its key must be defined |  | Optional: \{\} <br /> |
 
 
 #### SecretSource
@@ -470,6 +506,23 @@ _Appears in:_
 | `secret` |  |
 | `configmap` |  |
 | `file` |  |
+
+
+#### SecretVersion
+
+
+
+SecretVersion represents a secret version
+
+
+
+_Appears in:_
+- [PersesStatus](#persesstatus)
+
+| Field | Description | Default | Validation |
+| --- | --- | --- | --- |
+| `name` _string_ |  |  |  |
+| `version` _string_ |  |  |  |
 
 
 #### StorageConfiguration
