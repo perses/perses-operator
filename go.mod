@@ -3,7 +3,7 @@ module github.com/perses/perses-operator
 go 1.25.0
 
 require (
-	github.com/brunoga/deep v1.2.5
+	github.com/brunoga/deep v1.3.1
 	github.com/goreleaser/goreleaser/v2 v2.12.0
 	github.com/onsi/ginkgo/v2 v2.28.0
 	github.com/onsi/gomega v1.39.1
