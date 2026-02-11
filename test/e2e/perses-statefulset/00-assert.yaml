@@ -7,6 +7,9 @@ status:
     - type: Available
       status: "True"
       reason: Reconciled
+    - type: Degraded
+      status: "False"
+      reason: Reconciled
 ---
 apiVersion: v1
 kind: ConfigMap

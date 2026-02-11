@@ -14,6 +14,7 @@ import (
 	persesdashboard "github.com/perses/perses/pkg/model/api/v1/dashboard"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -171,21 +172,35 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 				return nil
 			}, time.Minute, time.Second).Should(Succeed())
 
-			By("Checking the latest Status Condition added to the Perses dashboard instance")
+			By("Checking the Status Conditions added to the Perses dashboard instance")
 			Eventually(func() error {
 				dashboardWithStatus := &persesv1alpha2.PersesDashboard{}
 				err = k8sClient.Get(ctx, dashboardNamespaceName, dashboardWithStatus)
 
 				if len(dashboardWithStatus.Status.Conditions) == 0 {
 					return fmt.Errorf("No status condition was added to the perses dashboard instance")
-				} else {
-					latestStatusCondition := dashboardWithStatus.Status.Conditions[len(dashboardWithStatus.Status.Conditions)-1]
-					expectedLatestStatusCondition := metav1.Condition{Type: common.TypeAvailablePerses,
-						Status: metav1.ConditionTrue, Reason: "Reconciled",
-						Message: fmt.Sprintf("Dashboard (%s) created successfully", dashboardWithStatus.Name)}
-					if latestStatusCondition.Message != expectedLatestStatusCondition.Message || latestStatusCondition.Reason != expectedLatestStatusCondition.Reason || latestStatusCondition.Status != expectedLatestStatusCondition.Status || latestStatusCondition.Type != expectedLatestStatusCondition.Type {
-						return fmt.Errorf("The latest status condition added to the perses dashboard instance is not as expected. Expected %v but recieved %v", expectedLatestStatusCondition, latestStatusCondition)
-					}
+				}
+
+				availableCond := apimeta.FindStatusCondition(dashboardWithStatus.Status.Conditions, common.TypeAvailablePerses)
+				if availableCond == nil {
+					return fmt.Errorf("Available condition not found on the perses dashboard instance")
+				}
+				expectedAvailable := metav1.Condition{Type: common.TypeAvailablePerses,
+					Status: metav1.ConditionTrue, Reason: "Reconciled",
+					Message: fmt.Sprintf("Dashboard (%s) created successfully", dashboardWithStatus.Name)}
+				if availableCond.Message != expectedAvailable.Message || availableCond.Reason != expectedAvailable.Reason || availableCond.Status != expectedAvailable.Status || availableCond.Type != expectedAvailable.Type {
+					return fmt.Errorf("The Available status condition is not as expected. Expected %v but received %v", expectedAvailable, *availableCond)
+				}
+
+				degradedCond := apimeta.FindStatusCondition(dashboardWithStatus.Status.Conditions, common.TypeDegradedPerses)
+				if degradedCond == nil {
+					return fmt.Errorf("Degraded condition not found on the perses dashboard instance")
+				}
+				expectedDegraded := metav1.Condition{Type: common.TypeDegradedPerses,
+					Status: metav1.ConditionFalse, Reason: "Reconciled",
+					Message: fmt.Sprintf("Dashboard (%s) reconciled successfully", dashboardWithStatus.Name)}
+				if degradedCond.Message != expectedDegraded.Message || degradedCond.Reason != expectedDegraded.Reason || degradedCond.Status != expectedDegraded.Status || degradedCond.Type != expectedDegraded.Type {
+					return fmt.Errorf("The Degraded status condition is not as expected. Expected %v but received %v", expectedDegraded, *degradedCond)
 				}
 
 				return err
@@ -272,21 +287,35 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 				return nil
 			}, time.Minute, time.Second).Should(Succeed())
 
-			By("Checking the latest Status Condition added to the Perses dashboard instance")
+			By("Checking the Status Conditions added to the Perses dashboard instance")
 			Eventually(func() error {
 				dashboardWithStatus := &persesv1alpha2.PersesDashboard{}
 				err = k8sClient.Get(ctx, dashboardNamespaceName, dashboardWithStatus)
 
 				if len(dashboardWithStatus.Status.Conditions) == 0 {
 					return fmt.Errorf("No status condition was added to the perses dashboard instance")
-				} else {
-					latestStatusCondition := dashboardWithStatus.Status.Conditions[len(dashboardWithStatus.Status.Conditions)-1]
-					expectedLatestStatusCondition := metav1.Condition{Type: common.TypeDegradedPerses,
-						Status: metav1.ConditionTrue, Reason: string(common.ReasonBackendError),
-						Message: "something wrong happened with the request to the API.  Message: internal server error StatusCode: 500"}
-					if latestStatusCondition.Message != expectedLatestStatusCondition.Message || latestStatusCondition.Reason != expectedLatestStatusCondition.Reason || latestStatusCondition.Status != expectedLatestStatusCondition.Status || latestStatusCondition.Type != expectedLatestStatusCondition.Type {
-						return fmt.Errorf("The latest status condition added to the perses dashboard instance is not as expected. Expected %v but recieved %v", expectedLatestStatusCondition, latestStatusCondition)
-					}
+				}
+
+				degradedCond := apimeta.FindStatusCondition(dashboardWithStatus.Status.Conditions, common.TypeDegradedPerses)
+				if degradedCond == nil {
+					return fmt.Errorf("Degraded condition not found on the perses dashboard instance")
+				}
+				expectedDegraded := metav1.Condition{Type: common.TypeDegradedPerses,
+					Status: metav1.ConditionTrue, Reason: string(common.ReasonBackendError),
+					Message: "something wrong happened with the request to the API.  Message: internal server error StatusCode: 500"}
+				if degradedCond.Message != expectedDegraded.Message || degradedCond.Reason != expectedDegraded.Reason || degradedCond.Status != expectedDegraded.Status || degradedCond.Type != expectedDegraded.Type {
+					return fmt.Errorf("The Degraded status condition is not as expected. Expected %v but received %v", expectedDegraded, *degradedCond)
+				}
+
+				availableCond := apimeta.FindStatusCondition(dashboardWithStatus.Status.Conditions, common.TypeAvailablePerses)
+				if availableCond == nil {
+					return fmt.Errorf("Available condition not found on the perses dashboard instance")
+				}
+				expectedAvailable := metav1.Condition{Type: common.TypeAvailablePerses,
+					Status: metav1.ConditionFalse, Reason: string(common.ReasonBackendError),
+					Message: "something wrong happened with the request to the API.  Message: internal server error StatusCode: 500"}
+				if availableCond.Message != expectedAvailable.Message || availableCond.Reason != expectedAvailable.Reason || availableCond.Status != expectedAvailable.Status || availableCond.Type != expectedAvailable.Type {
+					return fmt.Errorf("The Available status condition is not as expected. Expected %v but received %v", expectedAvailable, *availableCond)
 				}
 
 				return err

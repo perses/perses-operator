@@ -176,6 +176,9 @@ func (r *PersesDatasourceReconciler) setStatusToUnknown(ctx context.Context, req
 func (r *PersesDatasourceReconciler) setStatusToComplete(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
 	return r.updateDatasourceStatus(ctx, req, func(datasource *persesv1alpha2.PersesDatasource) {
 		meta.SetStatusCondition(&datasource.Status.Conditions, metav1.Condition{
+			Type: common.TypeDegradedPerses, Status: metav1.ConditionFalse,
+			Reason: "Reconciled", Message: fmt.Sprintf("Datasource (%s) reconciled successfully", datasource.Name)})
+		meta.SetStatusCondition(&datasource.Status.Conditions, metav1.Condition{
 			Type: common.TypeAvailablePerses, Status: metav1.ConditionTrue,
 			Reason: "Reconciled", Message: fmt.Sprintf("Datasource (%s) created successfully", datasource.Name)})
 	})
@@ -189,6 +192,9 @@ func (r *PersesDatasourceReconciler) setStatusToDegraded(
 	degradedError error,
 ) (*ctrl.Result, error) {
 	result, err := r.updateDatasourceStatus(ctx, req, func(datasource *persesv1alpha2.PersesDatasource) {
+		meta.SetStatusCondition(&datasource.Status.Conditions, metav1.Condition{
+			Type: common.TypeAvailablePerses, Status: metav1.ConditionFalse,
+			Reason: string(degradedReason), Message: degradedError.Error()})
 		meta.SetStatusCondition(&datasource.Status.Conditions, metav1.Condition{
 			Type: common.TypeDegradedPerses, Status: metav1.ConditionTrue,
 			Reason: string(degradedReason), Message: degradedError.Error()})

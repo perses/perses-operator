@@ -176,6 +176,9 @@ func (r *PersesDashboardReconciler) setStatusToUnknown(ctx context.Context, req 
 func (r *PersesDashboardReconciler) setStatusToComplete(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
 	return r.updateDashboardStatus(ctx, req, func(dashboard *persesv1alpha2.PersesDashboard) {
 		meta.SetStatusCondition(&dashboard.Status.Conditions, metav1.Condition{
+			Type: common.TypeDegradedPerses, Status: metav1.ConditionFalse,
+			Reason: "Reconciled", Message: fmt.Sprintf("Dashboard (%s) reconciled successfully", dashboard.Name)})
+		meta.SetStatusCondition(&dashboard.Status.Conditions, metav1.Condition{
 			Type: common.TypeAvailablePerses, Status: metav1.ConditionTrue,
 			Reason: "Reconciled", Message: fmt.Sprintf("Dashboard (%s) created successfully", dashboard.Name)})
 	})
@@ -189,6 +192,9 @@ func (r *PersesDashboardReconciler) setStatusToDegraded(
 	degradedError error,
 ) (*ctrl.Result, error) {
 	result, err := r.updateDashboardStatus(ctx, req, func(dashboard *persesv1alpha2.PersesDashboard) {
+		meta.SetStatusCondition(&dashboard.Status.Conditions, metav1.Condition{
+			Type: common.TypeAvailablePerses, Status: metav1.ConditionFalse,
+			Reason: string(degradedReason), Message: degradedError.Error()})
 		meta.SetStatusCondition(&dashboard.Status.Conditions, metav1.Condition{
 			Type: common.TypeDegradedPerses, Status: metav1.ConditionTrue,
 			Reason: string(degradedReason), Message: degradedError.Error()})

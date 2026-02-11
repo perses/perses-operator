@@ -345,6 +345,9 @@ func (r *PersesReconciler) doFinalizerOperationsForPerses(perses *v1alpha2.Perse
 func (r *PersesReconciler) setStatusToComplete(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
 	return r.updatePersesStatus(ctx, req, func(perses *v1alpha2.Perses) {
 		meta.SetStatusCondition(&perses.Status.Conditions, metav1.Condition{
+			Type: common.TypeDegradedPerses, Status: metav1.ConditionFalse,
+			Reason: "Reconciled", Message: fmt.Sprintf("Perses (%s) reconciled successfully", perses.Name)})
+		meta.SetStatusCondition(&perses.Status.Conditions, metav1.Condition{
 			Type: common.TypeAvailablePerses, Status: metav1.ConditionTrue,
 			Reason: "Reconciled", Message: fmt.Sprintf("Perses (%s) created successfully", perses.Name)})
 	})
