@@ -121,9 +121,17 @@ func (r *PersesReconciler) createPersesDeployment(
 
 	ls := common.LabelsForPerses(perses.Name, perses)
 
-	annotations := map[string]string{}
+	annotations := make(map[string]string)
 	if perses.Spec.Metadata != nil && perses.Spec.Metadata.Annotations != nil {
 		annotations = perses.Spec.Metadata.Annotations
+	}
+
+	provisioningHash, err := common.GetProvisioningHash(perses)
+	if err != nil {
+		return nil, err
+	}
+	if provisioningHash != "" {
+		annotations[common.PersesProvisioningVersion] = provisioningHash
 	}
 
 	// Get the Operand image

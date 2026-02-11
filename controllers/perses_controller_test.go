@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"time"
 
@@ -413,6 +414,143 @@ var _ = Describe("Perses controller", func() {
 				}
 				return nil
 			}, time.Minute, time.Second).Should(Succeed())
+		})
+
+		It("should successfully reconcile a custom resource for Perses with provisioning secrets", func() {
+			PersesProvisioningName := "perses-test-with-provisioning"
+			typeNamespaceName := types.NamespacedName{Name: PersesProvisioningName, Namespace: persesNamespace}
+			secretName := "encrypted-key-secret"
+			secretNamespaceName := types.NamespacedName{Name: secretName, Namespace: persesNamespace}
+
+			By("Creating the provisioning secret")
+			secretKey := "encrypted-key"
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretName,
+					Namespace: persesNamespace,
+				},
+				StringData: map[string]string{
+					secretKey: "verysecret",
+				},
+			}
+			Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+
+			By("Creating the custom resource for the Kind Perses with provisioning")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      PersesProvisioningName,
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					Image: persesImage,
+					Config: persesv1alpha2.PersesConfig{
+						Config: persesconfig.Config{
+							Database: persesconfig.Database{
+								File: &persesconfig.File{
+									Folder: "/etc/perses/storage",
+								},
+							},
+							Security: persesconfig.Security{
+								EncryptionKeyFile: filepath.Join("/etc/perses/provisioning/secrets", secret.String()),
+							},
+						},
+					},
+					Provisioning: &persesv1alpha2.Provisioning{
+						SecretRefs: []*persesv1alpha2.ProvisioningSecret{
+							{
+								SecretKeySelector: corev1.SecretKeySelector{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: secretName,
+									},
+									Key: secretKey,
+								},
+							},
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, perses)).To(Succeed())
+
+			By("Checking if the custom resource was successfully created")
+			Eventually(func() error {
+				found := &persesv1alpha2.Perses{}
+				return k8sClient.Get(ctx, typeNamespaceName, found)
+			}, time.Minute, time.Second).Should(Succeed())
+
+			persesReconciler := &persescontroller.PersesReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+
+			By("Reconciling the custom resource created")
+			_, err := persesReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespaceName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			var initialHash string
+			var initialResourceVersion string
+			By("Checking if StatefulSet has the correct provisioning annotation and status is updated")
+			Eventually(func() (string, error) {
+				persesResource := &persesv1alpha2.Perses{}
+				if err := k8sClient.Get(ctx, typeNamespaceName, persesResource); err != nil {
+					return "", err
+				}
+				if len(persesResource.Status.Provisioning) != 1 {
+					return "", fmt.Errorf("provisioning status not updated")
+				}
+				initialResourceVersion = persesResource.Status.Provisioning[0].Version
+
+				sts := &appsv1.StatefulSet{}
+				if err := k8sClient.Get(ctx, typeNamespaceName, sts); err != nil {
+					return "", err
+				}
+				hash, ok := sts.Spec.Template.Annotations[common.PersesProvisioningVersion]
+				if !ok {
+					return "", fmt.Errorf("provisioning annotation not found")
+				}
+				return hash, nil
+			}, time.Minute, time.Second).ShouldNot(BeEmpty(), initialHash)
+
+			By("Updating the provisioning secret")
+			updatedSecret := &corev1.Secret{}
+			Expect(k8sClient.Get(ctx, secretNamespaceName, updatedSecret)).To(Succeed())
+			if updatedSecret.StringData == nil {
+				updatedSecret.StringData = make(map[string]string)
+			}
+			updatedSecret.StringData[secretKey] = "newSecret"
+			Expect(k8sClient.Update(ctx, updatedSecret)).To(Succeed())
+
+			By("Reconciling the custom resource again")
+			_, err = persesReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespaceName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+			_, err = persesReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespaceName,
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			By("Checking if StatefulSet has the updated provisioning annotation and status is updated")
+			Eventually(func() (string, error) {
+				persesResource := &persesv1alpha2.Perses{}
+				if err := k8sClient.Get(ctx, typeNamespaceName, persesResource); err != nil {
+					return "", err
+				}
+				if len(persesResource.Status.Provisioning) != 1 || persesResource.Status.Provisioning[0].Version == initialResourceVersion {
+					return "", fmt.Errorf("provisioning status not updated")
+				}
+
+				sts := &appsv1.StatefulSet{}
+				if err := k8sClient.Get(ctx, typeNamespaceName, sts); err != nil {
+					return "", err
+				}
+				return sts.Spec.Template.Annotations["perses.dev/provisioning-version"], nil
+			}, time.Minute, time.Second).Should(Not(Equal(initialHash)))
+
+			By("Deleting the custom resource and secret")
+			Expect(k8sClient.Delete(ctx, perses)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, secret)).To(Succeed())
 		})
 
 		It("should successfully delete Perses and remove the finalizer", func() {

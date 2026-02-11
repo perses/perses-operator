@@ -5082,6 +5082,34 @@ spec:
                         type: string
                     type: object
                 type: object
+              provisioning:
+                description: Provisioning configuration for provisioning secrets
+                properties:
+                  secretRefs:
+                    description: SecretRefs is a list of references to Kubernetes secrets used for provisioning sensitive data.
+                    items:
+                      properties:
+                        key:
+                          description: The key of the secret to select from.  Must be a valid secret key.
+                          type: string
+                        name:
+                          default: ""
+                          description: |-
+                            Name of the referent.
+                            This field is effectively required, but due to backwards compatibility is
+                            allowed to be empty. Instances of this type with an empty value here are
+                            almost certainly wrong.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          type: string
+                        optional:
+                          description: Specify whether the Secret or its key must be defined
+                          type: boolean
+                      required:
+                      - key
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    type: array
+                type: object
               readinessProbe:
                 description: |-
                   Probe describes a health check to be performed against a container to determine whether it is
@@ -5490,6 +5518,20 @@ spec:
                   - reason
                   - status
                   - type
+                  type: object
+                type: array
+              provisioning:
+                description: Provisioning secrets versions
+                items:
+                  description: SecretVersion represents a secret version
+                  properties:
+                    name:
+                      type: string
+                    version:
+                      type: string
+                  required:
+                  - name
+                  - version
                   type: object
                 type: array
             type: object
