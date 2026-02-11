@@ -1,54 +1,66 @@
 # Perses Operator
 
-An operator to install [Perses](https://github.com/perses/perses) in a k8s cluster.
+An operator to install [Perses](https://github.com/perses/perses) in a Kubernetes cluster.
 
 ## Getting Started
 
 You’ll need:
 
-- a Kubernetes cluster to run against. You can use [KIND](https://sigs.k8s.io/kind) or [minikube](https://minikube.sigs.k8s.io/docs/) to get a local cluster for testing, or run against a remote cluster.
-**Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
+- A Kubernetes cluster to run against. You can use [kind](https://sigs.k8s.io/kind) or [minikube](https://minikube.sigs.k8s.io/docs/) to get a local cluster for testing, or run against a remote cluster.
+
+> [!NOTE]
+>
+> Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
+
 - [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) installed and configured to use your cluster.
 
 ### Running on the cluster
 
 1. Install custom resource definitions:
-```sh
+
+```shell
 make install-crds
 ```
 
 2. Create a namespace for the resources:
-```sh
+
+```shell
 kubectl create namespace perses-dev
 ```
 
-3. Using the the location specified by `IMG`, build a testing image and push it to the registry, then deploy the controller to the cluster:
-> **Note:** Make sure the image is accessible either publicly or from the cluster internal registry.
-> 
+3. Using the location specified by `IMG`, build a testing image and push it to the registry, then deploy the controller to the cluster:
+
+> [!NOTE]
+>
+> Make sure the image is accessible either publicly or from the cluster internal registry.
 > A cert is also required to run the operator due to the conversion webhook.
 
-**Option A: Using self-signed certificates (for development/testing)**
-```sh
+#### Option A: Using self-signed certificates (for development/testing)
+
+```shell
 IMG=<some-registry>/perses-operator:tag make test-image-build image-push deploy-local
 ```
 
-**Option B: Using cert-manager (recommended for production)**
-```sh
+#### Option B: Using cert-manager (recommended for production)
+
+```shell
 make install-cert-manager
 IMG=<some-registry>/perses-operator:tag make test-image-build image-push deploy
 ```
 
-> **Note:** If you already have an image built, you can deploy it to the cluster using `IMG=<some-registry>/perses-operator:tag make deploy`.
+> [!NOTE]
+>
+> If you already have an image built, you can deploy it to the cluster using `IMG=<some-registry>/perses-operator:tag make deploy`.
 
 4. Install custom resources:
 
-```sh
+```shell
 kubectl apply -k config/samples
 ```
 
 5. Port forward the service so you can access the Perses UI at `http://localhost:8080`:
 
-```sh
+```shell
 kubectl -n perses-dev port-forward svc/perses-sample 8080:8080
 ```
 
@@ -56,7 +68,7 @@ kubectl -n perses-dev port-forward svc/perses-sample 8080:8080
 
 To delete the CRDs from the cluster:
 
-```sh
+```shell
 make uninstall-crds
 ```
 
@@ -64,7 +76,7 @@ make uninstall-crds
 
 UnDeploy the controller from the cluster:
 
-```sh
+```shell
 make undeploy
 ```
 
@@ -89,27 +101,27 @@ Each instance of the CRD deploys the following resources:
 
 1. Install Instances of Custom Resources and run the controller:
 
-```sh
+```shell
 PERSES_IMAGE=docker.io/persesdev/perses:v0.50.3 make install-crds run
 ```
 
-2. Install a CRD instance
+2. Install a CRD instance:
 
-```sh
-kubectl apply -f config/samples/v1alpha1_perses.yaml
+```shell
+kubectl apply -f config/samples/v1alpha2/perses.yaml
 ```
 
-3. Uninstall the CRD instance
+3. Uninstall the CRD instance:
 
-```sh
-kubectl delete -f config/samples/v1alpha1_perses.yaml
+```shell
+kubectl delete -f config/samples/v1alpha2/perses.yaml
 ```
 
 ### Modifying the API definitions
 
 If you are editing the API definitions, generate the manifests such as CRs or CRDs using:
 
-```sh
+```shell
 make manifests # Generate YAML manifests like CRDs, RBAC etc.
 make generate # Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 ```
@@ -120,13 +132,13 @@ More information can be found via the [Kubebuilder Documentation](https://book.k
 
 ## License
 
-Copyright 2025 The Perses Authors.
+Copyright The Perses Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+<http://www.apache.org/licenses/LICENSE-2.0>
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,

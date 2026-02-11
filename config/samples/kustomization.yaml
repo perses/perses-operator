@@ -1,10 +1,12 @@
 ## Append samples you want in your CSV to this file as resources ##
+## 
+## This file points to the current (v1alpha2) API samples.
+## For deprecated v1alpha1 samples, see v1alpha1/ directory.
+
 resources:
-  - perses.dev_v1alpha1_perses.yaml
-  - perses.dev_v1alpha1_persesdashboard.yaml
-  - perses.dev_v1alpha1_persesdatasource.yaml
-  - perses.dev_v1alpha2_perses.yaml
-  - perses.dev_v1alpha2_persesdashboard.yaml
-  - perses.dev_v1alpha2_persesdatasource.yaml
-  - perses.dev_v1alpha2_persesglobaldatasource.yaml
+  # Current API version samples
+  - v1alpha2/perses.yaml
+  - v1alpha2/persesdashboard.yaml
+  - v1alpha2/persesdatasource.yaml
+  - v1alpha2/persesglobaldatasource.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

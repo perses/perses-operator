@@ -1,0 +1,7 @@
+## v1alpha1 API samples (DEPRECATED)
+## These samples are kept for reference and migration purposes only.
+## New deployments should use v1alpha2 samples instead.
+resources:
+  - perses.yaml
+  - persesdashboard.yaml
+  - persesdatasource.yaml

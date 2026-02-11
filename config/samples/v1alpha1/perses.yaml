@@ -6,7 +6,9 @@ metadata:
 spec:
   metadata:
     labels:
-      instance: perses-sample
+      app.kubernetes.io/instance: perses-sample
+      app.kubernetes.io/name: perses
+      app.kubernetes.io/component: server
   config:
     database:
       file:
