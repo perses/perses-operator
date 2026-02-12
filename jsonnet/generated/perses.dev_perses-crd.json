@@ -1014,7 +1014,7 @@
                   "config": {
                     "properties": {
                       "api_prefix": {
-                        "description": "Use it in case you want to prefix the API path.",
+                        "description": "Use it in case you want to prefix the API path.\nThis can be useful if you are running Perses behind a reverse proxy.\nBy default, the API is served with the path /api.\nWith this config, it will be served with the path <api_prefix>/api\nExample: \"/perses\"",
                         "type": "string"
                       },
                       "dashboard": {
@@ -1082,6 +1082,10 @@
                             "properties": {
                               "addr": {
                                 "description": "Network address (requires Net)",
+                                "type": "string"
+                              },
+                              "addr_file": {
+                                "description": "AddrFile is a path to a file that contains the network address",
                                 "type": "string"
                               },
                               "allow_all_files": {
@@ -1183,65 +1187,47 @@
                                 "description": "TLS configuration",
                                 "properties": {
                                   "ca": {
-                                    "description": "Text of the CA cert to use for the targets.",
+                                    "description": "Hidden special type for storing secrets.",
                                     "type": "string"
                                   },
-                                  "ca_file": {
-                                    "description": "The CA cert to use for the targets.",
-                                    "type": "string"
-                                  },
-                                  "ca_ref": {
-                                    "description": "CARef is the name of the secret within the secret manager to use as the CA cert for the\ntargets.",
+                                  "caFile": {
                                     "type": "string"
                                   },
                                   "cert": {
-                                    "description": "Text of the client cert file for the targets.",
+                                    "description": "Hidden special type for storing secrets.",
                                     "type": "string"
                                   },
-                                  "cert_file": {
-                                    "description": "The client cert file for the targets.",
+                                  "certFile": {
                                     "type": "string"
                                   },
-                                  "cert_ref": {
-                                    "description": "CertRef is the name of the secret within the secret manager to use as the client cert for\nthe targets.",
-                                    "type": "string"
-                                  },
-                                  "insecure_skip_verify": {
-                                    "description": "Disable target certificate validation.",
+                                  "insecureSkipVerify": {
                                     "type": "boolean"
                                   },
                                   "key": {
-                                    "description": "Text of the client key file for the targets.",
+                                    "description": "Hidden special type for storing secrets.",
                                     "type": "string"
                                   },
-                                  "key_file": {
-                                    "description": "The client key file for the targets.",
+                                  "keyFile": {
                                     "type": "string"
                                   },
-                                  "key_ref": {
-                                    "description": "KeyRef is the name of the secret within the secret manager to use as the client key for\nthe targets.",
+                                  "maxVersion": {
                                     "type": "string"
                                   },
-                                  "max_version": {
-                                    "description": "Maximum TLS version.",
-                                    "type": "integer"
+                                  "minVersion": {
+                                    "type": "string"
                                   },
-                                  "min_version": {
-                                    "description": "Minimum TLS version.",
-                                    "type": "integer"
-                                  },
-                                  "server_name": {
-                                    "description": "Used to verify the hostname for the targets.",
+                                  "serverName": {
                                     "type": "string"
                                   }
                                 },
-                                "required": [
-                                  "insecure_skip_verify"
-                                ],
                                 "type": "object"
                               },
                               "user": {
                                 "description": "Username",
+                                "type": "string"
+                              },
+                              "user_file": {
+                                "description": "UserFile is a path to a file that contains a username",
                                 "type": "string"
                               },
                               "write_timeout": {
@@ -1333,6 +1319,14 @@
                                         "headers": {
                                           "additionalProperties": {
                                             "type": "string"
+                                          },
+                                          "type": "object"
+                                        },
+                                        "k8s_auth": {
+                                          "properties": {
+                                            "kubeconfig": {
+                                              "type": "string"
+                                            }
                                           },
                                           "type": "object"
                                         },
@@ -1601,6 +1595,22 @@
                       "frontend": {
                         "description": "Frontend contains any config that will be used by the frontend itself.",
                         "properties": {
+                          "banner": {
+                            "description": "BannerInfo contains the content to be display in a banner at the top of each page along with the severity of the information",
+                            "properties": {
+                              "message": {
+                                "type": "string"
+                              },
+                              "severity": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "message",
+                              "severity"
+                            ],
+                            "type": "object"
+                          },
                           "disable": {
                             "description": "When it is true, Perses won't serve the frontend anymore, and any other config set here will be ignored",
                             "type": "boolean"
@@ -1653,6 +1663,7 @@
                               },
                               "options": {
                                 "items": {
+                                  "description": "DurationString is a string that represents a duration, such as \"1h\", \"30m\", \"15s\", etc.\nIt is used to unmarshal a duration string from JSON or YAML, and validate that it is a valid duration string.\n\nNot converting the duration string into a time.Duration type allows us to avoid the issue of changing the initial input with an alias.\nThis is something that happens when we use Duration type, because when the duration is unmarshalled then marshaled again, the input can be changed with an equivalent duration.\nFor example \"14d\" will be changed to \"2w\".\n\nSo, use DurationString instead of Duration when you want to preserve the original input string.\nIf, for any reason, you need to convert the DurationString to a time.Duration, you can use the ParseDuration function.",
                                   "format": "duration",
                                   "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
                                   "type": "string"
@@ -1660,10 +1671,6 @@
                                 "type": "array"
                               }
                             },
-                            "required": [
-                              "disable_custom",
-                              "disable_zoom"
-                            ],
                             "type": "object"
                           }
                         },
@@ -1677,8 +1684,15 @@
                         "description": "Plugin contains the config for runtime plugins.",
                         "properties": {
                           "archive_path": {
-                            "description": "ArchivePath is the path to the directory containing the archived plugins\nWhen Perses is starting, it will extract the content of the archive in the folder specified in the `folder` attribute.",
+                            "description": "ArchivePath is the path to the directory containing the archived plugins\nWhen Perses is starting, it will extract the content of the archive in the folder specified in the `folder` attribute.\nDEPRECATED: This attribute is deprecated and will be removed in a future version. It is still supported for backward compatibility, but it is recommended to use the `archive_paths` attribute instead.",
                             "type": "string"
+                          },
+                          "archive_paths": {
+                            "description": "ArchivePaths is the list of paths to the directories containing the archived plugins. It allows to specify multiple directories for the archived plugins.\nWhen Perses is starting, it will extract any archive found in the folders specified in this attribute in the folder specified in the `path` attribute.",
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
                           },
                           "enable_dev": {
                             "description": "DevEnvironment is the configuration to use when developing a plugin",
@@ -1757,6 +1771,17 @@
                                   "enable_native": {
                                     "type": "boolean"
                                   },
+                                  "kubernetes": {
+                                    "properties": {
+                                      "enable": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "enable"
+                                    ],
+                                    "type": "object"
+                                  },
                                   "oauth": {
                                     "items": {
                                       "properties": {
@@ -1774,6 +1799,9 @@
                                               "description": "Hidden special type for storing secrets.",
                                               "type": "string"
                                             },
+                                            "client_secret_file": {
+                                              "type": "string"
+                                            },
                                             "scopes": {
                                               "items": {
                                                 "type": "string"
@@ -1783,7 +1811,6 @@
                                           },
                                           "required": [
                                             "client_id",
-                                            "client_secret",
                                             "scopes"
                                           ],
                                           "type": "object"
@@ -1794,6 +1821,9 @@
                                         },
                                         "client_secret": {
                                           "description": "Hidden special type for storing secrets.",
+                                          "type": "string"
+                                        },
+                                        "client_secret_file": {
                                           "type": "string"
                                         },
                                         "custom_login_property": {
@@ -1813,6 +1843,9 @@
                                               "description": "Hidden special type for storing secrets.",
                                               "type": "string"
                                             },
+                                            "client_secret_file": {
+                                              "type": "string"
+                                            },
                                             "scopes": {
                                               "items": {
                                                 "type": "string"
@@ -1822,7 +1855,6 @@
                                           },
                                           "required": [
                                             "client_id",
-                                            "client_secret",
                                             "scopes"
                                           ],
                                           "type": "object"
@@ -1938,6 +1970,9 @@
                                               "description": "Hidden special type for storing secrets.",
                                               "type": "string"
                                             },
+                                            "client_secret_file": {
+                                              "type": "string"
+                                            },
                                             "scopes": {
                                               "items": {
                                                 "type": "string"
@@ -1947,7 +1982,6 @@
                                           },
                                           "required": [
                                             "client_id",
-                                            "client_secret",
                                             "scopes"
                                           ],
                                           "type": "object"
@@ -1960,6 +1994,9 @@
                                           "description": "Hidden special type for storing secrets.",
                                           "type": "string"
                                         },
+                                        "client_secret_file": {
+                                          "type": "string"
+                                        },
                                         "device_code": {
                                           "properties": {
                                             "client_id": {
@@ -1968,6 +2005,9 @@
                                             },
                                             "client_secret": {
                                               "description": "Hidden special type for storing secrets.",
+                                              "type": "string"
+                                            },
+                                            "client_secret_file": {
                                               "type": "string"
                                             },
                                             "scopes": {
@@ -1979,7 +2019,6 @@
                                           },
                                           "required": [
                                             "client_id",
-                                            "client_secret",
                                             "scopes"
                                           ],
                                           "type": "object"
@@ -2054,6 +2093,20 @@
                                           "format": "uri",
                                           "type": "string"
                                         },
+                                        "logout": {
+                                          "properties": {
+                                            "enabled": {
+                                              "type": "boolean"
+                                            },
+                                            "logout_redirect_param_name": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "enabled"
+                                          ],
+                                          "type": "object"
+                                        },
                                         "name": {
                                           "type": "string"
                                         },
@@ -2082,6 +2135,7 @@
                                         "disable_pkce",
                                         "http",
                                         "issuer",
+                                        "logout",
                                         "name",
                                         "slug_id"
                                       ],
@@ -2112,13 +2166,13 @@
                             "description": "Authorization contains all configs around rbac (permissions and roles)",
                             "properties": {
                               "check_latest_update_interval": {
-                                "description": "CheckLatestUpdateInterval that checks if the RBAC cache needs to be refreshed with db content. Only for SQL database setup.",
+                                "description": "DEPRECATED: use NativeAuthorizationProvider.CheckLatestUpdateInterval instead.",
                                 "format": "duration",
                                 "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
                                 "type": "string"
                               },
                               "guest_permissions": {
-                                "description": "Default permissions for guest users (logged-in users)",
+                                "description": "DEPRECATED: use NativeAuthorizationProvider.GuestPermissions instead.",
                                 "items": {
                                   "properties": {
                                     "actions": {
@@ -2143,6 +2197,90 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "provider": {
+                                "properties": {
+                                  "kubernetes": {
+                                    "properties": {
+                                      "authenticator_ttl": {
+                                        "description": "time an authenticator response will be cached for. Default: 2m",
+                                        "format": "duration",
+                                        "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
+                                        "type": "string"
+                                      },
+                                      "authorizer_allow_ttl": {
+                                        "description": "time an authorizer allow response will be cached for. Default: 5m",
+                                        "format": "duration",
+                                        "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
+                                        "type": "string"
+                                      },
+                                      "authorizer_deny_ttl": {
+                                        "description": "time an authorizer denied will be cached for. Default: 30s",
+                                        "format": "duration",
+                                        "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
+                                        "type": "string"
+                                      },
+                                      "burst": {
+                                        "description": "burst QPS the k8s client will use with the apiserver. Default: 1000 qps",
+                                        "type": "integer"
+                                      },
+                                      "enable": {
+                                        "type": "boolean"
+                                      },
+                                      "kubeconfig": {
+                                        "description": "The active user in the kubeconfig should have \"create\" permissions for the `TokenReview` and\n`SubjectAccessReview` resources. If the kubeconfig parameter isn't available the pods service\naccount token will be used",
+                                        "type": "string"
+                                      },
+                                      "qps": {
+                                        "description": "query per second (QPS) the k8s client will use with the apiserver. Default: 500 qps",
+                                        "type": "integer"
+                                      }
+                                    },
+                                    "type": "object"
+                                  },
+                                  "native": {
+                                    "properties": {
+                                      "check_latest_update_interval": {
+                                        "description": "CheckLatestUpdateInterval that checks if the RBAC cache needs to be refreshed with db content. Only for SQL database setup.",
+                                        "format": "duration",
+                                        "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
+                                        "type": "string"
+                                      },
+                                      "enable": {
+                                        "type": "boolean"
+                                      },
+                                      "guest_permissions": {
+                                        "description": "Default permissions for guest users (logged-in users)",
+                                        "items": {
+                                          "properties": {
+                                            "actions": {
+                                              "description": "Actions of the permission (read, create, update, delete, ...)",
+                                              "items": {
+                                                "type": "string"
+                                              },
+                                              "type": "array"
+                                            },
+                                            "scopes": {
+                                              "description": "The list of kind targeted by the permission. For example: `Datasource`, `Dashboard`, ...\nWith Role, you can't target global kinds",
+                                              "items": {
+                                                "type": "string"
+                                              },
+                                              "type": "array"
+                                            }
+                                          },
+                                          "required": [
+                                            "actions",
+                                            "scopes"
+                                          ],
+                                          "type": "object"
+                                        },
+                                        "type": "array"
+                                      }
+                                    },
+                                    "type": "object"
+                                  }
+                                },
+                                "type": "object"
                               }
                             },
                             "type": "object"
@@ -3886,7 +4024,7 @@
                     "description": "config specifies the Perses server configuration",
                     "properties": {
                       "api_prefix": {
-                        "description": "Use it in case you want to prefix the API path.",
+                        "description": "Use it in case you want to prefix the API path.\nThis can be useful if you are running Perses behind a reverse proxy.\nBy default, the API is served with the path /api.\nWith this config, it will be served with the path <api_prefix>/api\nExample: \"/perses\"",
                         "type": "string"
                       },
                       "dashboard": {
@@ -3954,6 +4092,10 @@
                             "properties": {
                               "addr": {
                                 "description": "Network address (requires Net)",
+                                "type": "string"
+                              },
+                              "addr_file": {
+                                "description": "AddrFile is a path to a file that contains the network address",
                                 "type": "string"
                               },
                               "allow_all_files": {
@@ -4055,65 +4197,47 @@
                                 "description": "TLS configuration",
                                 "properties": {
                                   "ca": {
-                                    "description": "Text of the CA cert to use for the targets.",
+                                    "description": "Hidden special type for storing secrets.",
                                     "type": "string"
                                   },
-                                  "ca_file": {
-                                    "description": "The CA cert to use for the targets.",
-                                    "type": "string"
-                                  },
-                                  "ca_ref": {
-                                    "description": "CARef is the name of the secret within the secret manager to use as the CA cert for the\ntargets.",
+                                  "caFile": {
                                     "type": "string"
                                   },
                                   "cert": {
-                                    "description": "Text of the client cert file for the targets.",
+                                    "description": "Hidden special type for storing secrets.",
                                     "type": "string"
                                   },
-                                  "cert_file": {
-                                    "description": "The client cert file for the targets.",
+                                  "certFile": {
                                     "type": "string"
                                   },
-                                  "cert_ref": {
-                                    "description": "CertRef is the name of the secret within the secret manager to use as the client cert for\nthe targets.",
-                                    "type": "string"
-                                  },
-                                  "insecure_skip_verify": {
-                                    "description": "Disable target certificate validation.",
+                                  "insecureSkipVerify": {
                                     "type": "boolean"
                                   },
                                   "key": {
-                                    "description": "Text of the client key file for the targets.",
+                                    "description": "Hidden special type for storing secrets.",
                                     "type": "string"
                                   },
-                                  "key_file": {
-                                    "description": "The client key file for the targets.",
+                                  "keyFile": {
                                     "type": "string"
                                   },
-                                  "key_ref": {
-                                    "description": "KeyRef is the name of the secret within the secret manager to use as the client key for\nthe targets.",
+                                  "maxVersion": {
                                     "type": "string"
                                   },
-                                  "max_version": {
-                                    "description": "Maximum TLS version.",
-                                    "type": "integer"
+                                  "minVersion": {
+                                    "type": "string"
                                   },
-                                  "min_version": {
-                                    "description": "Minimum TLS version.",
-                                    "type": "integer"
-                                  },
-                                  "server_name": {
-                                    "description": "Used to verify the hostname for the targets.",
+                                  "serverName": {
                                     "type": "string"
                                   }
                                 },
-                                "required": [
-                                  "insecure_skip_verify"
-                                ],
                                 "type": "object"
                               },
                               "user": {
                                 "description": "Username",
+                                "type": "string"
+                              },
+                              "user_file": {
+                                "description": "UserFile is a path to a file that contains a username",
                                 "type": "string"
                               },
                               "write_timeout": {
@@ -4205,6 +4329,14 @@
                                         "headers": {
                                           "additionalProperties": {
                                             "type": "string"
+                                          },
+                                          "type": "object"
+                                        },
+                                        "k8s_auth": {
+                                          "properties": {
+                                            "kubeconfig": {
+                                              "type": "string"
+                                            }
                                           },
                                           "type": "object"
                                         },
@@ -4473,6 +4605,22 @@
                       "frontend": {
                         "description": "Frontend contains any config that will be used by the frontend itself.",
                         "properties": {
+                          "banner": {
+                            "description": "BannerInfo contains the content to be display in a banner at the top of each page along with the severity of the information",
+                            "properties": {
+                              "message": {
+                                "type": "string"
+                              },
+                              "severity": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "message",
+                              "severity"
+                            ],
+                            "type": "object"
+                          },
                           "disable": {
                             "description": "When it is true, Perses won't serve the frontend anymore, and any other config set here will be ignored",
                             "type": "boolean"
@@ -4525,6 +4673,7 @@
                               },
                               "options": {
                                 "items": {
+                                  "description": "DurationString is a string that represents a duration, such as \"1h\", \"30m\", \"15s\", etc.\nIt is used to unmarshal a duration string from JSON or YAML, and validate that it is a valid duration string.\n\nNot converting the duration string into a time.Duration type allows us to avoid the issue of changing the initial input with an alias.\nThis is something that happens when we use Duration type, because when the duration is unmarshalled then marshaled again, the input can be changed with an equivalent duration.\nFor example \"14d\" will be changed to \"2w\".\n\nSo, use DurationString instead of Duration when you want to preserve the original input string.\nIf, for any reason, you need to convert the DurationString to a time.Duration, you can use the ParseDuration function.",
                                   "format": "duration",
                                   "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
                                   "type": "string"
@@ -4532,10 +4681,6 @@
                                 "type": "array"
                               }
                             },
-                            "required": [
-                              "disable_custom",
-                              "disable_zoom"
-                            ],
                             "type": "object"
                           }
                         },
@@ -4549,8 +4694,15 @@
                         "description": "Plugin contains the config for runtime plugins.",
                         "properties": {
                           "archive_path": {
-                            "description": "ArchivePath is the path to the directory containing the archived plugins\nWhen Perses is starting, it will extract the content of the archive in the folder specified in the `folder` attribute.",
+                            "description": "ArchivePath is the path to the directory containing the archived plugins\nWhen Perses is starting, it will extract the content of the archive in the folder specified in the `folder` attribute.\nDEPRECATED: This attribute is deprecated and will be removed in a future version. It is still supported for backward compatibility, but it is recommended to use the `archive_paths` attribute instead.",
                             "type": "string"
+                          },
+                          "archive_paths": {
+                            "description": "ArchivePaths is the list of paths to the directories containing the archived plugins. It allows to specify multiple directories for the archived plugins.\nWhen Perses is starting, it will extract any archive found in the folders specified in this attribute in the folder specified in the `path` attribute.",
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
                           },
                           "enable_dev": {
                             "description": "DevEnvironment is the configuration to use when developing a plugin",
@@ -4629,6 +4781,17 @@
                                   "enable_native": {
                                     "type": "boolean"
                                   },
+                                  "kubernetes": {
+                                    "properties": {
+                                      "enable": {
+                                        "type": "boolean"
+                                      }
+                                    },
+                                    "required": [
+                                      "enable"
+                                    ],
+                                    "type": "object"
+                                  },
                                   "oauth": {
                                     "items": {
                                       "properties": {
@@ -4646,6 +4809,9 @@
                                               "description": "Hidden special type for storing secrets.",
                                               "type": "string"
                                             },
+                                            "client_secret_file": {
+                                              "type": "string"
+                                            },
                                             "scopes": {
                                               "items": {
                                                 "type": "string"
@@ -4655,7 +4821,6 @@
                                           },
                                           "required": [
                                             "client_id",
-                                            "client_secret",
                                             "scopes"
                                           ],
                                           "type": "object"
@@ -4666,6 +4831,9 @@
                                         },
                                         "client_secret": {
                                           "description": "Hidden special type for storing secrets.",
+                                          "type": "string"
+                                        },
+                                        "client_secret_file": {
                                           "type": "string"
                                         },
                                         "custom_login_property": {
@@ -4685,6 +4853,9 @@
                                               "description": "Hidden special type for storing secrets.",
                                               "type": "string"
                                             },
+                                            "client_secret_file": {
+                                              "type": "string"
+                                            },
                                             "scopes": {
                                               "items": {
                                                 "type": "string"
@@ -4694,7 +4865,6 @@
                                           },
                                           "required": [
                                             "client_id",
-                                            "client_secret",
                                             "scopes"
                                           ],
                                           "type": "object"
@@ -4810,6 +4980,9 @@
                                               "description": "Hidden special type for storing secrets.",
                                               "type": "string"
                                             },
+                                            "client_secret_file": {
+                                              "type": "string"
+                                            },
                                             "scopes": {
                                               "items": {
                                                 "type": "string"
@@ -4819,7 +4992,6 @@
                                           },
                                           "required": [
                                             "client_id",
-                                            "client_secret",
                                             "scopes"
                                           ],
                                           "type": "object"
@@ -4832,6 +5004,9 @@
                                           "description": "Hidden special type for storing secrets.",
                                           "type": "string"
                                         },
+                                        "client_secret_file": {
+                                          "type": "string"
+                                        },
                                         "device_code": {
                                           "properties": {
                                             "client_id": {
@@ -4840,6 +5015,9 @@
                                             },
                                             "client_secret": {
                                               "description": "Hidden special type for storing secrets.",
+                                              "type": "string"
+                                            },
+                                            "client_secret_file": {
                                               "type": "string"
                                             },
                                             "scopes": {
@@ -4851,7 +5029,6 @@
                                           },
                                           "required": [
                                             "client_id",
-                                            "client_secret",
                                             "scopes"
                                           ],
                                           "type": "object"
@@ -4926,6 +5103,20 @@
                                           "format": "uri",
                                           "type": "string"
                                         },
+                                        "logout": {
+                                          "properties": {
+                                            "enabled": {
+                                              "type": "boolean"
+                                            },
+                                            "logout_redirect_param_name": {
+                                              "type": "string"
+                                            }
+                                          },
+                                          "required": [
+                                            "enabled"
+                                          ],
+                                          "type": "object"
+                                        },
                                         "name": {
                                           "type": "string"
                                         },
@@ -4954,6 +5145,7 @@
                                         "disable_pkce",
                                         "http",
                                         "issuer",
+                                        "logout",
                                         "name",
                                         "slug_id"
                                       ],
@@ -4984,13 +5176,13 @@
                             "description": "Authorization contains all configs around rbac (permissions and roles)",
                             "properties": {
                               "check_latest_update_interval": {
-                                "description": "CheckLatestUpdateInterval that checks if the RBAC cache needs to be refreshed with db content. Only for SQL database setup.",
+                                "description": "DEPRECATED: use NativeAuthorizationProvider.CheckLatestUpdateInterval instead.",
                                 "format": "duration",
                                 "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
                                 "type": "string"
                               },
                               "guest_permissions": {
-                                "description": "Default permissions for guest users (logged-in users)",
+                                "description": "DEPRECATED: use NativeAuthorizationProvider.GuestPermissions instead.",
                                 "items": {
                                   "properties": {
                                     "actions": {
@@ -5015,6 +5207,90 @@
                                   "type": "object"
                                 },
                                 "type": "array"
+                              },
+                              "provider": {
+                                "properties": {
+                                  "kubernetes": {
+                                    "properties": {
+                                      "authenticator_ttl": {
+                                        "description": "time an authenticator response will be cached for. Default: 2m",
+                                        "format": "duration",
+                                        "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
+                                        "type": "string"
+                                      },
+                                      "authorizer_allow_ttl": {
+                                        "description": "time an authorizer allow response will be cached for. Default: 5m",
+                                        "format": "duration",
+                                        "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
+                                        "type": "string"
+                                      },
+                                      "authorizer_deny_ttl": {
+                                        "description": "time an authorizer denied will be cached for. Default: 30s",
+                                        "format": "duration",
+                                        "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
+                                        "type": "string"
+                                      },
+                                      "burst": {
+                                        "description": "burst QPS the k8s client will use with the apiserver. Default: 1000 qps",
+                                        "type": "integer"
+                                      },
+                                      "enable": {
+                                        "type": "boolean"
+                                      },
+                                      "kubeconfig": {
+                                        "description": "The active user in the kubeconfig should have \"create\" permissions for the `TokenReview` and\n`SubjectAccessReview` resources. If the kubeconfig parameter isn't available the pods service\naccount token will be used",
+                                        "type": "string"
+                                      },
+                                      "qps": {
+                                        "description": "query per second (QPS) the k8s client will use with the apiserver. Default: 500 qps",
+                                        "type": "integer"
+                                      }
+                                    },
+                                    "type": "object"
+                                  },
+                                  "native": {
+                                    "properties": {
+                                      "check_latest_update_interval": {
+                                        "description": "CheckLatestUpdateInterval that checks if the RBAC cache needs to be refreshed with db content. Only for SQL database setup.",
+                                        "format": "duration",
+                                        "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
+                                        "type": "string"
+                                      },
+                                      "enable": {
+                                        "type": "boolean"
+                                      },
+                                      "guest_permissions": {
+                                        "description": "Default permissions for guest users (logged-in users)",
+                                        "items": {
+                                          "properties": {
+                                            "actions": {
+                                              "description": "Actions of the permission (read, create, update, delete, ...)",
+                                              "items": {
+                                                "type": "string"
+                                              },
+                                              "type": "array"
+                                            },
+                                            "scopes": {
+                                              "description": "The list of kind targeted by the permission. For example: `Datasource`, `Dashboard`, ...\nWith Role, you can't target global kinds",
+                                              "items": {
+                                                "type": "string"
+                                              },
+                                              "type": "array"
+                                            }
+                                          },
+                                          "required": [
+                                            "actions",
+                                            "scopes"
+                                          ],
+                                          "type": "object"
+                                        },
+                                        "type": "array"
+                                      }
+                                    },
+                                    "type": "object"
+                                  }
+                                },
+                                "type": "object"
                               }
                             },
                             "type": "object"

@@ -16,14 +16,18 @@ package main
 import (
 	_ "embed"
 
-	goreleasergenerate "github.com/perses/perses/scripts/generate-docker-goreleaser-config"
+	"github.com/perses/perses/scripts/pkg/goreleaser"
+
+	"github.com/perses/perses-operator/scripts/generate-goreleaser/dockerconfig"
 )
 
 //go:embed .goreleaser.base.yaml
 var baseConfig []byte
 
+func generate(cfg dockerconfig.TestConfig) {
+	goreleaser.Generate(baseConfig, dockerconfig.PersesOperatorDockerConfig(cfg))
+}
+
 func main() {
-	goreleasergenerate.GenerateGoreleaserConfig(baseConfig, "perses-operator", []string{
-		"LICENSE",
-	})
+	generate(dockerconfig.TestConfig{})
 }

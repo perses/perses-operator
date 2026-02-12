@@ -62,7 +62,22 @@
                           "description": "Plugin will contain the datasource configuration.\nThe data typed is available in Cue.",
                           "properties": {
                             "kind": {
+                              "description": "Kind is the type of the plugin (e.g., Panel, Variable, Datasource, etc.).",
                               "type": "string"
+                            },
+                            "metadata": {
+                              "description": "Metadata is an optional field that contains additional information such as version and registry of the plugin.",
+                              "properties": {
+                                "registry": {
+                                  "description": "Registry is optional. If not provided, it means the default registry: \"perses.dev\".",
+                                  "type": "string"
+                                },
+                                "version": {
+                                  "description": "Version is optional. If not provided, it means the latest version available in the Perses instance.",
+                                  "type": "string"
+                                }
+                              },
+                              "type": "object"
                             },
                             "spec": {
                               "x-kubernetes-preserve-unknown-fields": true
@@ -119,6 +134,33 @@
                     },
                     "type": "array"
                   },
+                  "links": {
+                    "description": "Links is an optional list of links to display at the dashboard level",
+                    "items": {
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "renderVariables": {
+                          "type": "boolean"
+                        },
+                        "targetBlank": {
+                          "type": "boolean"
+                        },
+                        "tooltip": {
+                          "type": "string"
+                        },
+                        "url": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "url"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
                   "panels": {
                     "additionalProperties": {
                       "properties": {
@@ -136,9 +178,6 @@
                                   "type": "string"
                                 }
                               },
-                              "required": [
-                                "name"
-                              ],
                               "type": "object"
                             },
                             "links": {
@@ -170,7 +209,22 @@
                             "plugin": {
                               "properties": {
                                 "kind": {
+                                  "description": "Kind is the type of the plugin (e.g., Panel, Variable, Datasource, etc.).",
                                   "type": "string"
+                                },
+                                "metadata": {
+                                  "description": "Metadata is an optional field that contains additional information such as version and registry of the plugin.",
+                                  "properties": {
+                                    "registry": {
+                                      "description": "Registry is optional. If not provided, it means the default registry: \"perses.dev\".",
+                                      "type": "string"
+                                    },
+                                    "version": {
+                                      "description": "Version is optional. If not provided, it means the latest version available in the Perses instance.",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "type": "object"
                                 },
                                 "spec": {
                                   "x-kubernetes-preserve-unknown-fields": true
@@ -193,7 +247,22 @@
                                       "plugin": {
                                         "properties": {
                                           "kind": {
+                                            "description": "Kind is the type of the plugin (e.g., Panel, Variable, Datasource, etc.).",
                                             "type": "string"
+                                          },
+                                          "metadata": {
+                                            "description": "Metadata is an optional field that contains additional information such as version and registry of the plugin.",
+                                            "properties": {
+                                              "registry": {
+                                                "description": "Registry is optional. If not provided, it means the default registry: \"perses.dev\".",
+                                                "type": "string"
+                                              },
+                                              "version": {
+                                                "description": "Version is optional. If not provided, it means the latest version available in the Perses instance.",
+                                                "type": "string"
+                                              }
+                                            },
+                                            "type": "object"
                                           },
                                           "spec": {
                                             "x-kubernetes-preserve-unknown-fields": true
@@ -222,7 +291,6 @@
                             }
                           },
                           "required": [
-                            "display",
                             "plugin"
                           ],
                           "type": "object"
@@ -383,7 +451,22 @@
                               "description": "Plugin will contain the datasource configuration.\nThe data typed is available in Cue.",
                               "properties": {
                                 "kind": {
+                                  "description": "Kind is the type of the plugin (e.g., Panel, Variable, Datasource, etc.).",
                                   "type": "string"
+                                },
+                                "metadata": {
+                                  "description": "Metadata is an optional field that contains additional information such as version and registry of the plugin.",
+                                  "properties": {
+                                    "registry": {
+                                      "description": "Registry is optional. If not provided, it means the default registry: \"perses.dev\".",
+                                      "type": "string"
+                                    },
+                                    "version": {
+                                      "description": "Version is optional. If not provided, it means the latest version available in the Perses instance.",
+                                      "type": "string"
+                                    }
+                                  },
+                                  "type": "object"
                                 },
                                 "spec": {
                                   "x-kubernetes-preserve-unknown-fields": true
@@ -440,6 +523,33 @@
                         },
                         "type": "array"
                       },
+                      "links": {
+                        "description": "Links is an optional list of links to display at the dashboard level",
+                        "items": {
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "renderVariables": {
+                              "type": "boolean"
+                            },
+                            "targetBlank": {
+                              "type": "boolean"
+                            },
+                            "tooltip": {
+                              "type": "string"
+                            },
+                            "url": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "url"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
                       "panels": {
                         "additionalProperties": {
                           "properties": {
@@ -457,9 +567,6 @@
                                       "type": "string"
                                     }
                                   },
-                                  "required": [
-                                    "name"
-                                  ],
                                   "type": "object"
                                 },
                                 "links": {
@@ -491,7 +598,22 @@
                                 "plugin": {
                                   "properties": {
                                     "kind": {
+                                      "description": "Kind is the type of the plugin (e.g., Panel, Variable, Datasource, etc.).",
                                       "type": "string"
+                                    },
+                                    "metadata": {
+                                      "description": "Metadata is an optional field that contains additional information such as version and registry of the plugin.",
+                                      "properties": {
+                                        "registry": {
+                                          "description": "Registry is optional. If not provided, it means the default registry: \"perses.dev\".",
+                                          "type": "string"
+                                        },
+                                        "version": {
+                                          "description": "Version is optional. If not provided, it means the latest version available in the Perses instance.",
+                                          "type": "string"
+                                        }
+                                      },
+                                      "type": "object"
                                     },
                                     "spec": {
                                       "x-kubernetes-preserve-unknown-fields": true
@@ -514,7 +636,22 @@
                                           "plugin": {
                                             "properties": {
                                               "kind": {
+                                                "description": "Kind is the type of the plugin (e.g., Panel, Variable, Datasource, etc.).",
                                                 "type": "string"
+                                              },
+                                              "metadata": {
+                                                "description": "Metadata is an optional field that contains additional information such as version and registry of the plugin.",
+                                                "properties": {
+                                                  "registry": {
+                                                    "description": "Registry is optional. If not provided, it means the default registry: \"perses.dev\".",
+                                                    "type": "string"
+                                                  },
+                                                  "version": {
+                                                    "description": "Version is optional. If not provided, it means the latest version available in the Perses instance.",
+                                                    "type": "string"
+                                                  }
+                                                },
+                                                "type": "object"
                                               },
                                               "spec": {
                                                 "x-kubernetes-preserve-unknown-fields": true
@@ -543,7 +680,6 @@
                                 }
                               },
                               "required": [
-                                "display",
                                 "plugin"
                               ],
                               "type": "object"

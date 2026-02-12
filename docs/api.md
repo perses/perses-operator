@@ -95,8 +95,9 @@ _Appears in:_
 | `variables` _Variable array_ |  |  |  |
 | `panels` _object (keys:string, values:[Panel](#panel))_ |  |  |  |
 | `layouts` _Layout array_ |  |  |  |
-| `duration` _[Duration](#duration)_ | Duration is the default time range to use when getting data to fill the dashboard |  | Format: duration <br />Pattern: `^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$` <br />Type: string <br /> |
-| `refreshInterval` _[Duration](#duration)_ | RefreshInterval is the default refresh interval to use when landing on the dashboard |  | Format: duration <br />Pattern: `^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$` <br />Type: string <br /> |
+| `duration` _[DurationString](#durationstring)_ | Duration is the default time range to use when getting data to fill the dashboard |  |  |
+| `refreshInterval` _[DurationString](#durationstring)_ | RefreshInterval is the default refresh interval to use when landing on the dashboard |  |  |
+| `links` _[Link](#link) array_ | Links is an optional list of links to display at the dashboard level |  |  |
 
 
 #### Datasource
@@ -227,7 +228,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `api_prefix` _string_ | Use it in case you want to prefix the API path. |  |  |
+| `api_prefix` _string_ | Use it in case you want to prefix the API path.<br />This can be useful if you are running Perses behind a reverse proxy.<br />By default, the API is served with the path /api.<br />With this config, it will be served with the path <api_prefix>/api<br />Example: "/perses" |  |  |
 | `security` _[Security](#security)_ | Security contains any configuration that changes the API behavior like the endpoints exposed or if the permissions are activated. |  |  |
 | `database` _[Database](#database)_ | Database contains the different configuration depending on the database you want to use |  |  |
 | `schemas` _[Schemas](#schemas)_ | Schemas contain the configuration to get access to the CUE schemas<br />DEPRECATED.<br />Please remove it from your config. |  |  |

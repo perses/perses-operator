@@ -23,7 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/perses/perses/scripts/changelog"
+	"github.com/perses/perses/scripts/pkg/changelog"
 	"github.com/sirupsen/logrus"
 )
 

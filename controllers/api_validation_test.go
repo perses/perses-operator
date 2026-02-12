@@ -863,8 +863,9 @@ var _ = Describe("PersesDashboard API Validation", func() {
 							Display: &persescommon.Display{
 								Name: "valid-dashboard",
 							},
-							Layouts: []persesdashboard.Layout{},
-							Panels:  map[string]*persesv1.Panel{},
+							Duration: "5m",
+							Layouts:  []persesdashboard.Layout{},
+							Panels:   map[string]*persesv1.Panel{},
 						},
 					},
 				},
