@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/brunoga/deep v1.3.1
 	github.com/goreleaser/goreleaser/v2 v2.12.0
-	github.com/onsi/ginkgo/v2 v2.28.0
+	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
 	github.com/perses/perses v0.52.0
 	github.com/prometheus/client_golang v1.23.2
