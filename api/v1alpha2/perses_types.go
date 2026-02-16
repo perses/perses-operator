@@ -224,6 +224,8 @@ const (
 )
 
 // SecretSource configuration for a perses secret source
+// +kubebuilder:validation:XValidation:rule="self.type != 'secret' && self.type != 'configmap' || has(self.name)",message="name is required when type is secret or configmap"
+// +kubebuilder:validation:XValidation:rule="self.type != 'secret' && self.type != 'configmap' || has(self.namespace)",message="namespace is required when type is secret or configmap"
 type SecretSource struct {
 	// Type specifies the source type for secret data (secret, configmap, or file)
 	// +required
@@ -232,10 +234,12 @@ type SecretSource struct {
 	// Name is the name of the Kubernetes Secret or ConfigMap resource
 	// Required when Type is "secret" or "configmap", ignored when Type is "file"
 	// +optional
+	// +kubebuilder:validation:MinLength=1
 	Name *string `json:"name,omitempty"`
 	// Namespace is the namespace of the Kubernetes Secret or ConfigMap resource
 	// Required when Type is "secret" or "configmap", ignored when Type is "file"
 	// +optional
+	// +kubebuilder:validation:MinLength=1
 	Namespace *string `json:"namespace,omitempty"`
 }
 
