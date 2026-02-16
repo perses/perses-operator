@@ -260,13 +260,21 @@ lint: lint-jsonnet ## Run linting.
 ##@ E2E Testing
 
 KIND_CLUSTER_NAME ?= kuttl-e2e
+KIND_VERSION ?= $(shell grep kind-version .github/env | sed 's/kind-version=//')
+KIND_NODE_IMAGE ?= $(shell grep kind-image .github/env | sed 's/kind-image=//')
 E2E_TAG ?= $(shell git rev-parse --short HEAD)
 E2E_IMG ?= $(IMAGE_TAG_BASE):$(E2E_TAG)
 
+.PHONY: e2e-versions
+e2e-versions: ## Display versions used for e2e testing.
+	@echo "Kind version: $(KIND_VERSION)"
+	@echo "Kind node image: $(KIND_NODE_IMAGE)"
+	@echo "Go version: $(shell grep golang-version .github/env | sed 's/golang-version=//')"
+
 .PHONY: e2e-create-cluster
 e2e-create-cluster: ## Create a kind cluster for e2e tests.
-	@echo ">> Creating kind cluster..."
-	kind create cluster --name $(KIND_CLUSTER_NAME) --wait 5m 2>/dev/null || true
+	@echo ">> Creating kind cluster with image $(KIND_NODE_IMAGE)..."
+	kind create cluster --name $(KIND_CLUSTER_NAME) --image $(KIND_NODE_IMAGE) --wait 5m 2>/dev/null || true
 
 .PHONY: e2e-deploy
 e2e-deploy: manifests generate kustomize check-container-runtime ## Build operator image, load into kind and deploy.
