@@ -360,7 +360,7 @@
                 "description": "PersesDashboardSpec defines the desired state of PersesDashboard",
                 "properties": {
                   "config": {
-                    "description": "Perses dashboard configuration",
+                    "description": "Config specifies the Perses dashboard configuration",
                     "properties": {
                       "datasources": {
                         "additionalProperties": {

@@ -18,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
@@ -68,17 +69,17 @@ var _ = Describe("Perses controller", func() {
 								"instance": PersesName,
 							},
 						},
-						ServiceAccountName: "perses-service-account",
+						ServiceAccountName: ptr.To("perses-service-account"),
 						Replicas:           &replicas,
 						Resources: &corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
 								corev1.ResourceMemory: resource.MustParse("128Mi"),
 							},
 						},
-						ContainerPort: 8080,
-						Image:         persesImage,
+						ContainerPort: ptr.To(int32(8080)),
+						Image:         ptr.To(persesImage),
 						Service: &persesv1alpha2.PersesService{
-							Name: persesServiceName,
+							Name: ptr.To(persesServiceName),
 							Annotations: map[string]string{
 								"custom-annotation": "true",
 							},
@@ -299,7 +300,7 @@ var _ = Describe("Perses controller", func() {
 								"instance": PersesStorageName,
 							},
 						},
-						Image: persesImage,
+						Image: ptr.To(persesImage),
 						Config: persesv1alpha2.PersesConfig{
 							Config: persesconfig.Config{
 								Database: persesconfig.Database{
@@ -310,7 +311,7 @@ var _ = Describe("Perses controller", func() {
 							},
 						},
 						Storage: &persesv1alpha2.StorageConfiguration{
-							Size: resource.MustParse("10Gi"),
+							Size: ptr.To(resource.MustParse("10Gi")),
 						},
 					},
 				}
@@ -442,7 +443,7 @@ var _ = Describe("Perses controller", func() {
 					Namespace: persesNamespace,
 				},
 				Spec: persesv1alpha2.PersesSpec{
-					Image: persesImage,
+					Image: ptr.To(persesImage),
 					Config: persesv1alpha2.PersesConfig{
 						Config: persesconfig.Config{
 							Database: persesconfig.Database{
@@ -564,7 +565,7 @@ var _ = Describe("Perses controller", func() {
 					Namespace: persesNamespace,
 				},
 				Spec: persesv1alpha2.PersesSpec{
-					Image: persesImage,
+					Image: ptr.To(persesImage),
 					Config: persesv1alpha2.PersesConfig{
 						Config: persesconfig.Config{
 							Database: persesconfig.Database{

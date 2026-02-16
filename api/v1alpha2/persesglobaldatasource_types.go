@@ -1,5 +1,5 @@
 /*
-Copyright 2025.
+Copyright The Perses Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,8 +22,9 @@ import (
 
 // PersesGlobalDatasourceStatus defines the observed state of PersesGlobalDatasource
 type PersesGlobalDatasourceStatus struct {
-	// +operator-sdk:csv:customresourcedefinitions:type=status
 	// Conditions represent the latest observations of the PersesGlobalDatasource resource state
+	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 

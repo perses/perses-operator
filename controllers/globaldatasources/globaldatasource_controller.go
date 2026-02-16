@@ -154,7 +154,11 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalSecret(ctx context.Co
 
 		switch basicAuth.Type {
 		case persesv1alpha2.SecretSourceTypeSecret, persesv1alpha2.SecretSourceTypeConfigMap:
-			passwordData, err := persescommon.GetBasicAuthData(ctx, r.Client, basicAuth.Namespace, datasourceName, basicAuth)
+			namespace := ""
+			if basicAuth.Namespace != nil {
+				namespace = *basicAuth.Namespace
+			}
+			passwordData, err := persescommon.GetBasicAuthData(ctx, r.Client, namespace, datasourceName, basicAuth)
 
 			if err != nil {
 				gdlog.WithFields(logger.Fields{
@@ -180,14 +184,18 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalSecret(ctx context.Co
 			EndpointParams: oauth.EndpointParams,
 		}
 
-		if oauth.AuthStyle != 0 {
-			oAuthConfig.AuthStyle = oauth.AuthStyle
+		if oauth.AuthStyle != nil && *oauth.AuthStyle != 0 {
+			oAuthConfig.AuthStyle = int(*oauth.AuthStyle)
 		}
 
 		oAuthConfig.TokenURL = oauth.TokenURL
 		switch oauth.Type {
 		case persesv1alpha2.SecretSourceTypeSecret, persesv1alpha2.SecretSourceTypeConfigMap:
-			clientIDData, clientSecretData, err := persescommon.GetOAuthData(ctx, r.Client, oauth.Namespace, datasourceName, oauth)
+			namespace := ""
+			if oauth.Namespace != nil {
+				namespace = *oauth.Namespace
+			}
+			clientIDData, clientSecretData, err := persescommon.GetOAuthData(ctx, r.Client, namespace, datasourceName, oauth)
 			if err != nil {
 				gdlog.WithFields(logger.Fields{
 					"globaldatasource": datasourceName,
@@ -202,27 +210,41 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalSecret(ctx context.Co
 		case persesv1alpha2.SecretSourceTypeFile:
 			// the clientID is a Hidden field in perses API,
 			// but doesn't expose it as a file field for it, so we need to read it and use the value
-			clientID, err := os.ReadFile(oauth.ClientIDPath)
+			clientIDPath := ""
+			if oauth.ClientIDPath != nil {
+				clientIDPath = *oauth.ClientIDPath
+			}
+			clientID, err := os.ReadFile(clientIDPath)
 			if err != nil {
-				err = fmt.Errorf("failed to read the OAuth client ID file: %s", oauth.ClientIDPath)
+				err = fmt.Errorf("failed to read the OAuth client ID file: %s", clientIDPath)
 				return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonInvalidConfiguration)
 			}
 			oAuthConfig.ClientID = string(clientID)
-			oAuthConfig.ClientSecretFile = oauth.ClientSecretPath
+			if oauth.ClientSecretPath != nil {
+				oAuthConfig.ClientSecretFile = *oauth.ClientSecretPath
+			}
 		}
 
 		secretWithName.Spec.OAuth = oAuthConfig
 	}
 
 	if tls != nil {
+		insecureSkipVerify := false
+		if tls.InsecureSkipVerify != nil {
+			insecureSkipVerify = *tls.InsecureSkipVerify
+		}
 		tlsConfig := &secret.TLSConfig{
-			InsecureSkipVerify: tls.InsecureSkipVerify,
+			InsecureSkipVerify: insecureSkipVerify,
 		}
 
 		if tls.CaCert != nil {
 			switch tls.CaCert.Type {
 			case persesv1alpha2.SecretSourceTypeSecret, persesv1alpha2.SecretSourceTypeConfigMap:
-				caData, _, err := persescommon.GetTLSCertData(ctx, r.Client, tls.CaCert.Namespace, datasourceName, tls.CaCert)
+				caCertNamespace := ""
+				if tls.CaCert.Namespace != nil {
+					caCertNamespace = *tls.CaCert.Namespace
+				}
+				caData, _, err := persescommon.GetTLSCertData(ctx, r.Client, caCertNamespace, datasourceName, tls.CaCert)
 
 				if err != nil {
 					gdlog.WithFields(logger.Fields{
@@ -242,7 +264,11 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalSecret(ctx context.Co
 		if tls.UserCert != nil {
 			switch tls.UserCert.Type {
 			case persesv1alpha2.SecretSourceTypeSecret, persesv1alpha2.SecretSourceTypeConfigMap:
-				certData, keyData, err := persescommon.GetTLSCertData(ctx, r.Client, tls.UserCert.Namespace, datasourceName, tls.UserCert)
+				userCertNamespace := ""
+				if tls.UserCert.Namespace != nil {
+					userCertNamespace = *tls.UserCert.Namespace
+				}
+				certData, keyData, err := persescommon.GetTLSCertData(ctx, r.Client, userCertNamespace, datasourceName, tls.UserCert)
 
 				if err != nil {
 					gdlog.WithFields(logger.Fields{
@@ -258,8 +284,8 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalSecret(ctx context.Co
 			case persesv1alpha2.SecretSourceTypeFile:
 				tlsConfig.CertFile = tls.UserCert.CertPath
 
-				if len(tls.UserCert.PrivateKeyPath) > 0 {
-					tlsConfig.KeyFile = tls.UserCert.PrivateKeyPath
+				if tls.UserCert.PrivateKeyPath != nil && len(*tls.UserCert.PrivateKeyPath) > 0 {
+					tlsConfig.KeyFile = *tls.UserCert.PrivateKeyPath
 				}
 			}
 		}

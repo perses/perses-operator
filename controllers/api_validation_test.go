@@ -27,6 +27,7 @@ import (
 	persesdashboard "github.com/perses/perses/pkg/model/api/v1/dashboard"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 )
@@ -43,12 +44,12 @@ var _ = Describe("API Validation", func() {
 					Namespace: persesNamespace,
 				},
 				Spec: persesv1alpha2.PersesSpec{
-					ContainerPort: 8080,
+					ContainerPort: ptr.To(int32(8080)),
 					Client: &persesv1alpha2.Client{
 						BasicAuth: &persesv1alpha2.BasicAuth{
 							SecretSource: persesv1alpha2.SecretSource{
 								Type: persesv1alpha2.SecretSourceTypeSecret,
-								Name: "my-secret",
+								Name: ptr.To("my-secret"),
 							},
 							Username:     "", // Invalid: required
 							PasswordPath: "/path/to/password",
@@ -71,12 +72,12 @@ var _ = Describe("API Validation", func() {
 					Namespace: persesNamespace,
 				},
 				Spec: persesv1alpha2.PersesSpec{
-					ContainerPort: 8080,
+					ContainerPort: ptr.To(int32(8080)),
 					Client: &persesv1alpha2.Client{
 						BasicAuth: &persesv1alpha2.BasicAuth{
 							SecretSource: persesv1alpha2.SecretSource{
 								Type: persesv1alpha2.SecretSourceTypeSecret,
-								Name: "my-secret",
+								Name: ptr.To("my-secret"),
 							},
 							Username:     "admin",
 							PasswordPath: "", // Invalid: required
@@ -99,12 +100,12 @@ var _ = Describe("API Validation", func() {
 					Namespace: persesNamespace,
 				},
 				Spec: persesv1alpha2.PersesSpec{
-					ContainerPort: 8080,
+					ContainerPort: ptr.To(int32(8080)),
 					Client: &persesv1alpha2.Client{
 						BasicAuth: &persesv1alpha2.BasicAuth{
 							SecretSource: persesv1alpha2.SecretSource{
 								Type: persesv1alpha2.SecretSourceTypeSecret,
-								Name: "my-secret",
+								Name: ptr.To("my-secret"),
 							},
 							Username:     "admin",
 							PasswordPath: "password",
@@ -135,12 +136,12 @@ var _ = Describe("API Validation", func() {
 					Namespace: persesNamespace,
 				},
 				Spec: persesv1alpha2.PersesSpec{
-					ContainerPort: 8080,
+					ContainerPort: ptr.To(int32(8080)),
 					Client: &persesv1alpha2.Client{
 						OAuth: &persesv1alpha2.OAuth{
 							SecretSource: persesv1alpha2.SecretSource{
 								Type: persesv1alpha2.SecretSourceTypeSecret,
-								Name: "oauth-secret",
+								Name: ptr.To("oauth-secret"),
 							},
 							TokenURL: "", // Invalid: required
 						},
@@ -162,12 +163,12 @@ var _ = Describe("API Validation", func() {
 					Namespace: persesNamespace,
 				},
 				Spec: persesv1alpha2.PersesSpec{
-					ContainerPort: 8080,
+					ContainerPort: ptr.To(int32(8080)),
 					Client: &persesv1alpha2.Client{
 						OAuth: &persesv1alpha2.OAuth{
 							SecretSource: persesv1alpha2.SecretSource{
 								Type: persesv1alpha2.SecretSourceTypeSecret,
-								Name: "oauth-secret",
+								Name: ptr.To("oauth-secret"),
 							},
 							TokenURL: "https://auth.example.com/token",
 						},
@@ -197,14 +198,14 @@ var _ = Describe("API Validation", func() {
 					Namespace: persesNamespace,
 				},
 				Spec: persesv1alpha2.PersesSpec{
-					ContainerPort: 8080,
+					ContainerPort: ptr.To(int32(8080)),
 					Client: &persesv1alpha2.Client{
 						TLS: &persesv1alpha2.TLS{
-							Enable: true,
+							Enable: ptr.To(true),
 							CaCert: &persesv1alpha2.Certificate{
 								SecretSource: persesv1alpha2.SecretSource{
 									Type: persesv1alpha2.SecretSourceTypeSecret,
-									Name: "tls-secret",
+									Name: ptr.To("tls-secret"),
 								},
 								CertPath: "", // Invalid: required
 							},
@@ -227,14 +228,14 @@ var _ = Describe("API Validation", func() {
 					Namespace: persesNamespace,
 				},
 				Spec: persesv1alpha2.PersesSpec{
-					ContainerPort: 8080,
+					ContainerPort: ptr.To(int32(8080)),
 					Client: &persesv1alpha2.Client{
 						TLS: &persesv1alpha2.TLS{
-							Enable: true,
+							Enable: ptr.To(true),
 							CaCert: &persesv1alpha2.Certificate{
 								SecretSource: persesv1alpha2.SecretSource{
 									Type: persesv1alpha2.SecretSourceTypeSecret,
-									Name: "tls-secret",
+									Name: ptr.To("tls-secret"),
 								},
 								CertPath: "ca.crt",
 							},
@@ -265,12 +266,12 @@ var _ = Describe("API Validation", func() {
 					Namespace: persesNamespace,
 				},
 				Spec: persesv1alpha2.PersesSpec{
-					ContainerPort: 8080,
+					ContainerPort: ptr.To(int32(8080)),
 					Client: &persesv1alpha2.Client{
 						BasicAuth: &persesv1alpha2.BasicAuth{
 							SecretSource: persesv1alpha2.SecretSource{
 								Type: "invalid-type", // Invalid: must be secret, configmap, or file
-								Name: "my-secret",
+								Name: ptr.To("my-secret"),
 							},
 							Username:     "admin",
 							PasswordPath: "password",
@@ -297,7 +298,7 @@ var _ = Describe("API Validation", func() {
 					Namespace: persesNamespace,
 				},
 				Spec: persesv1alpha2.PersesSpec{
-					ContainerPort: 65536, // Invalid: maximum is 65535
+					ContainerPort: ptr.To(int32(65536)), // Invalid: maximum is 65535
 				},
 			}
 
@@ -315,7 +316,7 @@ var _ = Describe("API Validation", func() {
 					Namespace: persesNamespace,
 				},
 				Spec: persesv1alpha2.PersesSpec{
-					ContainerPort: 8500,
+					ContainerPort: ptr.To(int32(8500)),
 				},
 			}
 
@@ -342,7 +343,7 @@ var _ = Describe("API Validation", func() {
 					Namespace: persesNamespace,
 				},
 				Spec: persesv1alpha2.PersesSpec{
-					ContainerPort: 8080,
+					ContainerPort: ptr.To(int32(8080)),
 					LogLevel:      &invalidLogLevel,
 				},
 			}
@@ -362,7 +363,7 @@ var _ = Describe("API Validation", func() {
 					Namespace: persesNamespace,
 				},
 				Spec: persesv1alpha2.PersesSpec{
-					ContainerPort: 8080,
+					ContainerPort: ptr.To(int32(8080)),
 					LogLevel:      &debugLogLevel,
 				},
 			}
@@ -390,7 +391,7 @@ var _ = Describe("API Validation", func() {
 					Namespace: persesNamespace,
 				},
 				Spec: persesv1alpha2.PersesSpec{
-					ContainerPort:  8080,
+					ContainerPort:  ptr.To(int32(8080)),
 					LogMethodTrace: &logMethodTrace,
 				},
 			}

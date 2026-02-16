@@ -1,5 +1,5 @@
 /*
-Copyright 2025 The Perses Authors.
+Copyright The Perses Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -58,6 +58,10 @@ func (p *ProvisioningSecret) GetSecretVolumeName() string {
 
 // SecretVersion represents a secret version
 type SecretVersion struct {
-	Name    string `json:"name"`
+	// Name is the name of the provisioning secret
+	// +required
+	Name string `json:"name"`
+	// Version is the resource version of the provisioning secret
+	// +required
 	Version string `json:"version"`
 }

@@ -83,8 +83,8 @@ func ImageForPerses(perses *v1alpha2.Perses, persesImageFromFlags string) (strin
 		image = persesImageFromFlags
 	}
 
-	if len(perses.Spec.Image) > 0 {
-		image = perses.Spec.Image
+	if perses.Spec.Image != nil && len(*perses.Spec.Image) > 0 {
+		image = *perses.Spec.Image
 	}
 
 	if image == "" {

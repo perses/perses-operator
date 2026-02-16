@@ -23,6 +23,7 @@ import (
 	"github.com/perses/perses-operator/api/v1alpha2"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 
 	. "github.com/onsi/ginkgo/v2"
 
@@ -45,7 +46,7 @@ var _ = Describe("LabelsForPerses", func() {
 			strings.Repeat("a", 100),
 			&v1alpha2.Perses{
 				ObjectMeta: metav1.ObjectMeta{Name: strings.Repeat("a", 100)},
-				Spec:       v1alpha2.PersesSpec{Image: "perses/perses:latest"},
+				Spec:       v1alpha2.PersesSpec{Image: ptr.To("perses/perses:latest")},
 			},
 			func(labels map[string]string) {
 				nameLabel, exists := labels["app.kubernetes.io/name"]
@@ -62,7 +63,7 @@ var _ = Describe("LabelsForPerses", func() {
 					Name: "test-perses",
 				},
 				Spec: v1alpha2.PersesSpec{
-					Image: "perses/perses:latest",
+					Image: ptr.To("perses/perses:latest"),
 					Metadata: &v1alpha2.Metadata{
 						Labels: map[string]string{
 							"custom-label": "custom-value",

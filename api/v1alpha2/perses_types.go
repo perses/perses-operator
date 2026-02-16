@@ -1,5 +1,5 @@
 /*
-Copyright 2025 The Perses Authors.
+Copyright The Perses Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,187 +24,196 @@ import (
 
 // PersesSpec defines the desired state of Perses
 type PersesSpec struct {
-	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	// Metadata to add to deployed pods
-	Metadata *Metadata `json:"metadata,omitempty"`
+	// Metadata specifies additional metadata to add to deployed pods
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	// Perses client configuration
+	Metadata *Metadata `json:"metadata,omitempty"`
+	// Client specifies the Perses client configuration
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
 	Client *Client `json:"client,omitempty"`
+	// Config specifies the Perses server configuration
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	// Perses server configuration
+	// +optional
 	Config PersesConfig `json:"config,omitempty"`
+	// Args are extra command-line arguments to pass to the Perses server
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	// Args extra arguments to pass to perses
+	// +optional
 	Args []string `json:"args,omitempty"`
+	// ContainerPort is the port on which the Perses server listens for HTTP requests
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
-	// +kubebuilder:default=8080
-	ContainerPort int32 `json:"containerPort,omitempty"`
+	ContainerPort *int32 `json:"containerPort,omitempty"`
+	// Replicas is the number of desired pod replicas for the Perses deployment
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Replicas *int32 `json:"replicas,omitempty"`
-
+	// Resources defines the compute resources configured for the container
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	// Resources defines the compute resources configured for the container.
 	Resources *corev1.ResourceRequirements `json:"resources,omitempty"`
-
-	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// NodeSelector constrains pods to nodes with matching labels
-	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	// Tolerations allow pods to schedule onto nodes with matching taints
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+	// Affinity specifies the pod's scheduling constraints
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+	// Image specifies the container image that should be used for the Perses deployment
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	// Image specifies the container image that should be used for the Perses deployment.
-	Image string `json:"image,omitempty"`
+	Image *string `json:"image,omitempty"`
+	// Service specifies the service configuration for the Perses instance
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	// service specifies the service configuration for the perses instance
 	Service *PersesService `json:"service,omitempty"`
-
+	// LivenessProbe specifies the liveness probe configuration for the Perses container
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	LivenessProbe *corev1.Probe `json:"livenessProbe,omitempty"`
-
+	// ReadinessProbe specifies the readiness probe configuration for the Perses container
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	ReadinessProbe *corev1.Probe `json:"readinessProbe,omitempty"`
+	// TLS specifies the TLS configuration for the Perses instance
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	// tls specifies the tls configuration for the perses instance
 	TLS *TLS `json:"tls,omitempty"`
+	// Storage configuration used by the StatefulSet
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +kubebuilder:default:={size: "1Gi"}
 	// +optional
-	// Storage configuration used by the StatefulSet
 	Storage *StorageConfiguration `json:"storage,omitempty"`
-
+	// ServiceAccountName is the name of the ServiceAccount to use for the Perses deployment or statefulset
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	// ServiceAccountName is the name of the service account to use for the perses deployment or statefulset.
-	ServiceAccountName string `json:"serviceAccountName,omitempty"`
-
+	ServiceAccountName *string `json:"serviceAccountName,omitempty"`
+	// PodSecurityContext holds pod-level security attributes and common container settings
+	// If not specified, defaults to fsGroup: 65534 to ensure proper volume permissions for the nobody user
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	// PodSecurityContext holds pod-level security attributes and common container settings.
-	// If not specified, defaults to fsGroup: 65534 to ensure proper volume permissions for the nobody user.
 	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
-
+	// LogLevel defines the log level for Perses
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +kubebuilder:validation:Enum=panic;fatal;error;warning;info;debug;trace
 	// +optional
-	// LogLevel defines the log level for Perses.
 	LogLevel *string `json:"logLevel,omitempty"`
-
+	// LogMethodTrace when true, includes the calling method as a field in the log
+	// It can be useful to see immediately where the log comes from
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	// LogMethodTrace when true, includes the calling method as a field in the log.
-	// It can be useful to see immediately where the log comes from.
 	LogMethodTrace *bool `json:"logMethodTrace,omitempty"`
-
+	// Provisioning configuration for provisioning secrets
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	// Provisioning configuration for provisioning secrets
 	Provisioning *Provisioning `json:"provisioning,omitempty"`
 }
 
 // Metadata to add to deployed pods
 type Metadata struct {
 	// Labels are key/value pairs attached to pods
+	// +optional
 	Labels map[string]string `json:"labels,omitempty"`
 	// Annotations are key/value pairs attached to pods for non-identifying metadata
+	// +optional
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // PersesService defines service configuration for Perses
 type PersesService struct {
+	// Name is the name of the Kubernetes Service resource
+	// If not specified, a default name will be generated
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	// Name of the Kubernetes service
-	Name string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty"`
+	// Annotations are key/value pairs attached to the Service for non-identifying metadata
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	// Annotations attached to the service for non-identifying metadata
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 type Client struct {
-	// BasicAuth basic auth config for perses client
+	// BasicAuth provides username/password authentication configuration for the Perses client
 	// +optional
 	BasicAuth *BasicAuth `json:"basicAuth,omitempty"`
-	// OAuth configuration for perses client
+	// OAuth provides OAuth 2.0 authentication configuration for the Perses client
 	// +optional
 	OAuth *OAuth `json:"oauth,omitempty"`
-	// TLS the equivalent to the tls_config for perses client
+	// TLS provides TLS/SSL configuration for secure connections to Perses
 	// +optional
 	TLS *TLS `json:"tls,omitempty"`
-
-	// KubernetesAuth configuration for perses client
+	// KubernetesAuth enables Kubernetes native authentication for the Perses client
 	// +optional
 	KubernetesAuth *KubernetesAuth `json:"kubernetesAuth,omitempty"`
 }
 
 type KubernetesAuth struct {
-	// Enable kubernetes auth for perses client
-	Enable bool `json:"enable"`
+	// Enable determines whether Kubernetes authentication is enabled for the Perses client
+	// +optional
+	Enable *bool `json:"enable,omitempty"`
 }
 
 type BasicAuth struct {
 	SecretSource `json:",inline"`
-	// +kubebuilder:validation:Required
+	// Username is the username credential for basic authentication
+	// +required
 	// +kubebuilder:validation:MinLength=1
-	// Username for basic auth
 	Username string `json:"username"`
-	// +kubebuilder:validation:Required
+	// PasswordPath specifies the key name within the secret/configmap or filesystem path
+	// (depending on SecretSource.Type) where the password is stored
+	// +required
 	// +kubebuilder:validation:MinLength=1
-	// Path to password
 	PasswordPath string `json:"passwordPath"`
 }
 
 type OAuth struct {
 	SecretSource `json:",inline"`
-	// Path to client id
+	// ClientIDPath specifies the key name within the secret/configmap or filesystem path
+	// (depending on SecretSource.Type) where the OAuth client ID is stored
 	// +optional
-	ClientIDPath string `json:"clientIDPath,omitempty"`
-	// Path to client secret
+	ClientIDPath *string `json:"clientIDPath,omitempty"`
+	// ClientSecretPath specifies the key name within the secret/configmap or filesystem path
+	// (depending on SecretSource.Type) where the OAuth client secret is stored
 	// +optional
-	ClientSecretPath string `json:"clientSecretPath,omitempty"`
-	// +kubebuilder:validation:Required
+	ClientSecretPath *string `json:"clientSecretPath,omitempty"`
+	// TokenURL is the OAuth 2.0 provider's token endpoint URL
+	// This is a constant specific to each OAuth provider
+	// +required
 	// +kubebuilder:validation:MinLength=1
-	// TokenURL is the resource server's token endpoint
-	// URL. This is a constant specific to each server.
 	TokenURL string `json:"tokenURL"`
+	// Scopes specifies optional requested permissions for the OAuth token
 	// +optional
-	// Scope specifies optional requested permissions.
 	Scopes []string `json:"scopes,omitempty"`
+	// EndpointParams specifies additional parameters to include in requests to the token endpoint
 	// +optional
-	// EndpointParams specifies additional parameters for requests to the token endpoint.
 	EndpointParams map[string][]string `json:"endpointParams,omitempty"`
+	// AuthStyle specifies how the endpoint wants the client ID and client secret sent
+	// The zero value means to auto-detect
 	// +optional
-	// AuthStyle optionally specifies how the endpoint wants the
-	// client ID & client secret sent. The zero value means to
-	// auto-detect.
-	AuthStyle int `json:"authStyle,omitempty"`
+	AuthStyle *int32 `json:"authStyle,omitempty"`
 }
 
 type TLS struct {
-	// Enable TLS connection to perses
-	Enable bool `json:"enable"`
-	// CaCert to verify the perses certificate
+	// Enable determines whether TLS is enabled for connections to Perses
+	// +optional
+	Enable *bool `json:"enable,omitempty"`
+	// CaCert specifies the CA certificate to verify the Perses server's certificate
 	// +optional
 	CaCert *Certificate `json:"caCert,omitempty"`
-	// UserCert client cert/key for mTLS
+	// UserCert specifies the client certificate and key for mutual TLS (mTLS) authentication
 	// +optional
 	UserCert *Certificate `json:"userCert,omitempty"`
-	// InsecureSkipVerify skip verify of perses certificate
+	// InsecureSkipVerify determines whether to skip verification of the Perses server's certificate
+	// Setting this to true is insecure and should only be used for testing
 	// +optional
-	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
+	InsecureSkipVerify *bool `json:"insecureSkipVerify,omitempty"`
 }
 
 // SecretSourceType types of secret sources in k8s
@@ -218,48 +227,55 @@ const (
 
 // SecretSource configuration for a perses secret source
 type SecretSource struct {
+	// Type specifies the source type for secret data (secret, configmap, or file)
+	// +required
 	// +kubebuilder:validation:Enum=secret;configmap;file
-	// +kubebuilder:validation:Required
-	// Type source type of secret
 	Type SecretSourceType `json:"type"`
-	// Name of basic auth k8s resource (when type is secret or configmap)
+	// Name is the name of the Kubernetes Secret or ConfigMap resource
+	// Required when Type is "secret" or "configmap", ignored when Type is "file"
 	// +optional
-	Name string `json:"name,omitempty"`
-	// Namespace of certificate k8s resource (when type is secret or configmap)
+	Name *string `json:"name,omitempty"`
+	// Namespace is the namespace of the Kubernetes Secret or ConfigMap resource
+	// Required when Type is "secret" or "configmap", ignored when Type is "file"
 	// +optional
-	Namespace string `json:"namespace,omitempty"`
+	Namespace *string `json:"namespace,omitempty"`
 }
 
 type Certificate struct {
 	SecretSource `json:",inline"`
-	// +kubebuilder:validation:Required
+	// CertPath specifies the key name within the secret/configmap or filesystem path
+	// (depending on SecretSource.Type) where the certificate is stored
+	// +required
 	// +kubebuilder:validation:MinLength=1
-	// Path to Certificate
 	CertPath string `json:"certPath"`
-	// Path to Private key certificate
+	// PrivateKeyPath specifies the key name within the secret/configmap or filesystem path
+	// (depending on SecretSource.Type) where the private key is stored
+	// Required for client certificates (UserCert), optional for CA certificates (CaCert)
 	// +optional
-	PrivateKeyPath string `json:"privateKeyPath,omitempty"`
+	PrivateKeyPath *string `json:"privateKeyPath,omitempty"`
 }
 
 // StorageConfiguration is the configuration used to create and reconcile PVCs
 type StorageConfiguration struct {
-	// StorageClass to use for PVCs.
-	// If not specified, will use the default storage class
+	// StorageClass specifies the StorageClass to use for PersistentVolumeClaims
+	// If not specified, the default StorageClass will be used
 	// +optional
 	StorageClass *string `json:"storageClass,omitempty"`
-	// Size of the storage.
-	// cannot be decreased.
+	// Size specifies the storage capacity for the PersistentVolumeClaim
+	// Once set, the size cannot be decreased (only increased if the StorageClass supports volume expansion)
 	// +optional
-	Size resource.Quantity `json:"size,omitempty"`
+	Size *resource.Quantity `json:"size,omitempty"`
 }
 
 // PersesStatus defines the observed state of Perses
 type PersesStatus struct {
-	// +operator-sdk:csv:customresourcedefinitions:type=status
 	// Conditions represent the latest observations of the Perses resource state
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 	// +operator-sdk:csv:customresourcedefinitions:type=status
-	// Provisioning secrets versions
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	// Provisioning contains the versions of provisioning secrets currently in use
+	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// +optional
 	Provisioning []SecretVersion `json:"provisioning,omitempty"`
 }
 

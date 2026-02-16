@@ -179,8 +179,13 @@ func (r *PersesReconciler) createPersesStatefulSet(
 							},
 						},
 						Ports: []corev1.ContainerPort{{
-							ContainerPort: perses.Spec.ContainerPort,
-							Name:          "perses",
+							ContainerPort: func() int32 {
+								if perses.Spec.ContainerPort != nil {
+									return *perses.Spec.ContainerPort
+								}
+								return 8080
+							}(),
+							Name: "perses",
 						}},
 						VolumeMounts:   common.GetVolumeMounts(perses),
 						Args:           common.GetPersesArgs(perses),
@@ -221,15 +226,15 @@ func (r *PersesReconciler) createPersesStatefulSet(
 			sts.Spec.VolumeClaimTemplates[0].Spec.StorageClassName = perses.Spec.Storage.StorageClass
 		}
 
-		if !perses.Spec.Storage.Size.IsZero() {
+		if perses.Spec.Storage.Size != nil && !perses.Spec.Storage.Size.IsZero() {
 			sts.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests = corev1.ResourceList{
-				corev1.ResourceStorage: perses.Spec.Storage.Size,
+				corev1.ResourceStorage: *perses.Spec.Storage.Size,
 			}
 		}
 	}
 
-	if perses.Spec.ServiceAccountName != "" {
-		sts.Spec.Template.Spec.ServiceAccountName = perses.Spec.ServiceAccountName
+	if perses.Spec.ServiceAccountName != nil && *perses.Spec.ServiceAccountName != "" {
+		sts.Spec.Template.Spec.ServiceAccountName = *perses.Spec.ServiceAccountName
 	}
 
 	// Set the ownerRef for the StatefulSet

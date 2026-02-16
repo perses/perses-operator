@@ -64,7 +64,8 @@ const (
 func isTLSEnabled(perses *v1alpha2.Perses) bool {
 	return perses != nil &&
 		perses.Spec.TLS != nil &&
-		perses.Spec.TLS.Enable
+		perses.Spec.TLS.Enable != nil &&
+		*perses.Spec.TLS.Enable
 }
 
 // hasTLSConfiguration checks if valid TLS configuration is present
@@ -72,7 +73,8 @@ func hasTLSConfiguration(perses *v1alpha2.Perses) bool {
 	return isTLSEnabled(perses) &&
 		perses.Spec.TLS.UserCert != nil &&
 		perses.Spec.TLS.UserCert.CertPath != "" &&
-		perses.Spec.TLS.UserCert.PrivateKeyPath != ""
+		perses.Spec.TLS.UserCert.PrivateKeyPath != nil &&
+		*perses.Spec.TLS.UserCert.PrivateKeyPath != ""
 }
 
 // isClientTLSEnabled checks if TLS is enabled in the Perses client configuration
@@ -80,12 +82,14 @@ func isClientTLSEnabled(perses *v1alpha2.Perses) bool {
 	return perses != nil &&
 		perses.Spec.Client != nil &&
 		perses.Spec.Client.TLS != nil &&
-		perses.Spec.Client.TLS.Enable
+		perses.Spec.Client.TLS.Enable != nil &&
+		*perses.Spec.Client.TLS.Enable
 }
 
 func isKubernetesAuthEnabled(perses *v1alpha2.Perses) bool {
 	return perses != nil &&
 		perses.Spec.Client != nil &&
 		perses.Spec.Client.KubernetesAuth != nil &&
-		perses.Spec.Client.KubernetesAuth.Enable
+		perses.Spec.Client.KubernetesAuth.Enable != nil &&
+		*perses.Spec.Client.KubernetesAuth.Enable
 }

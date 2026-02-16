@@ -40,7 +40,11 @@ func (f *PersesClientFactoryWithConfig) CreateClient(ctx context.Context, client
 	if serverURLFlag != nil && serverURLFlag.Value.String() != "" {
 		urlStr = serverURLFlag.Value.String()
 	} else {
-		urlStr = fmt.Sprintf("%s://%s.%s.svc.cluster.local:%d", httpProtocol, perses.Name, perses.Namespace, perses.Spec.ContainerPort)
+		containerPort := int32(8080)
+		if perses.Spec.ContainerPort != nil {
+			containerPort = *perses.Spec.ContainerPort
+		}
+		urlStr = fmt.Sprintf("%s://%s.%s.svc.cluster.local:%d", httpProtocol, perses.Name, perses.Namespace, containerPort)
 	}
 	parsedURL, err := common.ParseURL(urlStr)
 	if err != nil {
@@ -70,8 +74,13 @@ func (f *PersesClientFactoryWithConfig) CreateClient(ctx context.Context, client
 	if isClientTLSEnabled(&perses) {
 		tls := perses.Spec.Client.TLS
 
+		insecureSkipVerify := false
+		if tls.InsecureSkipVerify != nil {
+			insecureSkipVerify = *tls.InsecureSkipVerify
+		}
+
 		tlsConfig := &secret.TLSConfig{
-			InsecureSkipVerify: tls.InsecureSkipVerify,
+			InsecureSkipVerify: insecureSkipVerify,
 		}
 
 		if tls.CaCert != nil {

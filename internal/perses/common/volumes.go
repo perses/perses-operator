@@ -96,17 +96,25 @@ func createCertVolume(name string, cert v1alpha2.Certificate) corev1.Volume {
 
 	switch cert.Type {
 	case v1alpha2.SecretSourceTypeSecret:
+		secretName := ""
+		if cert.Name != nil {
+			secretName = *cert.Name
+		}
 		volume.VolumeSource = corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{
-				SecretName:  cert.Name,
+				SecretName:  secretName,
 				DefaultMode: ptr.To[int32](defaultFileMode),
 			},
 		}
 	case v1alpha2.SecretSourceTypeConfigMap:
+		cmName := ""
+		if cert.Name != nil {
+			cmName = *cert.Name
+		}
 		volume.VolumeSource = corev1.VolumeSource{
 			ConfigMap: &corev1.ConfigMapVolumeSource{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: cert.Name,
+					Name: cmName,
 				},
 				DefaultMode: ptr.To[int32](defaultFileMode),
 			},
