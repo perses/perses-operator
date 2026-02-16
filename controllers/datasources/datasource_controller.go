@@ -30,6 +30,8 @@ import (
 
 	"github.com/perses/perses/pkg/model/api/v1/secret"
 	logger "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -41,9 +43,29 @@ import (
 var dlog = logger.WithField("module", "datasource_controller")
 
 func (r *PersesDatasourceReconciler) reconcileDatasourcesInAllInstances(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
+	datasource, ok := datasourceFromContext(ctx)
+	if !ok {
+		dlog.Error("datasource not found in context")
+		res, err := subreconciler.RequeueWithError(fmt.Errorf("datasource not found in context"))
+		return r.setStatusToDegraded(ctx, req, res, persescommon.ReasonMissingResource, err)
+	}
+
+	var labelSelector labels.Selector
+	if datasource.Spec.InstanceSelector == nil {
+		labelSelector = labels.Everything()
+	} else {
+		var err error
+		labelSelector, err = metav1.LabelSelectorAsSelector(datasource.Spec.InstanceSelector)
+		if err != nil {
+			return subreconciler.RequeueWithError(err)
+		}
+	}
+
 	persesInstances := &persesv1alpha2.PersesList{}
-	var opts []client.ListOption
-	err := r.List(ctx, persesInstances, opts...)
+	opts := &client.ListOptions{
+		LabelSelector: labelSelector,
+	}
+	err := r.List(ctx, persesInstances, opts)
 	if err != nil {
 		dlog.WithError(err).Error("Failed to get perses instances")
 		res, err := subreconciler.RequeueWithError(err)
@@ -54,14 +76,6 @@ func (r *PersesDatasourceReconciler) reconcileDatasourcesInAllInstances(ctx cont
 		dlog.Info("No Perses instances found, requeue in 1 minute")
 		res, err := subreconciler.RequeueWithDelay(time.Minute)
 		return r.setStatusToDegraded(ctx, req, res, persescommon.ReasonMissingPerses, err)
-
-	}
-
-	datasource, ok := datasourceFromContext(ctx)
-	if !ok {
-		dlog.Error("datasource not found in context")
-		res, err := subreconciler.RequeueWithError(fmt.Errorf("datasource not found in context"))
-		return r.setStatusToDegraded(ctx, req, res, persescommon.ReasonMissingResource, err)
 	}
 
 	for _, persesInstance := range persesInstances.Items {

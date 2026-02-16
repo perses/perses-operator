@@ -2,6 +2,8 @@ apiVersion: perses.dev/v1alpha2
 kind: Perses
 metadata:
   name: perses-e2e-test
+  labels:
+    app.kubernetes.io/instance: perses-e2e-test
 spec:
   metadata:
     labels:
