@@ -29,11 +29,11 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `type` _[SecretSourceType](#secretsourcetype)_ | Type source type of secret |  | Enum: [secret configmap file] <br />Required: \{\} <br /> |
-| `name` _string_ | Name of basic auth k8s resource (when type is secret or configmap) |  | Optional: \{\} <br /> |
-| `namespace` _string_ | Namespace of certificate k8s resource (when type is secret or configmap) |  | Optional: \{\} <br /> |
-| `username` _string_ | Username for basic auth |  | MinLength: 1 <br />Required: \{\} <br /> |
-| `passwordPath` _string_ | Path to password |  | MinLength: 1 <br />Required: \{\} <br /> |
+| `type` _[SecretSourceType](#secretsourcetype)_ | Type specifies the source type for secret data (secret, configmap, or file) |  | Enum: [secret configmap file] <br />Required: \{\} <br /> |
+| `name` _string_ | Name is the name of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | Optional: \{\} <br /> |
+| `namespace` _string_ | Namespace is the namespace of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | Optional: \{\} <br /> |
+| `username` _string_ | Username is the username credential for basic authentication |  | MinLength: 1 <br />Required: \{\} <br /> |
+| `passwordPath` _string_ | PasswordPath specifies the key name within the secret/configmap or filesystem path<br />(depending on SecretSource.Type) where the password is stored |  | MinLength: 1 <br />Required: \{\} <br /> |
 
 
 #### Certificate
@@ -49,11 +49,11 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `type` _[SecretSourceType](#secretsourcetype)_ | Type source type of secret |  | Enum: [secret configmap file] <br />Required: \{\} <br /> |
-| `name` _string_ | Name of basic auth k8s resource (when type is secret or configmap) |  | Optional: \{\} <br /> |
-| `namespace` _string_ | Namespace of certificate k8s resource (when type is secret or configmap) |  | Optional: \{\} <br /> |
-| `certPath` _string_ | Path to Certificate |  | MinLength: 1 <br />Required: \{\} <br /> |
-| `privateKeyPath` _string_ | Path to Private key certificate |  | Optional: \{\} <br /> |
+| `type` _[SecretSourceType](#secretsourcetype)_ | Type specifies the source type for secret data (secret, configmap, or file) |  | Enum: [secret configmap file] <br />Required: \{\} <br /> |
+| `name` _string_ | Name is the name of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | Optional: \{\} <br /> |
+| `namespace` _string_ | Namespace is the namespace of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | Optional: \{\} <br /> |
+| `certPath` _string_ | CertPath specifies the key name within the secret/configmap or filesystem path<br />(depending on SecretSource.Type) where the certificate is stored |  | MinLength: 1 <br />Required: \{\} <br /> |
+| `privateKeyPath` _string_ | PrivateKeyPath specifies the key name within the secret/configmap or filesystem path<br />(depending on SecretSource.Type) where the private key is stored<br />Required for client certificates (UserCert), optional for CA certificates (CaCert) |  | Optional: \{\} <br /> |
 
 
 #### Client
@@ -70,10 +70,10 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `basicAuth` _[BasicAuth](#basicauth)_ | BasicAuth basic auth config for perses client |  | Optional: \{\} <br /> |
-| `oauth` _[OAuth](#oauth)_ | OAuth configuration for perses client |  | Optional: \{\} <br /> |
-| `tls` _[TLS](#tls)_ | TLS the equivalent to the tls_config for perses client |  | Optional: \{\} <br /> |
-| `kubernetesAuth` _[KubernetesAuth](#kubernetesauth)_ | KubernetesAuth configuration for perses client |  | Optional: \{\} <br /> |
+| `basicAuth` _[BasicAuth](#basicauth)_ | BasicAuth provides username/password authentication configuration for the Perses client |  | Optional: \{\} <br /> |
+| `oauth` _[OAuth](#oauth)_ | OAuth provides OAuth 2.0 authentication configuration for the Perses client |  | Optional: \{\} <br /> |
+| `tls` _[TLS](#tls)_ | TLS provides TLS/SSL configuration for secure connections to Perses |  | Optional: \{\} <br /> |
+| `kubernetesAuth` _[KubernetesAuth](#kubernetesauth)_ | KubernetesAuth enables Kubernetes native authentication for the Perses client |  | Optional: \{\} <br /> |
 
 
 #### Dashboard
@@ -132,8 +132,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `config` _[Datasource](#datasource)_ | Perses datasource configuration |  | Required: \{\} <br /> |
-| `client` _[Client](#client)_ | Client authentication and TLS configuration for the datasource |  | Optional: \{\} <br /> |
+| `config` _[Datasource](#datasource)_ | Config specifies the Perses datasource configuration |  | Required: \{\} <br /> |
+| `client` _[Client](#client)_ | Client specifies authentication and TLS configuration for the datasource |  | Optional: \{\} <br /> |
 | `instanceSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#labelselector-v1-meta)_ | InstanceSelector selects Perses instances where this datasource will be created |  | Optional: \{\} <br /> |
 
 
@@ -150,7 +150,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `enable` _boolean_ | Enable kubernetes auth for perses client |  |  |
+| `enable` _boolean_ | Enable determines whether Kubernetes authentication is enabled for the Perses client |  | Optional: \{\} <br /> |
 
 
 #### Metadata
@@ -166,8 +166,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `labels` _object (keys:string, values:string)_ | Labels are key/value pairs attached to pods |  |  |
-| `annotations` _object (keys:string, values:string)_ | Annotations are key/value pairs attached to pods for non-identifying metadata |  |  |
+| `labels` _object (keys:string, values:string)_ | Labels are key/value pairs attached to pods |  | Optional: \{\} <br /> |
+| `annotations` _object (keys:string, values:string)_ | Annotations are key/value pairs attached to pods for non-identifying metadata |  | Optional: \{\} <br /> |
 
 
 #### OAuth
@@ -183,15 +183,15 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `type` _[SecretSourceType](#secretsourcetype)_ | Type source type of secret |  | Enum: [secret configmap file] <br />Required: \{\} <br /> |
-| `name` _string_ | Name of basic auth k8s resource (when type is secret or configmap) |  | Optional: \{\} <br /> |
-| `namespace` _string_ | Namespace of certificate k8s resource (when type is secret or configmap) |  | Optional: \{\} <br /> |
-| `clientIDPath` _string_ | Path to client id |  | Optional: \{\} <br /> |
-| `clientSecretPath` _string_ | Path to client secret |  | Optional: \{\} <br /> |
-| `tokenURL` _string_ | TokenURL is the resource server's token endpoint<br />URL. This is a constant specific to each server. |  | MinLength: 1 <br />Required: \{\} <br /> |
-| `scopes` _string array_ | Scope specifies optional requested permissions. |  | Optional: \{\} <br /> |
-| `endpointParams` _object (keys:string, values:string array)_ | EndpointParams specifies additional parameters for requests to the token endpoint. |  | Optional: \{\} <br /> |
-| `authStyle` _integer_ | AuthStyle optionally specifies how the endpoint wants the<br />client ID & client secret sent. The zero value means to<br />auto-detect. |  | Optional: \{\} <br /> |
+| `type` _[SecretSourceType](#secretsourcetype)_ | Type specifies the source type for secret data (secret, configmap, or file) |  | Enum: [secret configmap file] <br />Required: \{\} <br /> |
+| `name` _string_ | Name is the name of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | Optional: \{\} <br /> |
+| `namespace` _string_ | Namespace is the namespace of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | Optional: \{\} <br /> |
+| `clientIDPath` _string_ | ClientIDPath specifies the key name within the secret/configmap or filesystem path<br />(depending on SecretSource.Type) where the OAuth client ID is stored |  | Optional: \{\} <br /> |
+| `clientSecretPath` _string_ | ClientSecretPath specifies the key name within the secret/configmap or filesystem path<br />(depending on SecretSource.Type) where the OAuth client secret is stored |  | Optional: \{\} <br /> |
+| `tokenURL` _string_ | TokenURL is the OAuth 2.0 provider's token endpoint URL<br />This is a constant specific to each OAuth provider |  | MinLength: 1 <br />Required: \{\} <br /> |
+| `scopes` _string array_ | Scopes specifies optional requested permissions for the OAuth token |  | Optional: \{\} <br /> |
+| `endpointParams` _object (keys:string, values:string array)_ | EndpointParams specifies additional parameters to include in requests to the token endpoint |  | Optional: \{\} <br /> |
+| `authStyle` _integer_ | AuthStyle specifies how the endpoint wants the client ID and client secret sent<br />The zero value means to auto-detect |  | Optional: \{\} <br /> |
 
 
 #### Perses
@@ -273,7 +273,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `config` _[Dashboard](#dashboard)_ | Perses dashboard configuration |  | Required: \{\} <br /> |
+| `config` _[Dashboard](#dashboard)_ | Config specifies the Perses dashboard configuration |  | Required: \{\} <br /> |
 | `instanceSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#labelselector-v1-meta)_ | InstanceSelector selects Perses instances where this dashboard will be created |  | Optional: \{\} <br /> |
 
 
@@ -290,7 +290,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#condition-v1-meta) array_ | Conditions represent the latest observations of the PersesDashboard resource state |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#condition-v1-meta) array_ | Conditions represent the latest observations of the PersesDashboard resource state |  | Optional: \{\} <br /> |
 
 
 #### PersesDatasource
@@ -325,7 +325,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#condition-v1-meta) array_ | Conditions represent the latest observations of the PersesDatasource resource state |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#condition-v1-meta) array_ | Conditions represent the latest observations of the PersesDatasource resource state |  | Optional: \{\} <br /> |
 
 
 #### PersesGlobalDatasource
@@ -360,7 +360,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#condition-v1-meta) array_ | Conditions represent the latest observations of the PersesGlobalDatasource resource state |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#condition-v1-meta) array_ | Conditions represent the latest observations of the PersesGlobalDatasource resource state |  | Optional: \{\} <br /> |
 
 
 #### PersesService
@@ -376,8 +376,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `name` _string_ | Name of the Kubernetes service |  | Optional: \{\} <br /> |
-| `annotations` _object (keys:string, values:string)_ | Annotations attached to the service for non-identifying metadata |  | Optional: \{\} <br /> |
+| `name` _string_ | Name is the name of the Kubernetes Service resource<br />If not specified, a default name will be generated |  | Optional: \{\} <br /> |
+| `annotations` _object (keys:string, values:string)_ | Annotations are key/value pairs attached to the Service for non-identifying metadata |  | Optional: \{\} <br /> |
 
 
 #### PersesSpec
@@ -393,26 +393,26 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `metadata` _[Metadata](#metadata)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `client` _[Client](#client)_ | Perses client configuration |  | Optional: \{\} <br /> |
-| `config` _[PersesConfig](#persesconfig)_ | Perses server configuration |  |  |
-| `args` _string array_ | Args extra arguments to pass to perses |  |  |
-| `containerPort` _integer_ |  | 8080 | Maximum: 65535 <br />Minimum: 1 <br /> |
-| `replicas` _integer_ |  |  | Optional: \{\} <br /> |
-| `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core)_ | Resources defines the compute resources configured for the container. |  | Optional: \{\} <br /> |
-| `nodeSelector` _object (keys:string, values:string)_ | NodeSelector constrains pods to nodes with matching labels |  |  |
-| `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#toleration-v1-core) array_ |  |  |  |
-| `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#affinity-v1-core)_ |  |  | Optional: \{\} <br /> |
-| `image` _string_ | Image specifies the container image that should be used for the Perses deployment. |  | Optional: \{\} <br /> |
-| `service` _[PersesService](#persesservice)_ | service specifies the service configuration for the perses instance |  | Optional: \{\} <br /> |
-| `livenessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#probe-v1-core)_ |  |  | Optional: \{\} <br /> |
-| `readinessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#probe-v1-core)_ |  |  | Optional: \{\} <br /> |
-| `tls` _[TLS](#tls)_ | tls specifies the tls configuration for the perses instance |  | Optional: \{\} <br /> |
+| `metadata` _[Metadata](#metadata)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  | Optional: \{\} <br /> |
+| `client` _[Client](#client)_ | Client specifies the Perses client configuration |  | Optional: \{\} <br /> |
+| `config` _[PersesConfig](#persesconfig)_ | Config specifies the Perses server configuration |  | Optional: \{\} <br /> |
+| `args` _string array_ | Args are extra command-line arguments to pass to the Perses server |  | Optional: \{\} <br /> |
+| `containerPort` _integer_ | ContainerPort is the port on which the Perses server listens for HTTP requests |  | Maximum: 65535 <br />Minimum: 1 <br />Optional: \{\} <br /> |
+| `replicas` _integer_ | Replicas is the number of desired pod replicas for the Perses deployment |  | Optional: \{\} <br /> |
+| `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#resourcerequirements-v1-core)_ | Resources defines the compute resources configured for the container |  | Optional: \{\} <br /> |
+| `nodeSelector` _object (keys:string, values:string)_ | NodeSelector constrains pods to nodes with matching labels |  | Optional: \{\} <br /> |
+| `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#toleration-v1-core) array_ | Tolerations allow pods to schedule onto nodes with matching taints |  | Optional: \{\} <br /> |
+| `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#affinity-v1-core)_ | Affinity specifies the pod's scheduling constraints |  | Optional: \{\} <br /> |
+| `image` _string_ | Image specifies the container image that should be used for the Perses deployment |  | Optional: \{\} <br /> |
+| `service` _[PersesService](#persesservice)_ | Service specifies the service configuration for the Perses instance |  | Optional: \{\} <br /> |
+| `livenessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#probe-v1-core)_ | LivenessProbe specifies the liveness probe configuration for the Perses container |  | Optional: \{\} <br /> |
+| `readinessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#probe-v1-core)_ | ReadinessProbe specifies the readiness probe configuration for the Perses container |  | Optional: \{\} <br /> |
+| `tls` _[TLS](#tls)_ | TLS specifies the TLS configuration for the Perses instance |  | Optional: \{\} <br /> |
 | `storage` _[StorageConfiguration](#storageconfiguration)_ | Storage configuration used by the StatefulSet | \{ size:1Gi \} | Optional: \{\} <br /> |
-| `serviceAccountName` _string_ | ServiceAccountName is the name of the service account to use for the perses deployment or statefulset. |  | Optional: \{\} <br /> |
-| `podSecurityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#podsecuritycontext-v1-core)_ | PodSecurityContext holds pod-level security attributes and common container settings.<br />If not specified, defaults to fsGroup: 65534 to ensure proper volume permissions for the nobody user. |  | Optional: \{\} <br /> |
-| `logLevel` _string_ | LogLevel defines the log level for Perses. |  | Enum: [panic fatal error warning info debug trace] <br />Optional: \{\} <br /> |
-| `logMethodTrace` _boolean_ | LogMethodTrace when true, includes the calling method as a field in the log.<br />It can be useful to see immediately where the log comes from. |  | Optional: \{\} <br /> |
+| `serviceAccountName` _string_ | ServiceAccountName is the name of the ServiceAccount to use for the Perses deployment or statefulset |  | Optional: \{\} <br /> |
+| `podSecurityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#podsecuritycontext-v1-core)_ | PodSecurityContext holds pod-level security attributes and common container settings<br />If not specified, defaults to fsGroup: 65534 to ensure proper volume permissions for the nobody user |  | Optional: \{\} <br /> |
+| `logLevel` _string_ | LogLevel defines the log level for Perses |  | Enum: [panic fatal error warning info debug trace] <br />Optional: \{\} <br /> |
+| `logMethodTrace` _boolean_ | LogMethodTrace when true, includes the calling method as a field in the log<br />It can be useful to see immediately where the log comes from |  | Optional: \{\} <br /> |
 | `provisioning` _[Provisioning](#provisioning)_ | Provisioning configuration for provisioning secrets |  | Optional: \{\} <br /> |
 
 
@@ -429,8 +429,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#condition-v1-meta) array_ | Conditions represent the latest observations of the Perses resource state |  |  |
-| `provisioning` _[SecretVersion](#secretversion) array_ | Provisioning secrets versions |  |  |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#condition-v1-meta) array_ | Conditions represent the latest observations of the Perses resource state |  | Optional: \{\} <br /> |
+| `provisioning` _[SecretVersion](#secretversion) array_ | Provisioning contains the versions of provisioning secrets currently in use |  | Optional: \{\} <br /> |
 
 
 #### Provisioning
@@ -482,9 +482,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `type` _[SecretSourceType](#secretsourcetype)_ | Type source type of secret |  | Enum: [secret configmap file] <br />Required: \{\} <br /> |
-| `name` _string_ | Name of basic auth k8s resource (when type is secret or configmap) |  | Optional: \{\} <br /> |
-| `namespace` _string_ | Namespace of certificate k8s resource (when type is secret or configmap) |  | Optional: \{\} <br /> |
+| `type` _[SecretSourceType](#secretsourcetype)_ | Type specifies the source type for secret data (secret, configmap, or file) |  | Enum: [secret configmap file] <br />Required: \{\} <br /> |
+| `name` _string_ | Name is the name of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | Optional: \{\} <br /> |
+| `namespace` _string_ | Namespace is the namespace of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | Optional: \{\} <br /> |
 
 
 #### SecretSourceType
@@ -521,8 +521,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `name` _string_ |  |  |  |
-| `version` _string_ |  |  |  |
+| `name` _string_ | Name is the name of the provisioning secret |  | Required: \{\} <br /> |
+| `version` _string_ | Version is the resource version of the provisioning secret |  | Required: \{\} <br /> |
 
 
 #### StorageConfiguration
@@ -538,8 +538,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `storageClass` _string_ | StorageClass to use for PVCs.<br />If not specified, will use the default storage class |  | Optional: \{\} <br /> |
-| `size` _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#quantity-resource-api)_ | Size of the storage.<br />cannot be decreased. |  | Optional: \{\} <br /> |
+| `storageClass` _string_ | StorageClass specifies the StorageClass to use for PersistentVolumeClaims<br />If not specified, the default StorageClass will be used |  | Optional: \{\} <br /> |
+| `size` _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#quantity-resource-api)_ | Size specifies the storage capacity for the PersistentVolumeClaim<br />Once set, the size cannot be decreased (only increased if the StorageClass supports volume expansion) |  | Optional: \{\} <br /> |
 
 
 #### TLS
@@ -556,9 +556,9 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `enable` _boolean_ | Enable TLS connection to perses |  |  |
-| `caCert` _[Certificate](#certificate)_ | CaCert to verify the perses certificate |  | Optional: \{\} <br /> |
-| `userCert` _[Certificate](#certificate)_ | UserCert client cert/key for mTLS |  | Optional: \{\} <br /> |
-| `insecureSkipVerify` _boolean_ | InsecureSkipVerify skip verify of perses certificate |  | Optional: \{\} <br /> |
+| `enable` _boolean_ | Enable determines whether TLS is enabled for connections to Perses |  | Optional: \{\} <br /> |
+| `caCert` _[Certificate](#certificate)_ | CaCert specifies the CA certificate to verify the Perses server's certificate |  | Optional: \{\} <br /> |
+| `userCert` _[Certificate](#certificate)_ | UserCert specifies the client certificate and key for mutual TLS (mTLS) authentication |  | Optional: \{\} <br /> |
+| `insecureSkipVerify` _boolean_ | InsecureSkipVerify determines whether to skip verification of the Perses server's certificate<br />Setting this to true is insecure and should only be used for testing |  | Optional: \{\} <br /> |
 
 

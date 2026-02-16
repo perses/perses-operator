@@ -16,8 +16,12 @@ func GetPersesArgs(perses *v1alpha2.Perses) []string {
 	if hasTLSConfiguration(perses) {
 		args = append(args, fmt.Sprintf("--web.tls-cert-file=%s/%s",
 			tlsCertMountPath, perses.Spec.TLS.UserCert.CertPath))
+		privateKeyPath := ""
+		if perses.Spec.TLS.UserCert.PrivateKeyPath != nil {
+			privateKeyPath = *perses.Spec.TLS.UserCert.PrivateKeyPath
+		}
 		args = append(args, fmt.Sprintf("--web.tls-key-file=%s/%s",
-			tlsCertMountPath, perses.Spec.TLS.UserCert.PrivateKeyPath))
+			tlsCertMountPath, privateKeyPath))
 	}
 
 	// Append log level if specified

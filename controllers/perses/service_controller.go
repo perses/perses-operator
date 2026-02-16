@@ -47,8 +47,8 @@ func (r *PersesReconciler) reconcileService(ctx context.Context, req ctrl.Reques
 	}
 
 	serviceName := perses.Name
-	if perses.Spec.Service != nil && len(perses.Spec.Service.Name) > 0 {
-		serviceName = perses.Spec.Service.Name
+	if perses.Spec.Service != nil && perses.Spec.Service.Name != nil && len(*perses.Spec.Service.Name) > 0 {
+		serviceName = *perses.Spec.Service.Name
 	}
 
 	found := &corev1.Service{}

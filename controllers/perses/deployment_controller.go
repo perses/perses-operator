@@ -177,8 +177,13 @@ func (r *PersesReconciler) createPersesDeployment(
 							},
 						},
 						Ports: []corev1.ContainerPort{{
-							ContainerPort: perses.Spec.ContainerPort,
-							Name:          "perses",
+							ContainerPort: func() int32 {
+								if perses.Spec.ContainerPort != nil {
+									return *perses.Spec.ContainerPort
+								}
+								return 8080
+							}(),
+							Name: "perses",
 						}},
 						VolumeMounts:   common.GetVolumeMounts(perses),
 						Args:           common.GetPersesArgs(perses),
@@ -210,8 +215,8 @@ func (r *PersesReconciler) createPersesDeployment(
 		dep.Spec.Template.Spec.Containers[0].Resources = *perses.Spec.Resources
 	}
 
-	if perses.Spec.ServiceAccountName != "" {
-		dep.Spec.Template.Spec.ServiceAccountName = perses.Spec.ServiceAccountName
+	if perses.Spec.ServiceAccountName != nil && *perses.Spec.ServiceAccountName != "" {
+		dep.Spec.Template.Spec.ServiceAccountName = *perses.Spec.ServiceAccountName
 	}
 
 	// Set the ownerRef for the Deployment

@@ -1,5 +1,5 @@
 /*
-Copyright 2025.
+Copyright The Perses Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,20 +22,21 @@ import (
 
 // PersesDashboardStatus defines the observed state of PersesDashboard
 type PersesDashboardStatus struct {
-	// +operator-sdk:csv:customresourcedefinitions:type=status
 	// Conditions represent the latest observations of the PersesDashboard resource state
+	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 
 // PersesDashboardSpec defines the desired state of PersesDashboard
 type PersesDashboardSpec struct {
+	// Config specifies the Perses dashboard configuration
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	// +kubebuilder:validation:Required
-	// Perses dashboard configuration
+	// +required
 	Config Dashboard `json:"config"`
+	// InstanceSelector selects Perses instances where this dashboard will be created
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	// InstanceSelector selects Perses instances where this dashboard will be created
 	InstanceSelector *metav1.LabelSelector `json:"instanceSelector,omitempty"`
 }
 

@@ -17,6 +17,7 @@ import (
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
@@ -66,7 +67,7 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 						Namespace: PersesNamespace,
 					},
 					Spec: persesv1alpha2.PersesSpec{
-						ContainerPort: 8080,
+						ContainerPort: ptr.To(int32(8080)),
 					},
 				}
 

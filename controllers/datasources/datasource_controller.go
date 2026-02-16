@@ -213,8 +213,8 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 			EndpointParams: oauth.EndpointParams,
 		}
 
-		if oauth.AuthStyle != 0 {
-			oAuthConfig.AuthStyle = oauth.AuthStyle
+		if oauth.AuthStyle != nil && *oauth.AuthStyle != 0 {
+			oAuthConfig.AuthStyle = int(*oauth.AuthStyle)
 		}
 
 		oAuthConfig.TokenURL = oauth.TokenURL
@@ -236,22 +236,32 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 		case persesv1alpha2.SecretSourceTypeFile:
 			// the clientID is a Hidden field in perses API,
 			// but doesn't expose it as a file field for it, so we need to read it and use the value
-			clientID, err := os.ReadFile(oauth.ClientIDPath)
+			clientIDPath := ""
+			if oauth.ClientIDPath != nil {
+				clientIDPath = *oauth.ClientIDPath
+			}
+			clientID, err := os.ReadFile(clientIDPath)
 			if err != nil {
-				err = fmt.Errorf("failed to read the OAuth client ID file: %s", oauth.ClientIDPath)
+				err = fmt.Errorf("failed to read the OAuth client ID file: %s", clientIDPath)
 				return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonInvalidConfiguration)
 
 			}
 			oAuthConfig.ClientID = string(clientID)
-			oAuthConfig.ClientSecretFile = oauth.ClientSecretPath
+			if oauth.ClientSecretPath != nil {
+				oAuthConfig.ClientSecretFile = *oauth.ClientSecretPath
+			}
 		}
 
 		secretWithName.Spec.OAuth = oAuthConfig
 	}
 
 	if tls != nil {
+		insecureSkipVerify := false
+		if tls.InsecureSkipVerify != nil {
+			insecureSkipVerify = *tls.InsecureSkipVerify
+		}
 		tlsConfig := &secret.TLSConfig{
-			InsecureSkipVerify: tls.InsecureSkipVerify,
+			InsecureSkipVerify: insecureSkipVerify,
 		}
 
 		if tls.CaCert != nil {
@@ -293,8 +303,8 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 			case persesv1alpha2.SecretSourceTypeFile:
 				tlsConfig.CertFile = tls.UserCert.CertPath
 
-				if len(tls.UserCert.PrivateKeyPath) > 0 {
-					tlsConfig.KeyFile = tls.UserCert.PrivateKeyPath
+				if tls.UserCert.PrivateKeyPath != nil && len(*tls.UserCert.PrivateKeyPath) > 0 {
+					tlsConfig.KeyFile = *tls.UserCert.PrivateKeyPath
 				}
 			}
 		}

@@ -43,32 +43,40 @@ spec:
             description: DatasourceSpec defines the desired state of a Perses datasource
             properties:
               client:
-                description: Client authentication and TLS configuration for the datasource
+                description: Client specifies authentication and TLS configuration
+                  for the datasource
                 properties:
                   basicAuth:
-                    description: BasicAuth basic auth config for perses client
+                    description: BasicAuth provides username/password authentication
+                      configuration for the Perses client
                     properties:
                       name:
-                        description: Name of basic auth k8s resource (when type is
-                          secret or configmap)
+                        description: |-
+                          Name is the name of the Kubernetes Secret or ConfigMap resource
+                          Required when Type is "secret" or "configmap", ignored when Type is "file"
                         type: string
                       namespace:
-                        description: Namespace of certificate k8s resource (when type
-                          is secret or configmap)
+                        description: |-
+                          Namespace is the namespace of the Kubernetes Secret or ConfigMap resource
+                          Required when Type is "secret" or "configmap", ignored when Type is "file"
                         type: string
                       passwordPath:
-                        description: Path to password
+                        description: |-
+                          PasswordPath specifies the key name within the secret/configmap or filesystem path
+                          (depending on SecretSource.Type) where the password is stored
                         minLength: 1
                         type: string
                       type:
-                        description: Type source type of secret
+                        description: Type specifies the source type for secret data
+                          (secret, configmap, or file)
                         enum:
                         - secret
                         - configmap
                         - file
                         type: string
                       username:
-                        description: Username for basic auth
+                        description: Username is the username credential for basic
+                          authentication
                         minLength: 1
                         type: string
                     required:
@@ -77,28 +85,33 @@ spec:
                     - username
                     type: object
                   kubernetesAuth:
-                    description: KubernetesAuth configuration for perses client
+                    description: KubernetesAuth enables Kubernetes native authentication
+                      for the Perses client
                     properties:
                       enable:
-                        description: Enable kubernetes auth for perses client
+                        description: Enable determines whether Kubernetes authentication
+                          is enabled for the Perses client
                         type: boolean
-                    required:
-                    - enable
                     type: object
                   oauth:
-                    description: OAuth configuration for perses client
+                    description: OAuth provides OAuth 2.0 authentication configuration
+                      for the Perses client
                     properties:
                       authStyle:
                         description: |-
-                          AuthStyle optionally specifies how the endpoint wants the
-                          client ID & client secret sent. The zero value means to
-                          auto-detect.
+                          AuthStyle specifies how the endpoint wants the client ID and client secret sent
+                          The zero value means to auto-detect
+                        format: int32
                         type: integer
                       clientIDPath:
-                        description: Path to client id
+                        description: |-
+                          ClientIDPath specifies the key name within the secret/configmap or filesystem path
+                          (depending on SecretSource.Type) where the OAuth client ID is stored
                         type: string
                       clientSecretPath:
-                        description: Path to client secret
+                        description: |-
+                          ClientSecretPath specifies the key name within the secret/configmap or filesystem path
+                          (depending on SecretSource.Type) where the OAuth client secret is stored
                         type: string
                       endpointParams:
                         additionalProperties:
@@ -106,29 +119,33 @@ spec:
                             type: string
                           type: array
                         description: EndpointParams specifies additional parameters
-                          for requests to the token endpoint.
+                          to include in requests to the token endpoint
                         type: object
                       name:
-                        description: Name of basic auth k8s resource (when type is
-                          secret or configmap)
+                        description: |-
+                          Name is the name of the Kubernetes Secret or ConfigMap resource
+                          Required when Type is "secret" or "configmap", ignored when Type is "file"
                         type: string
                       namespace:
-                        description: Namespace of certificate k8s resource (when type
-                          is secret or configmap)
+                        description: |-
+                          Namespace is the namespace of the Kubernetes Secret or ConfigMap resource
+                          Required when Type is "secret" or "configmap", ignored when Type is "file"
                         type: string
                       scopes:
-                        description: Scope specifies optional requested permissions.
+                        description: Scopes specifies optional requested permissions
+                          for the OAuth token
                         items:
                           type: string
                         type: array
                       tokenURL:
                         description: |-
-                          TokenURL is the resource server's token endpoint
-                          URL. This is a constant specific to each server.
+                          TokenURL is the OAuth 2.0 provider's token endpoint URL
+                          This is a constant specific to each OAuth provider
                         minLength: 1
                         type: string
                       type:
-                        description: Type source type of secret
+                        description: Type specifies the source type for secret data
+                          (secret, configmap, or file)
                         enum:
                         - secret
                         - configmap
@@ -139,28 +156,38 @@ spec:
                     - type
                     type: object
                   tls:
-                    description: TLS the equivalent to the tls_config for perses client
+                    description: TLS provides TLS/SSL configuration for secure connections
+                      to Perses
                     properties:
                       caCert:
-                        description: CaCert to verify the perses certificate
+                        description: CaCert specifies the CA certificate to verify
+                          the Perses server's certificate
                         properties:
                           certPath:
-                            description: Path to Certificate
+                            description: |-
+                              CertPath specifies the key name within the secret/configmap or filesystem path
+                              (depending on SecretSource.Type) where the certificate is stored
                             minLength: 1
                             type: string
                           name:
-                            description: Name of basic auth k8s resource (when type
-                              is secret or configmap)
+                            description: |-
+                              Name is the name of the Kubernetes Secret or ConfigMap resource
+                              Required when Type is "secret" or "configmap", ignored when Type is "file"
                             type: string
                           namespace:
-                            description: Namespace of certificate k8s resource (when
-                              type is secret or configmap)
+                            description: |-
+                              Namespace is the namespace of the Kubernetes Secret or ConfigMap resource
+                              Required when Type is "secret" or "configmap", ignored when Type is "file"
                             type: string
                           privateKeyPath:
-                            description: Path to Private key certificate
+                            description: |-
+                              PrivateKeyPath specifies the key name within the secret/configmap or filesystem path
+                              (depending on SecretSource.Type) where the private key is stored
+                              Required for client certificates (UserCert), optional for CA certificates (CaCert)
                             type: string
                           type:
-                            description: Type source type of secret
+                            description: Type specifies the source type for secret
+                              data (secret, configmap, or file)
                             enum:
                             - secret
                             - configmap
@@ -171,31 +198,43 @@ spec:
                         - type
                         type: object
                       enable:
-                        description: Enable TLS connection to perses
+                        description: Enable determines whether TLS is enabled for
+                          connections to Perses
                         type: boolean
                       insecureSkipVerify:
-                        description: InsecureSkipVerify skip verify of perses certificate
+                        description: |-
+                          InsecureSkipVerify determines whether to skip verification of the Perses server's certificate
+                          Setting this to true is insecure and should only be used for testing
                         type: boolean
                       userCert:
-                        description: UserCert client cert/key for mTLS
+                        description: UserCert specifies the client certificate and
+                          key for mutual TLS (mTLS) authentication
                         properties:
                           certPath:
-                            description: Path to Certificate
+                            description: |-
+                              CertPath specifies the key name within the secret/configmap or filesystem path
+                              (depending on SecretSource.Type) where the certificate is stored
                             minLength: 1
                             type: string
                           name:
-                            description: Name of basic auth k8s resource (when type
-                              is secret or configmap)
+                            description: |-
+                              Name is the name of the Kubernetes Secret or ConfigMap resource
+                              Required when Type is "secret" or "configmap", ignored when Type is "file"
                             type: string
                           namespace:
-                            description: Namespace of certificate k8s resource (when
-                              type is secret or configmap)
+                            description: |-
+                              Namespace is the namespace of the Kubernetes Secret or ConfigMap resource
+                              Required when Type is "secret" or "configmap", ignored when Type is "file"
                             type: string
                           privateKeyPath:
-                            description: Path to Private key certificate
+                            description: |-
+                              PrivateKeyPath specifies the key name within the secret/configmap or filesystem path
+                              (depending on SecretSource.Type) where the private key is stored
+                              Required for client certificates (UserCert), optional for CA certificates (CaCert)
                             type: string
                           type:
-                            description: Type source type of secret
+                            description: Type specifies the source type for secret
+                              data (secret, configmap, or file)
                             enum:
                             - secret
                             - configmap
@@ -205,12 +244,10 @@ spec:
                         - certPath
                         - type
                         type: object
-                    required:
-                    - enable
                     type: object
                 type: object
               config:
-                description: Perses datasource configuration
+                description: Config specifies the Perses datasource configuration
                 properties:
                   default:
                     type: boolean

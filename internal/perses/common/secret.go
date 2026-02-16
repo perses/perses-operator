@@ -14,7 +14,7 @@ import (
 const SecretNameSuffix = "-secret"
 
 func HasSecretConfig(c *v1alpha2.Client) bool {
-	return c != nil && (c.TLS != nil && c.TLS.Enable || c.BasicAuth != nil || c.OAuth != nil)
+	return c != nil && (c.TLS != nil && c.TLS.Enable != nil && *c.TLS.Enable || c.BasicAuth != nil || c.OAuth != nil)
 }
 
 // GetBasicAuthData get basic auth from a BasicAuth resource
@@ -22,19 +22,19 @@ func GetBasicAuthData(ctx context.Context, client client.Client, namespace strin
 	var passwordData string
 
 	if basicAuth.Type == v1alpha2.SecretSourceTypeSecret || basicAuth.Type == v1alpha2.SecretSourceTypeConfigMap {
-		if len(basicAuth.Name) == 0 {
+		if basicAuth.Name == nil || len(*basicAuth.Name) == 0 {
 			return "", fmt.Errorf("no name found for basic auth: %s with type: %s", basicAuth.Username, basicAuth.Type)
 		}
 
-		if len(basicAuth.Namespace) != 0 {
-			namespace = basicAuth.Namespace
+		if basicAuth.Namespace != nil && len(*basicAuth.Namespace) != 0 {
+			namespace = *basicAuth.Namespace
 		}
 
 		switch basicAuth.Type {
 		case v1alpha2.SecretSourceTypeSecret:
 			secret := &corev1.Secret{}
 
-			err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: basicAuth.Name}, secret)
+			err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: *basicAuth.Name}, secret)
 
 			if err != nil {
 				return "", err
@@ -43,7 +43,7 @@ func GetBasicAuthData(ctx context.Context, client client.Client, namespace strin
 			passwordData = string(secret.Data[basicAuth.PasswordPath])
 		case v1alpha2.SecretSourceTypeConfigMap:
 			cm := &corev1.ConfigMap{}
-			err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: basicAuth.Name}, cm)
+			err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: *basicAuth.Name}, cm)
 
 			if err != nil {
 				return "", err
@@ -68,44 +68,64 @@ func GetOAuthData(ctx context.Context, client client.Client, namespace string, n
 	var clientSecretData string
 
 	if oauth.Type == v1alpha2.SecretSourceTypeSecret || oauth.Type == v1alpha2.SecretSourceTypeConfigMap {
-		if len(oauth.Name) == 0 {
-			return "", "", fmt.Errorf("no name found for oauth: %s with type: %s", oauth.ClientIDPath, oauth.Type)
+		if oauth.Name == nil || len(*oauth.Name) == 0 {
+			clientIDPath := ""
+			if oauth.ClientIDPath != nil {
+				clientIDPath = *oauth.ClientIDPath
+			}
+			return "", "", fmt.Errorf("no name found for oauth: %s with type: %s", clientIDPath, oauth.Type)
 		}
 
-		if len(oauth.Namespace) != 0 {
-			namespace = oauth.Namespace
+		if oauth.Namespace != nil && len(*oauth.Namespace) != 0 {
+			namespace = *oauth.Namespace
 		}
 
 		switch oauth.Type {
 		case v1alpha2.SecretSourceTypeSecret:
 			secret := &corev1.Secret{}
 
-			err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: oauth.Name}, secret)
+			err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: *oauth.Name}, secret)
 
 			if err != nil {
 				return "", "", err
 			}
 
-			clientIDData = string(secret.Data[oauth.ClientIDPath])
-			clientSecretData = string(secret.Data[oauth.ClientSecretPath])
+			if oauth.ClientIDPath != nil {
+				clientIDData = string(secret.Data[*oauth.ClientIDPath])
+			}
+			if oauth.ClientSecretPath != nil {
+				clientSecretData = string(secret.Data[*oauth.ClientSecretPath])
+			}
 		case v1alpha2.SecretSourceTypeConfigMap:
 			cm := &corev1.ConfigMap{}
-			err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: oauth.Name}, cm)
+			err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: *oauth.Name}, cm)
 
 			if err != nil {
 				return "", "", err
 			}
 
-			clientIDData = cm.Data[oauth.ClientIDPath]
-			clientSecretData = cm.Data[oauth.ClientSecretPath]
+			if oauth.ClientIDPath != nil {
+				clientIDData = cm.Data[*oauth.ClientIDPath]
+			}
+			if oauth.ClientSecretPath != nil {
+				clientSecretData = cm.Data[*oauth.ClientSecretPath]
+			}
 		}
 
 		if clientIDData == "" {
-			return "", "", fmt.Errorf("no client id data found for oauth: %s in namespace: %s for %s", oauth.ClientIDPath, namespace, name)
+			clientIDPath := ""
+			if oauth.ClientIDPath != nil {
+				clientIDPath = *oauth.ClientIDPath
+			}
+			return "", "", fmt.Errorf("no client id data found for oauth: %s in namespace: %s for %s", clientIDPath, namespace, name)
 		}
 
 		if clientSecretData == "" {
-			return "", "", fmt.Errorf("no client secret data found for oauth: %s in namespace: %s for %s", oauth.ClientSecretPath, namespace, name)
+			clientSecretPath := ""
+			if oauth.ClientSecretPath != nil {
+				clientSecretPath = *oauth.ClientSecretPath
+			}
+			return "", "", fmt.Errorf("no client secret data found for oauth: %s in namespace: %s for %s", clientSecretPath, namespace, name)
 		}
 
 		return clientIDData, clientSecretData, nil
@@ -120,36 +140,40 @@ func GetTLSCertData(ctx context.Context, client client.Client, namespace string,
 	var keyData string
 
 	if cert.Type == v1alpha2.SecretSourceTypeSecret || cert.Type == v1alpha2.SecretSourceTypeConfigMap {
-		if len(cert.Name) == 0 {
+		if cert.Name == nil || len(*cert.Name) == 0 {
 			return "", "", fmt.Errorf("no name found for tls certificate: %s with type: %s", cert.CertPath, cert.Type)
 		}
 
-		if len(cert.Namespace) != 0 {
-			namespace = cert.Namespace
+		if cert.Namespace != nil && len(*cert.Namespace) != 0 {
+			namespace = *cert.Namespace
 		}
 
 		switch cert.Type {
 		case v1alpha2.SecretSourceTypeSecret:
 			secret := &corev1.Secret{}
 
-			err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: cert.Name}, secret)
+			err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: *cert.Name}, secret)
 
 			if err != nil {
 				return "", "", err
 			}
 
 			certData = string(secret.Data[cert.CertPath])
-			keyData = string(secret.Data[cert.PrivateKeyPath])
+			if cert.PrivateKeyPath != nil {
+				keyData = string(secret.Data[*cert.PrivateKeyPath])
+			}
 		case v1alpha2.SecretSourceTypeConfigMap:
 			cm := &corev1.ConfigMap{}
-			err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: cert.Name}, cm)
+			err := client.Get(ctx, types.NamespacedName{Namespace: namespace, Name: *cert.Name}, cm)
 
 			if err != nil {
 				return "", "", err
 			}
 
 			certData = cm.Data[cert.CertPath]
-			keyData = cm.Data[cert.PrivateKeyPath]
+			if cert.PrivateKeyPath != nil {
+				keyData = cm.Data[*cert.PrivateKeyPath]
+			}
 		}
 
 		if certData == "" {

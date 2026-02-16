@@ -1,5 +1,5 @@
 /*
-Copyright 2025.
+Copyright The Perses Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,24 +22,25 @@ import (
 
 // PersesDatasourceStatus defines the observed state of PersesDatasource
 type PersesDatasourceStatus struct {
-	// +operator-sdk:csv:customresourcedefinitions:type=status
 	// Conditions represent the latest observations of the PersesDatasource resource state
+	// +operator-sdk:csv:customresourcedefinitions:type=status
+	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 
 // DatasourceSpec defines the desired state of a Perses datasource
 type DatasourceSpec struct {
+	// Config specifies the Perses datasource configuration
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	// +kubebuilder:validation:Required
-	// Perses datasource configuration
+	// +required
 	Config Datasource `json:"config"`
+	// Client specifies authentication and TLS configuration for the datasource
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	// Client authentication and TLS configuration for the datasource
 	Client *Client `json:"client,omitempty"`
+	// InstanceSelector selects Perses instances where this datasource will be created
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
-	// InstanceSelector selects Perses instances where this datasource will be created
 	InstanceSelector *metav1.LabelSelector `json:"instanceSelector,omitempty"`
 }
 

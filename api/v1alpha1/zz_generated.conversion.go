@@ -22,6 +22,7 @@ package v1alpha1
 
 import (
 	v1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -105,16 +106,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddGeneratedConversionFunc((*v1alpha2.Metadata)(nil), (*Metadata)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha2_Metadata_To_v1alpha1_Metadata(a.(*v1alpha2.Metadata), b.(*Metadata), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*OAuth)(nil), (*v1alpha2.OAuth)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_OAuth_To_v1alpha2_OAuth(a.(*OAuth), b.(*v1alpha2.OAuth), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha2.OAuth)(nil), (*OAuth)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_OAuth_To_v1alpha1_OAuth(a.(*v1alpha2.OAuth), b.(*OAuth), scope)
 	}); err != nil {
 		return err
 	}
@@ -238,16 +229,6 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
-	if err := s.AddGeneratedConversionFunc((*StorageConfiguration)(nil), (*v1alpha2.StorageConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha1_StorageConfiguration_To_v1alpha2_StorageConfiguration(a.(*StorageConfiguration), b.(*v1alpha2.StorageConfiguration), scope)
-	}); err != nil {
-		return err
-	}
-	if err := s.AddGeneratedConversionFunc((*v1alpha2.StorageConfiguration)(nil), (*StorageConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
-		return Convert_v1alpha2_StorageConfiguration_To_v1alpha1_StorageConfiguration(a.(*v1alpha2.StorageConfiguration), b.(*StorageConfiguration), scope)
-	}); err != nil {
-		return err
-	}
 	if err := s.AddGeneratedConversionFunc((*TLS)(nil), (*v1alpha2.TLS)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha1_TLS_To_v1alpha2_TLS(a.(*TLS), b.(*v1alpha2.TLS), scope)
 	}); err != nil {
@@ -263,8 +244,23 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}); err != nil {
 		return err
 	}
+	if err := s.AddConversionFunc((*OAuth)(nil), (*v1alpha2.OAuth)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_OAuth_To_v1alpha2_OAuth(a.(*OAuth), b.(*v1alpha2.OAuth), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*StorageConfiguration)(nil), (*v1alpha2.StorageConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha1_StorageConfiguration_To_v1alpha2_StorageConfiguration(a.(*StorageConfiguration), b.(*v1alpha2.StorageConfiguration), scope)
+	}); err != nil {
+		return err
+	}
 	if err := s.AddConversionFunc((*v1alpha2.DatasourceSpec)(nil), (*DatasourceSpec)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha2_DatasourceSpec_To_v1alpha1_DatasourceSpec(a.(*v1alpha2.DatasourceSpec), b.(*DatasourceSpec), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha2.OAuth)(nil), (*OAuth)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_OAuth_To_v1alpha1_OAuth(a.(*v1alpha2.OAuth), b.(*OAuth), scope)
 	}); err != nil {
 		return err
 	}
@@ -280,6 +276,11 @@ func RegisterConversions(s *runtime.Scheme) error {
 	}
 	if err := s.AddConversionFunc((*v1alpha2.PersesStatus)(nil), (*PersesStatus)(nil), func(a, b interface{}, scope conversion.Scope) error {
 		return Convert_v1alpha2_PersesStatus_To_v1alpha1_PersesStatus(a.(*v1alpha2.PersesStatus), b.(*PersesStatus), scope)
+	}); err != nil {
+		return err
+	}
+	if err := s.AddConversionFunc((*v1alpha2.StorageConfiguration)(nil), (*StorageConfiguration)(nil), func(a, b interface{}, scope conversion.Scope) error {
+		return Convert_v1alpha2_StorageConfiguration_To_v1alpha1_StorageConfiguration(a.(*v1alpha2.StorageConfiguration), b.(*StorageConfiguration), scope)
 	}); err != nil {
 		return err
 	}
@@ -319,7 +320,9 @@ func autoConvert_v1alpha1_Certificate_To_v1alpha2_Certificate(in *Certificate, o
 		return err
 	}
 	out.CertPath = in.CertPath
-	out.PrivateKeyPath = in.PrivateKeyPath
+	if err := v1.Convert_string_To_Pointer_string(&in.PrivateKeyPath, &out.PrivateKeyPath, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -333,7 +336,9 @@ func autoConvert_v1alpha2_Certificate_To_v1alpha1_Certificate(in *v1alpha2.Certi
 		return err
 	}
 	out.CertPath = in.CertPath
-	out.PrivateKeyPath = in.PrivateKeyPath
+	if err := v1.Convert_Pointer_string_To_string(&in.PrivateKeyPath, &out.PrivateKeyPath, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -511,7 +516,9 @@ func autoConvert_v1alpha2_DatasourceSpec_To_v1alpha1_DatasourceSpec(in *v1alpha2
 }
 
 func autoConvert_v1alpha1_KubernetesAuth_To_v1alpha2_KubernetesAuth(in *KubernetesAuth, out *v1alpha2.KubernetesAuth, s conversion.Scope) error {
-	out.Enable = in.Enable
+	if err := v1.Convert_bool_To_Pointer_bool(&in.Enable, &out.Enable, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -521,7 +528,9 @@ func Convert_v1alpha1_KubernetesAuth_To_v1alpha2_KubernetesAuth(in *KubernetesAu
 }
 
 func autoConvert_v1alpha2_KubernetesAuth_To_v1alpha1_KubernetesAuth(in *v1alpha2.KubernetesAuth, out *KubernetesAuth, s conversion.Scope) error {
-	out.Enable = in.Enable
+	if err := v1.Convert_Pointer_bool_To_bool(&in.Enable, &out.Enable, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -556,36 +565,34 @@ func autoConvert_v1alpha1_OAuth_To_v1alpha2_OAuth(in *OAuth, out *v1alpha2.OAuth
 	if err := Convert_v1alpha1_SecretSource_To_v1alpha2_SecretSource(&in.SecretSource, &out.SecretSource, s); err != nil {
 		return err
 	}
-	out.ClientIDPath = in.ClientIDPath
-	out.ClientSecretPath = in.ClientSecretPath
+	if err := v1.Convert_string_To_Pointer_string(&in.ClientIDPath, &out.ClientIDPath, s); err != nil {
+		return err
+	}
+	if err := v1.Convert_string_To_Pointer_string(&in.ClientSecretPath, &out.ClientSecretPath, s); err != nil {
+		return err
+	}
 	out.TokenURL = in.TokenURL
 	out.Scopes = in.Scopes
 	out.EndpointParams = in.EndpointParams
-	out.AuthStyle = in.AuthStyle
+	// WARNING: in.AuthStyle requires manual conversion: inconvertible types (int vs *int32)
 	return nil
-}
-
-// Convert_v1alpha1_OAuth_To_v1alpha2_OAuth is an autogenerated conversion function.
-func Convert_v1alpha1_OAuth_To_v1alpha2_OAuth(in *OAuth, out *v1alpha2.OAuth, s conversion.Scope) error {
-	return autoConvert_v1alpha1_OAuth_To_v1alpha2_OAuth(in, out, s)
 }
 
 func autoConvert_v1alpha2_OAuth_To_v1alpha1_OAuth(in *v1alpha2.OAuth, out *OAuth, s conversion.Scope) error {
 	if err := Convert_v1alpha2_SecretSource_To_v1alpha1_SecretSource(&in.SecretSource, &out.SecretSource, s); err != nil {
 		return err
 	}
-	out.ClientIDPath = in.ClientIDPath
-	out.ClientSecretPath = in.ClientSecretPath
+	if err := v1.Convert_Pointer_string_To_string(&in.ClientIDPath, &out.ClientIDPath, s); err != nil {
+		return err
+	}
+	if err := v1.Convert_Pointer_string_To_string(&in.ClientSecretPath, &out.ClientSecretPath, s); err != nil {
+		return err
+	}
 	out.TokenURL = in.TokenURL
 	out.Scopes = in.Scopes
 	out.EndpointParams = in.EndpointParams
-	out.AuthStyle = in.AuthStyle
+	// WARNING: in.AuthStyle requires manual conversion: inconvertible types (*int32 vs int)
 	return nil
-}
-
-// Convert_v1alpha2_OAuth_To_v1alpha1_OAuth is an autogenerated conversion function.
-func Convert_v1alpha2_OAuth_To_v1alpha1_OAuth(in *v1alpha2.OAuth, out *OAuth, s conversion.Scope) error {
-	return autoConvert_v1alpha2_OAuth_To_v1alpha1_OAuth(in, out, s)
 }
 
 func autoConvert_v1alpha1_Perses_To_v1alpha2_Perses(in *Perses, out *v1alpha2.Perses, s conversion.Scope) error {
@@ -871,7 +878,9 @@ func Convert_v1alpha2_PersesList_To_v1alpha1_PersesList(in *v1alpha2.PersesList,
 }
 
 func autoConvert_v1alpha1_PersesService_To_v1alpha2_PersesService(in *PersesService, out *v1alpha2.PersesService, s conversion.Scope) error {
-	out.Name = in.Name
+	if err := v1.Convert_string_To_Pointer_string(&in.Name, &out.Name, s); err != nil {
+		return err
+	}
 	out.Annotations = in.Annotations
 	return nil
 }
@@ -882,7 +891,9 @@ func Convert_v1alpha1_PersesService_To_v1alpha2_PersesService(in *PersesService,
 }
 
 func autoConvert_v1alpha2_PersesService_To_v1alpha1_PersesService(in *v1alpha2.PersesService, out *PersesService, s conversion.Scope) error {
-	out.Name = in.Name
+	if err := v1.Convert_Pointer_string_To_string(&in.Name, &out.Name, s); err != nil {
+		return err
+	}
 	out.Annotations = in.Annotations
 	return nil
 }
@@ -915,12 +926,16 @@ func autoConvert_v1alpha1_PersesSpec_To_v1alpha2_PersesSpec(in *PersesSpec, out 
 		return err
 	}
 	out.Args = in.Args
-	out.ContainerPort = in.ContainerPort
+	if err := v1.Convert_int32_To_Pointer_int32(&in.ContainerPort, &out.ContainerPort, s); err != nil {
+		return err
+	}
 	out.Replicas = in.Replicas
 	out.NodeSelector = in.NodeSelector
 	out.Tolerations = in.Tolerations
 	out.Affinity = in.Affinity
-	out.Image = in.Image
+	if err := v1.Convert_string_To_Pointer_string(&in.Image, &out.Image, s); err != nil {
+		return err
+	}
 	if in.Service != nil {
 		in, out := &in.Service, &out.Service
 		*out = new(v1alpha2.PersesService)
@@ -950,7 +965,9 @@ func autoConvert_v1alpha1_PersesSpec_To_v1alpha2_PersesSpec(in *PersesSpec, out 
 	} else {
 		out.Storage = nil
 	}
-	out.ServiceAccountName = in.ServiceAccountName
+	if err := v1.Convert_string_To_Pointer_string(&in.ServiceAccountName, &out.ServiceAccountName, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -982,13 +999,17 @@ func autoConvert_v1alpha2_PersesSpec_To_v1alpha1_PersesSpec(in *v1alpha2.PersesS
 		return err
 	}
 	out.Args = in.Args
-	out.ContainerPort = in.ContainerPort
+	if err := v1.Convert_Pointer_int32_To_int32(&in.ContainerPort, &out.ContainerPort, s); err != nil {
+		return err
+	}
 	out.Replicas = in.Replicas
 	// WARNING: in.Resources requires manual conversion: does not exist in peer-type
 	out.NodeSelector = in.NodeSelector
 	out.Tolerations = in.Tolerations
 	out.Affinity = in.Affinity
-	out.Image = in.Image
+	if err := v1.Convert_Pointer_string_To_string(&in.Image, &out.Image, s); err != nil {
+		return err
+	}
 	if in.Service != nil {
 		in, out := &in.Service, &out.Service
 		*out = new(PersesService)
@@ -1018,7 +1039,9 @@ func autoConvert_v1alpha2_PersesSpec_To_v1alpha1_PersesSpec(in *v1alpha2.PersesS
 	} else {
 		out.Storage = nil
 	}
-	out.ServiceAccountName = in.ServiceAccountName
+	if err := v1.Convert_Pointer_string_To_string(&in.ServiceAccountName, &out.ServiceAccountName, s); err != nil {
+		return err
+	}
 	// WARNING: in.PodSecurityContext requires manual conversion: does not exist in peer-type
 	// WARNING: in.LogLevel requires manual conversion: does not exist in peer-type
 	// WARNING: in.LogMethodTrace requires manual conversion: does not exist in peer-type
@@ -1044,8 +1067,12 @@ func autoConvert_v1alpha2_PersesStatus_To_v1alpha1_PersesStatus(in *v1alpha2.Per
 
 func autoConvert_v1alpha1_SecretSource_To_v1alpha2_SecretSource(in *SecretSource, out *v1alpha2.SecretSource, s conversion.Scope) error {
 	out.Type = v1alpha2.SecretSourceType(in.Type)
-	out.Name = in.Name
-	out.Namespace = in.Namespace
+	if err := v1.Convert_string_To_Pointer_string(&in.Name, &out.Name, s); err != nil {
+		return err
+	}
+	if err := v1.Convert_string_To_Pointer_string(&in.Namespace, &out.Namespace, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1056,8 +1083,12 @@ func Convert_v1alpha1_SecretSource_To_v1alpha2_SecretSource(in *SecretSource, ou
 
 func autoConvert_v1alpha2_SecretSource_To_v1alpha1_SecretSource(in *v1alpha2.SecretSource, out *SecretSource, s conversion.Scope) error {
 	out.Type = SecretSourceType(in.Type)
-	out.Name = in.Name
-	out.Namespace = in.Namespace
+	if err := v1.Convert_Pointer_string_To_string(&in.Name, &out.Name, s); err != nil {
+		return err
+	}
+	if err := v1.Convert_Pointer_string_To_string(&in.Namespace, &out.Namespace, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1068,28 +1099,20 @@ func Convert_v1alpha2_SecretSource_To_v1alpha1_SecretSource(in *v1alpha2.SecretS
 
 func autoConvert_v1alpha1_StorageConfiguration_To_v1alpha2_StorageConfiguration(in *StorageConfiguration, out *v1alpha2.StorageConfiguration, s conversion.Scope) error {
 	out.StorageClass = in.StorageClass
-	out.Size = in.Size
+	// WARNING: in.Size requires manual conversion: inconvertible types (k8s.io/apimachinery/pkg/api/resource.Quantity vs *k8s.io/apimachinery/pkg/api/resource.Quantity)
 	return nil
-}
-
-// Convert_v1alpha1_StorageConfiguration_To_v1alpha2_StorageConfiguration is an autogenerated conversion function.
-func Convert_v1alpha1_StorageConfiguration_To_v1alpha2_StorageConfiguration(in *StorageConfiguration, out *v1alpha2.StorageConfiguration, s conversion.Scope) error {
-	return autoConvert_v1alpha1_StorageConfiguration_To_v1alpha2_StorageConfiguration(in, out, s)
 }
 
 func autoConvert_v1alpha2_StorageConfiguration_To_v1alpha1_StorageConfiguration(in *v1alpha2.StorageConfiguration, out *StorageConfiguration, s conversion.Scope) error {
 	out.StorageClass = in.StorageClass
-	out.Size = in.Size
+	// WARNING: in.Size requires manual conversion: inconvertible types (*k8s.io/apimachinery/pkg/api/resource.Quantity vs k8s.io/apimachinery/pkg/api/resource.Quantity)
 	return nil
 }
 
-// Convert_v1alpha2_StorageConfiguration_To_v1alpha1_StorageConfiguration is an autogenerated conversion function.
-func Convert_v1alpha2_StorageConfiguration_To_v1alpha1_StorageConfiguration(in *v1alpha2.StorageConfiguration, out *StorageConfiguration, s conversion.Scope) error {
-	return autoConvert_v1alpha2_StorageConfiguration_To_v1alpha1_StorageConfiguration(in, out, s)
-}
-
 func autoConvert_v1alpha1_TLS_To_v1alpha2_TLS(in *TLS, out *v1alpha2.TLS, s conversion.Scope) error {
-	out.Enable = in.Enable
+	if err := v1.Convert_bool_To_Pointer_bool(&in.Enable, &out.Enable, s); err != nil {
+		return err
+	}
 	if in.CaCert != nil {
 		in, out := &in.CaCert, &out.CaCert
 		*out = new(v1alpha2.Certificate)
@@ -1108,7 +1131,9 @@ func autoConvert_v1alpha1_TLS_To_v1alpha2_TLS(in *TLS, out *v1alpha2.TLS, s conv
 	} else {
 		out.UserCert = nil
 	}
-	out.InsecureSkipVerify = in.InsecureSkipVerify
+	if err := v1.Convert_bool_To_Pointer_bool(&in.InsecureSkipVerify, &out.InsecureSkipVerify, s); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -1118,7 +1143,9 @@ func Convert_v1alpha1_TLS_To_v1alpha2_TLS(in *TLS, out *v1alpha2.TLS, s conversi
 }
 
 func autoConvert_v1alpha2_TLS_To_v1alpha1_TLS(in *v1alpha2.TLS, out *TLS, s conversion.Scope) error {
-	out.Enable = in.Enable
+	if err := v1.Convert_Pointer_bool_To_bool(&in.Enable, &out.Enable, s); err != nil {
+		return err
+	}
 	if in.CaCert != nil {
 		in, out := &in.CaCert, &out.CaCert
 		*out = new(Certificate)
@@ -1137,7 +1164,9 @@ func autoConvert_v1alpha2_TLS_To_v1alpha1_TLS(in *v1alpha2.TLS, out *TLS, s conv
 	} else {
 		out.UserCert = nil
 	}
-	out.InsecureSkipVerify = in.InsecureSkipVerify
+	if err := v1.Convert_Pointer_bool_To_bool(&in.InsecureSkipVerify, &out.InsecureSkipVerify, s); err != nil {
+		return err
+	}
 	return nil
 }
 
