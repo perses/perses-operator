@@ -125,10 +125,20 @@ checkformat:
 	@echo ">> checking go code format"
 	! gofmt -d $$(find . -name '*.go' -print) | grep '^'
 
-.PHONY: checkunused
-checkunused:
+.PHONY: update-go-deps
+update-go-deps: ## Update all Go dependencies to latest versions
+	@echo ">> updating Go dependencies"
+	@for m in $$(go list -mod=readonly -m -f '{{ if and (not .Indirect) (not .Main)}}{{.Path}}{{end}}' all); do \
+		echo "Updating $$m"; \
+		go get -u $$m; \
+	done
+	@go mod tidy -v
+	@echo ">> Dependencies updated, run tests before committing."
+
+.PHONY: tidy
+tidy: ## Verify that go.mod and go.sum are tidy (for CI)
 	@echo ">> running check for unused/missing packages in go.mod"
-	go mod tidy
+	@go mod tidy
 	@git diff --exit-code -- go.sum go.mod
 
 ##@ Development

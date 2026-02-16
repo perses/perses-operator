@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   gofmt:
-    name: 'check code format'
+    name: "check code format"
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -27,10 +27,10 @@ jobs:
           enable_go: true
       - name: check format
         run: make checkformat
-      - name: check go.mod
-        run: make checkunused
+      - name: verify go modules
+        run: make tidy
   test-unit:
-    name: 'unit tests'
+    name: "unit tests"
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -42,7 +42,7 @@ jobs:
       - name: unit tests
         run: make test-unit
   test-integration:
-    name: 'integration tests'
+    name: "integration tests"
     runs-on: ubuntu-latest
     steps:
       - name: checkout

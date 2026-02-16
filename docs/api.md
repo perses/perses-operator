@@ -208,7 +208,7 @@ Perses is the Schema for the perses API
 | --- | --- | --- | --- |
 | `apiVersion` _string_ | `perses.dev/v1alpha2` | | |
 | `kind` _string_ | `Perses` | | |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
 | `spec` _[PersesSpec](#persesspec)_ |  |  |  |
 | `status` _[PersesStatus](#persesstatus)_ |  |  |  |
 
@@ -255,7 +255,7 @@ PersesDashboard is the Schema for the persesdashboards API
 | --- | --- | --- | --- |
 | `apiVersion` _string_ | `perses.dev/v1alpha2` | | |
 | `kind` _string_ | `PersesDashboard` | | |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
 | `spec` _[PersesDashboardSpec](#persesdashboardspec)_ |  |  |  |
 | `status` _[PersesDashboardStatus](#persesdashboardstatus)_ |  |  |  |
 
@@ -307,7 +307,7 @@ PersesDatasource is the Schema for the PersesDatasources API
 | --- | --- | --- | --- |
 | `apiVersion` _string_ | `perses.dev/v1alpha2` | | |
 | `kind` _string_ | `PersesDatasource` | | |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
 | `spec` _[DatasourceSpec](#datasourcespec)_ |  |  |  |
 | `status` _[PersesDatasourceStatus](#persesdatasourcestatus)_ |  |  |  |
 
@@ -342,7 +342,7 @@ PersesGlobalDatasource is the Schema for the PersesGlobalDatasources API
 | --- | --- | --- | --- |
 | `apiVersion` _string_ | `perses.dev/v1alpha2` | | |
 | `kind` _string_ | `PersesGlobalDatasource` | | |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.34/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
 | `spec` _[DatasourceSpec](#datasourcespec)_ |  |  |  |
 | `status` _[PersesGlobalDatasourceStatus](#persesglobaldatasourcestatus)_ |  |  |  |
 
