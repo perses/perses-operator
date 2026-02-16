@@ -22,7 +22,5 @@ import (
 
 // SetupWebhookWithManager will setup the manager to manage the webhooks
 func (r *Perses) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
-		Complete()
+	return ctrl.NewWebhookManagedBy[*Perses](mgr, r).Complete()
 }
