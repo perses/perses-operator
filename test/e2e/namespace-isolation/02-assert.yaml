@@ -1,0 +1,6 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+commands:
+  - script: kubectl get persesdashboard dashboard-in-ns-a -n perses-test-ns-a -o jsonpath='{.status.conditions[?(@.type=="Available")].reason}' | grep -q Reconciled
+  - script: kubectl get persesdatasource datasource-in-ns-b -n perses-test-ns-b -o jsonpath='{.status.conditions[?(@.type=="Available")].reason}' | grep -q Reconciled

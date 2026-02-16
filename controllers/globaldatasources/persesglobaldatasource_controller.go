@@ -26,10 +26,14 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 	operatormetrics "github.com/perses/perses-operator/internal/metrics"
@@ -207,8 +211,42 @@ func (r *PersesGlobalDatasourceReconciler) setStatusToDegraded(
 	return degradedResult, degradedError
 }
 
+// findGlobalDatasourcesForPerses returns reconcile requests for all PersesGlobalDatasources
+// when a Perses instance becomes available.
+// Global datasources are cluster-scoped and their instanceSelector labels determine
+// which Perses instances they sync to. If no instanceSelector is set, they sync to all instances.
+func (r *PersesGlobalDatasourceReconciler) findGlobalDatasourcesForPerses(ctx context.Context, _ client.Object) []reconcile.Request {
+	datasources := &persesv1alpha2.PersesGlobalDatasourceList{}
+	if err := r.List(ctx, datasources); err != nil {
+		log.WithError(err).Error("Failed to list globaldatasources for Perses instance change")
+		return nil
+	}
+
+	requests := make([]reconcile.Request, len(datasources.Items))
+	for i, d := range datasources.Items {
+		requests[i] = reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      d.Name,
+				Namespace: d.Namespace,
+			},
+		}
+	}
+	return requests
+}
+
+// SetupWithManager sets up the controller with the Manager.
+// It watches PersesGlobalDatasource resources and also watches Perses instances
+// to trigger re-reconciliation of all global datasources when a Perses instance becomes
+// available. Global datasources are matched to Perses instances via instanceSelector labels.
+// Create and delete events for Perses instances are ignored because the instance is not yet
+// ready at creation, and deletion is handled by the global datasource's own reconciliation loop.
 func (r *PersesGlobalDatasourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&persesv1alpha2.PersesGlobalDatasource{}).
+		Watches(
+			&persesv1alpha2.Perses{},
+			handler.EnqueueRequestsFromMapFunc(r.findGlobalDatasourcesForPerses),
+			builder.WithPredicates(common.PersesAvailabilityPredicate()),
+		).
 		Complete(r)
 }

@@ -1,0 +1,14 @@
+apiVersion: perses.dev/v1alpha2
+kind: Perses
+metadata:
+  name: perses-instance-1
+spec:
+  config:
+    database:
+      file:
+        folder: "/perses"
+        extension: "yaml"
+  containerPort: 8080
+  resources:
+    requests:
+      memory: 128Mi
