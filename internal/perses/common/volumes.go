@@ -32,22 +32,27 @@ func GetVolumes(perses *v1alpha2.Perses) []corev1.Volume {
 		},
 	}
 
+	// Add storage volume only for file-based database
+	// SQL database doesn't need storage volumes (uses external database)
 	if perses.Spec.Config.Database.File != nil {
-		volumes = append(volumes, corev1.Volume{
-			Name: StorageVolumeName,
-			VolumeSource: corev1.VolumeSource{
-				PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-					ClaimName: GetStorageName(perses.Name),
+		if perses.Spec.Storage != nil && perses.Spec.Storage.EmptyDir != nil {
+			volumes = append(volumes, corev1.Volume{
+				Name: StorageVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					EmptyDir: perses.Spec.Storage.EmptyDir,
 				},
-			},
-		})
-	} else {
-		volumes = append(volumes, corev1.Volume{
-			Name: StorageVolumeName,
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{},
-			},
-		})
+			})
+		} else {
+			// File database without explicit emptyDir = use PVC (handled by StatefulSet)
+			volumes = append(volumes, corev1.Volume{
+				Name: StorageVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
+						ClaimName: GetStorageName(perses.Name),
+					},
+				},
+			})
+		}
 	}
 
 	// Add TLS volumes if enabled
@@ -132,11 +137,15 @@ func GetVolumeMounts(perses *v1alpha2.Perses) []corev1.VolumeMount {
 			ReadOnly:  true,
 			MountPath: configMountPath,
 		},
-		{
+	}
+
+	// Add storage volume mount only for file-based database
+	if perses.Spec.Config.Database.File != nil {
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{
 			Name:      StorageVolumeName,
 			ReadOnly:  false,
 			MountPath: storageMountPath,
-		},
+		})
 	}
 
 	// Add TLS volume mounts if enabled

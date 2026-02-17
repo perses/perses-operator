@@ -47,13 +47,15 @@ func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Re
 		return subreconciler.RequeueWithError(fmt.Errorf("perses not found in context"))
 	}
 
-	if perses.Spec.Config.Database.File == nil {
-		stlog.Debug("Database file configuration is not set, skipping StatefulSet creation")
+	// Create StatefulSet only if using file database AND NOT using EmptyDir (i.e., using PVC)
+	if perses.Spec.Config.Database.File == nil ||
+		(perses.Spec.Storage != nil && perses.Spec.Storage.EmptyDir != nil) {
+		stlog.Debug("File database not configured or EmptyDir storage configured, skipping StatefulSet creation")
 
 		found := &appsv1.StatefulSet{}
 		err := r.Get(ctx, types.NamespacedName{Name: perses.Name, Namespace: perses.Namespace}, found)
 		if err == nil {
-			stlog.Info("Deleting StatefulSet since database configuration changed")
+			stlog.Info("Deleting StatefulSet since configuration changed")
 			if err := r.Delete(ctx, found); err != nil {
 				stlog.WithError(err).Error("Failed to delete StatefulSet")
 				return subreconciler.RequeueWithError(err)
@@ -221,14 +223,16 @@ func (r *PersesReconciler) createPersesStatefulSet(
 		sts.Spec.Template.Spec.Containers[0].Resources = *perses.Spec.Resources
 	}
 
-	if perses.Spec.Storage != nil {
-		if perses.Spec.Storage.StorageClass != nil && len(*perses.Spec.Storage.StorageClass) > 0 {
-			sts.Spec.VolumeClaimTemplates[0].Spec.StorageClassName = perses.Spec.Storage.StorageClass
-		}
+	if perses.Spec.Storage != nil && perses.Spec.Storage.PersistentVolumeClaimTemplate != nil {
+		pvcTemplate := perses.Spec.Storage.PersistentVolumeClaimTemplate
 
-		if perses.Spec.Storage.Size != nil && !perses.Spec.Storage.Size.IsZero() {
-			sts.Spec.VolumeClaimTemplates[0].Spec.Resources.Requests = corev1.ResourceList{
-				corev1.ResourceStorage: *perses.Spec.Storage.Size,
+		// Apply user-provided PVC template spec
+		sts.Spec.VolumeClaimTemplates[0].Spec = *pvcTemplate
+
+		// Set default AccessModes if not specified
+		if pvcTemplate.AccessModes == nil {
+			sts.Spec.VolumeClaimTemplates[0].Spec.AccessModes = []corev1.PersistentVolumeAccessMode{
+				corev1.ReadWriteOnce,
 			}
 		}
 	}

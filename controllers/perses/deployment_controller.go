@@ -45,14 +45,18 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 		dlog.Error("perses not found in context")
 		return subreconciler.RequeueWithError(fmt.Errorf("perses not found in context"))
 	}
+	// Create Deployment if using SQL database OR file database with EmptyDir storage
+	usesSQLDatabase := perses.Spec.Config.Database.SQL != nil
+	usesFileWithEmptyDir := perses.Spec.Config.Database.File != nil &&
+		perses.Spec.Storage != nil && perses.Spec.Storage.EmptyDir != nil
 
-	if perses.Spec.Config.Database.SQL == nil {
-		dlog.Debug("Database SQL configuration is not set, skipping Deployment creation")
+	if !usesSQLDatabase && !usesFileWithEmptyDir {
+		dlog.Debug("Neither SQL database nor file database with EmptyDir configured, skipping Deployment creation")
 
 		found := &appsv1.Deployment{}
 		err := r.Get(ctx, types.NamespacedName{Name: perses.Name, Namespace: perses.Namespace}, found)
 		if err == nil {
-			dlog.Info("Deleting Deployment since database configuration changed")
+			dlog.Info("Deleting Deployment since configuration changed")
 			if err := r.Delete(ctx, found); err != nil {
 				dlog.WithError(err).Error("Failed to delete Deployment")
 				return subreconciler.RequeueWithError(err)
