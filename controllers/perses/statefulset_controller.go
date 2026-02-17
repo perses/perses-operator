@@ -47,9 +47,7 @@ func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Re
 		return subreconciler.RequeueWithError(fmt.Errorf("perses not found in context"))
 	}
 
-	// Create StatefulSet only if using file database AND NOT using EmptyDir (i.e., using PVC)
-	if perses.Spec.Config.Database.File == nil ||
-		(perses.Spec.Storage != nil && perses.Spec.Storage.EmptyDir != nil) {
+	if !perses.RequiresStatefulSet() {
 		stlog.Debug("File database not configured or EmptyDir storage configured, skipping StatefulSet creation")
 
 		found := &appsv1.StatefulSet{}

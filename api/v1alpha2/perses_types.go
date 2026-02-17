@@ -296,6 +296,22 @@ type Perses struct {
 	Status PersesStatus `json:"status,omitempty"`
 }
 
+// RequiresDeployment returns true if the Perses instance should be deployed as a Deployment.
+// This is the case when using SQL database OR file database with EmptyDir storage.
+func (p *Perses) RequiresDeployment() bool {
+	usesSQLDatabase := p.Spec.Config.Database.SQL != nil
+	usesFileWithEmptyDir := p.Spec.Config.Database.File != nil &&
+		p.Spec.Storage != nil && p.Spec.Storage.EmptyDir != nil
+	return usesSQLDatabase || usesFileWithEmptyDir
+}
+
+// RequiresStatefulSet returns true if the Perses instance should be deployed as a StatefulSet.
+// This is the case when using file database with persistent volume storage (not EmptyDir).
+func (p *Perses) RequiresStatefulSet() bool {
+	return p.Spec.Config.Database.File != nil &&
+		(p.Spec.Storage == nil || p.Spec.Storage.EmptyDir == nil)
+}
+
 //+kubebuilder:object:root=true
 
 // PersesList contains a list of Perses

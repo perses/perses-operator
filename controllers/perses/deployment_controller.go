@@ -45,12 +45,8 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 		dlog.Error("perses not found in context")
 		return subreconciler.RequeueWithError(fmt.Errorf("perses not found in context"))
 	}
-	// Create Deployment if using SQL database OR file database with EmptyDir storage
-	usesSQLDatabase := perses.Spec.Config.Database.SQL != nil
-	usesFileWithEmptyDir := perses.Spec.Config.Database.File != nil &&
-		perses.Spec.Storage != nil && perses.Spec.Storage.EmptyDir != nil
 
-	if !usesSQLDatabase && !usesFileWithEmptyDir {
+	if !perses.RequiresDeployment() {
 		dlog.Debug("Neither SQL database nor file database with EmptyDir configured, skipping Deployment creation")
 
 		found := &appsv1.Deployment{}
