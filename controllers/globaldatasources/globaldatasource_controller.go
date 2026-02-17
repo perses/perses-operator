@@ -28,6 +28,8 @@ import (
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	"github.com/perses/perses/pkg/model/api/v1/secret"
 	logger "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -39,9 +41,29 @@ import (
 var gdlog = logger.WithField("module", "globaldatasource_controller")
 
 func (r *PersesGlobalDatasourceReconciler) reconcileGlobalDatasourcesInAllInstances(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
+	globaldatasource, ok := globalDatasourceFromContext(ctx)
+	if !ok {
+		gdlog.Error("globaldatasource not found in context")
+		res, err := subreconciler.RequeueWithError(fmt.Errorf("globaldatasource not found in context"))
+		return r.setStatusToDegraded(ctx, req, res, persescommon.ReasonMissingResource, err)
+	}
+
+	var labelSelector labels.Selector
+	if globaldatasource.Spec.InstanceSelector == nil {
+		labelSelector = labels.Everything()
+	} else {
+		var err error
+		labelSelector, err = metav1.LabelSelectorAsSelector(globaldatasource.Spec.InstanceSelector)
+		if err != nil {
+			return subreconciler.RequeueWithError(err)
+		}
+	}
+
 	persesInstances := &persesv1alpha2.PersesList{}
-	var opts []client.ListOption
-	err := r.List(ctx, persesInstances, opts...)
+	opts := &client.ListOptions{
+		LabelSelector: labelSelector,
+	}
+	err := r.List(ctx, persesInstances, opts)
 	if err != nil {
 		gdlog.WithError(err).Error("Failed to get perses instances")
 		res, err := subreconciler.RequeueWithError(err)
@@ -52,13 +74,6 @@ func (r *PersesGlobalDatasourceReconciler) reconcileGlobalDatasourcesInAllInstan
 		gdlog.Info("No Perses instances found, requeue in 1 minute")
 		res, err := subreconciler.RequeueWithDelay(time.Minute)
 		return r.setStatusToDegraded(ctx, req, res, persescommon.ReasonMissingPerses, err)
-	}
-
-	globaldatasource, ok := globalDatasourceFromContext(ctx)
-	if !ok {
-		gdlog.Error("globaldatasource not found in context")
-		res, err := subreconciler.RequeueWithError(fmt.Errorf("globaldatasource not found in context"))
-		return r.setStatusToDegraded(ctx, req, res, persescommon.ReasonMissingResource, err)
 	}
 
 	for _, persesInstance := range persesInstances.Items {

@@ -347,4 +347,246 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 			}, time.Minute, time.Second).Should(Succeed())
 		})
 	})
+
+	Context("Dashboard controller instance selector test", func() {
+		const SelectorNamespace = "perses-dashboard-selector-test"
+		const MatchingPersesName = "perses-matching"
+		const NonMatchingPersesName = "perses-non-matching"
+		const SelectorDashboardName = "selector-dashboard"
+
+		ctx := context.Background()
+
+		namespace := &corev1.Namespace{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      SelectorNamespace,
+				Namespace: SelectorNamespace,
+			},
+		}
+
+		selectorDashboardNamespaceName := types.NamespacedName{Name: SelectorDashboardName, Namespace: SelectorNamespace}
+
+		persesImage := "perses-dev.io/perses:test"
+
+		var selectorDashboard *persesv1.Dashboard
+
+		BeforeAll(func() {
+			By("Creating the Namespace to perform the tests")
+			err := k8sClient.Create(ctx, namespace)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Setting the Image ENV VAR which stores the Operand image")
+			err = os.Setenv("PERSES_IMAGE", persesImage)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Creating a Perses instance with matching labels")
+			matchingPerses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      MatchingPersesName,
+					Namespace: SelectorNamespace,
+					Labels: map[string]string{
+						"app": "perses",
+						"env": "production",
+					},
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					ContainerPort: ptr.To(int32(8080)),
+				},
+			}
+			err = k8sClient.Create(ctx, matchingPerses)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Creating a Perses instance with non-matching labels")
+			nonMatchingPerses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      NonMatchingPersesName,
+					Namespace: SelectorNamespace,
+					Labels: map[string]string{
+						"app": "perses",
+						"env": "staging",
+					},
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					ContainerPort: ptr.To(int32(8080)),
+				},
+			}
+			err = k8sClient.Create(ctx, nonMatchingPerses)
+			Expect(err).To(Not(HaveOccurred()))
+
+			selectorDashboard = &persesv1.Dashboard{
+				Kind: persesv1.KindDashboard,
+				Metadata: persesv1.ProjectMetadata{
+					Metadata: persesv1.Metadata{
+						Name: SelectorDashboardName,
+					},
+				},
+				Spec: persesv1.DashboardSpec{
+					Display: &persescommon.Display{
+						Name: SelectorDashboardName,
+					},
+					Layouts: []persesdashboard.Layout{},
+					Panels: map[string]*persesv1.Panel{
+						"panel1": {
+							Kind: "Panel",
+							Spec: persesv1.PanelSpec{
+								Display: persesv1.PanelDisplay{
+									Name: "test-panel",
+								},
+								Plugin: persescommon.Plugin{
+									Kind: "PrometheusPlugin",
+									Spec: map[string]any{},
+								},
+							},
+						},
+					},
+				},
+			}
+		})
+
+		AfterAll(func() {
+			By("Deleting the Namespace to perform the tests")
+			_ = k8sClient.Delete(ctx, namespace)
+
+			By("Removing the Image ENV VAR which stores the Operand image")
+			_ = os.Unsetenv("PERSES_IMAGE")
+		})
+
+		It("should only sync the dashboard with Perses instances matching the instance selector", func() {
+			By("Creating the custom resource for the Kind PersesDashboard with instance selector")
+			dashboard := &persesv1alpha2.PersesDashboard{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      SelectorDashboardName,
+					Namespace: SelectorNamespace,
+				},
+				Spec: persesv1alpha2.PersesDashboardSpec{
+					Config: persesv1alpha2.Dashboard{
+						DashboardSpec: selectorDashboard.Spec,
+					},
+					InstanceSelector: &metav1.LabelSelector{
+						MatchLabels: map[string]string{
+							"env": "production",
+						},
+					},
+				},
+			}
+			err := k8sClient.Create(ctx, dashboard)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Checking if the custom resource was successfully created")
+			Eventually(func() error {
+				found := &persesv1alpha2.PersesDashboard{}
+				return k8sClient.Get(ctx, selectorDashboardNamespaceName, found)
+			}, time.Minute, time.Second).Should(Succeed())
+
+			// Mock the Perses API - should only be called once for the matching instance
+			mockPersesClient := new(internal.MockClient)
+			mockDashboard := new(internal.MockDashboard)
+
+			mockPersesClient.On("Dashboard", SelectorNamespace).Return(mockDashboard)
+			mockDashboard.On("Get", SelectorDashboardName).Return(&persesv1.Dashboard{}, perseshttp.RequestNotFoundError)
+			mockDashboard.On("Create", selectorDashboard).Return(&persesv1.Dashboard{}, nil)
+
+			By("Reconciling the custom resource created")
+			dashboardReconciler := &dashboardcontroller.PersesDashboardReconciler{
+				Client:        k8sClient,
+				Scheme:        k8sClient.Scheme(),
+				ClientFactory: common.NewWithClient(mockPersesClient),
+			}
+
+			_, err = dashboardReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: selectorDashboardNamespaceName,
+			})
+
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Checking that the Perses API was called exactly once (only for the matching instance)")
+			mockDashboard.AssertNumberOfCalls(GinkgoT(), "Get", 1)
+			mockDashboard.AssertNumberOfCalls(GinkgoT(), "Create", 1)
+
+			By("Cleaning up the dashboard resource")
+			mockDashboard.On("Delete", SelectorDashboardName).Return(nil)
+
+			dashboardToDelete := &persesv1alpha2.PersesDashboard{}
+			err = k8sClient.Get(ctx, selectorDashboardNamespaceName, dashboardToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+
+			err = k8sClient.Delete(ctx, dashboardToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+
+			_, err = dashboardReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: selectorDashboardNamespaceName,
+			})
+			Expect(err).To(Not(HaveOccurred()))
+		})
+
+		It("should sync the dashboard with all Perses instances when no instance selector is provided", func() {
+			By("Counting the total number of Perses instances in the cluster")
+			allPerses := &persesv1alpha2.PersesList{}
+			err := k8sClient.List(ctx, allPerses)
+			Expect(err).To(Not(HaveOccurred()))
+			totalInstances := len(allPerses.Items)
+			Expect(totalInstances).To(BeNumerically(">", 1), "Expected more than 1 Perses instance to validate no-selector behavior")
+
+			By("Creating the custom resource for the Kind PersesDashboard without instance selector")
+			dashboard := &persesv1alpha2.PersesDashboard{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      SelectorDashboardName,
+					Namespace: SelectorNamespace,
+				},
+				Spec: persesv1alpha2.PersesDashboardSpec{
+					Config: persesv1alpha2.Dashboard{
+						DashboardSpec: selectorDashboard.Spec,
+					},
+					// No InstanceSelector - should match all instances
+				},
+			}
+			err = k8sClient.Create(ctx, dashboard)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Checking if the custom resource was successfully created")
+			Eventually(func() error {
+				found := &persesv1alpha2.PersesDashboard{}
+				return k8sClient.Get(ctx, selectorDashboardNamespaceName, found)
+			}, time.Minute, time.Second).Should(Succeed())
+
+			// Mock the Perses API - should be called for all instances
+			mockPersesClient := new(internal.MockClient)
+			mockDashboard := new(internal.MockDashboard)
+
+			mockPersesClient.On("Dashboard", SelectorNamespace).Return(mockDashboard)
+			mockDashboard.On("Get", SelectorDashboardName).Return(&persesv1.Dashboard{}, perseshttp.RequestNotFoundError)
+			mockDashboard.On("Create", selectorDashboard).Return(&persesv1.Dashboard{}, nil)
+
+			By("Reconciling the custom resource created")
+			dashboardReconciler := &dashboardcontroller.PersesDashboardReconciler{
+				Client:        k8sClient,
+				Scheme:        k8sClient.Scheme(),
+				ClientFactory: common.NewWithClient(mockPersesClient),
+			}
+
+			_, err = dashboardReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: selectorDashboardNamespaceName,
+			})
+
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Checking that the Perses API was called for all instances")
+			mockDashboard.AssertNumberOfCalls(GinkgoT(), "Get", totalInstances)
+			mockDashboard.AssertNumberOfCalls(GinkgoT(), "Create", totalInstances)
+
+			By("Cleaning up the dashboard resource")
+			mockDashboard.On("Delete", SelectorDashboardName).Return(nil)
+
+			dashboardToDelete := &persesv1alpha2.PersesDashboard{}
+			err = k8sClient.Get(ctx, selectorDashboardNamespaceName, dashboardToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+
+			err = k8sClient.Delete(ctx, dashboardToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+
+			_, err = dashboardReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: selectorDashboardNamespaceName,
+			})
+			Expect(err).To(Not(HaveOccurred()))
+		})
+	})
 })
