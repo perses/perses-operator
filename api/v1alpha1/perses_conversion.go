@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/conversion"
 	conv "sigs.k8s.io/controller-runtime/pkg/conversion"
 
@@ -80,27 +81,41 @@ func Convert_v1alpha2_OAuth_To_v1alpha1_OAuth(in *v1alpha2.OAuth, out *OAuth, s 
 	return nil
 }
 
-// Convert_v1alpha1_StorageConfiguration_To_v1alpha2_StorageConfiguration converts StorageConfiguration from v1alpha1 to v1alpha2.
+// Convert_v1alpha1_StorageConfiguration_To_v1alpha2_StorageConfiguration converts v1alpha1 storage to v1alpha2.
+// Migrates StorageClass and Size fields into PersistentVolumeClaimTemplate.
 func Convert_v1alpha1_StorageConfiguration_To_v1alpha2_StorageConfiguration(in *StorageConfiguration, out *v1alpha2.StorageConfiguration, s conversion.Scope) error {
-	if err := autoConvert_v1alpha1_StorageConfiguration_To_v1alpha2_StorageConfiguration(in, out, s); err != nil {
-		return err
+	// Only create PVC template if v1alpha1 has storage config
+	if in.StorageClass == nil && in.Size.IsZero() {
+		return nil
 	}
-	// Convert Size from resource.Quantity to *resource.Quantity
+
+	out.PersistentVolumeClaimTemplate = &corev1.PersistentVolumeClaimSpec{
+		StorageClassName: in.StorageClass,
+	}
+
 	if !in.Size.IsZero() {
-		size := in.Size.DeepCopy()
-		out.Size = &size
+		out.PersistentVolumeClaimTemplate.Resources.Requests = corev1.ResourceList{
+			corev1.ResourceStorage: in.Size,
+		}
 	}
+
 	return nil
 }
 
-// Convert_v1alpha2_StorageConfiguration_To_v1alpha1_StorageConfiguration converts StorageConfiguration from v1alpha2 to v1alpha1.
+// Convert_v1alpha2_StorageConfiguration_To_v1alpha1_StorageConfiguration converts v1alpha2 storage to v1alpha1.
+// Extracts StorageClass and Size from PersistentVolumeClaimTemplate.
 func Convert_v1alpha2_StorageConfiguration_To_v1alpha1_StorageConfiguration(in *v1alpha2.StorageConfiguration, out *StorageConfiguration, s conversion.Scope) error {
-	if err := autoConvert_v1alpha2_StorageConfiguration_To_v1alpha1_StorageConfiguration(in, out, s); err != nil {
-		return err
+	// Extract from PVC template if it exists
+	if in.PersistentVolumeClaimTemplate != nil {
+		out.StorageClass = in.PersistentVolumeClaimTemplate.StorageClassName
+
+		if storage, ok := in.PersistentVolumeClaimTemplate.Resources.Requests[corev1.ResourceStorage]; ok {
+			out.Size = storage
+		}
 	}
-	// Convert Size from *resource.Quantity to resource.Quantity
-	if in.Size != nil {
-		out.Size = *in.Size
-	}
+
+	// EmptyDir cannot be converted to v1alpha1 (not supported)
+	// It will be silently dropped
+
 	return nil
 }
