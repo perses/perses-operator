@@ -408,7 +408,7 @@ _Appears in:_
 | `livenessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#probe-v1-core)_ | LivenessProbe specifies the liveness probe configuration for the Perses container |  | Optional: \{\} <br /> |
 | `readinessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#probe-v1-core)_ | ReadinessProbe specifies the readiness probe configuration for the Perses container |  | Optional: \{\} <br /> |
 | `tls` _[TLS](#tls)_ | TLS specifies the TLS configuration for the Perses instance |  | Optional: \{\} <br /> |
-| `storage` _[StorageConfiguration](#storageconfiguration)_ | Storage configuration used by the StatefulSet | \{ size:1Gi \} | Optional: \{\} <br /> |
+| `storage` _[StorageConfiguration](#storageconfiguration)_ | Storage configuration used by the StatefulSet |  | Optional: \{\} <br /> |
 | `serviceAccountName` _string_ | ServiceAccountName is the name of the ServiceAccount to use for the Perses deployment or statefulset |  | Optional: \{\} <br /> |
 | `podSecurityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#podsecuritycontext-v1-core)_ | PodSecurityContext holds pod-level security attributes and common container settings<br />If not specified, defaults to fsGroup: 65534 to ensure proper volume permissions for the nobody user |  | Optional: \{\} <br /> |
 | `logLevel` _string_ | LogLevel defines the log level for Perses |  | Enum: [panic fatal error warning info debug trace] <br />Optional: \{\} <br /> |
@@ -538,8 +538,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `storageClass` _string_ | StorageClass specifies the StorageClass to use for PersistentVolumeClaims<br />If not specified, the default StorageClass will be used |  | Optional: \{\} <br /> |
-| `size` _[Quantity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#quantity-resource-api)_ | Size specifies the storage capacity for the PersistentVolumeClaim<br />Once set, the size cannot be decreased (only increased if the StorageClass supports volume expansion) |  | Optional: \{\} <br /> |
+| `emptyDir` _[EmptyDirVolumeSource](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#emptydirvolumesource-v1-core)_ | EmptyDir to use for ephemeral storage.<br />When set, data will be lost when the pod is deleted or restarted.<br />Mutually exclusive with PersistentVolumeClaimTemplate. |  | Optional: \{\} <br /> |
+| `pvcTemplate` _[PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#persistentvolumeclaimspec-v1-core)_ | PersistentVolumeClaimTemplate is the template for PVCs that will be created.<br />Mutually exclusive with EmptyDir. |  | Optional: \{\} <br /> |
 
 
 #### TLS
