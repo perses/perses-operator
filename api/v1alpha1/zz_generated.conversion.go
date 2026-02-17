@@ -1098,14 +1098,14 @@ func Convert_v1alpha2_SecretSource_To_v1alpha1_SecretSource(in *v1alpha2.SecretS
 }
 
 func autoConvert_v1alpha1_StorageConfiguration_To_v1alpha2_StorageConfiguration(in *StorageConfiguration, out *v1alpha2.StorageConfiguration, s conversion.Scope) error {
-	out.StorageClass = in.StorageClass
-	// WARNING: in.Size requires manual conversion: inconvertible types (k8s.io/apimachinery/pkg/api/resource.Quantity vs *k8s.io/apimachinery/pkg/api/resource.Quantity)
+	// WARNING: in.StorageClass requires manual conversion: does not exist in peer-type
+	// WARNING: in.Size requires manual conversion: does not exist in peer-type
 	return nil
 }
 
 func autoConvert_v1alpha2_StorageConfiguration_To_v1alpha1_StorageConfiguration(in *v1alpha2.StorageConfiguration, out *StorageConfiguration, s conversion.Scope) error {
-	out.StorageClass = in.StorageClass
-	// WARNING: in.Size requires manual conversion: inconvertible types (*k8s.io/apimachinery/pkg/api/resource.Quantity vs k8s.io/apimachinery/pkg/api/resource.Quantity)
+	// WARNING: in.EmptyDir requires manual conversion: does not exist in peer-type
+	// WARNING: in.PersistentVolumeClaimTemplate requires manual conversion: does not exist in peer-type
 	return nil
 }
 

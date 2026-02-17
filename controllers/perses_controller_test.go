@@ -311,7 +311,13 @@ var _ = Describe("Perses controller", func() {
 							},
 						},
 						Storage: &persesv1alpha2.StorageConfiguration{
-							Size: ptr.To(resource.MustParse("10Gi")),
+							PersistentVolumeClaimTemplate: &corev1.PersistentVolumeClaimSpec{
+								Resources: corev1.VolumeResourceRequirements{
+									Requests: corev1.ResourceList{
+										corev1.ResourceStorage: resource.MustParse("10Gi"),
+									},
+								},
+							},
 						},
 					},
 				}

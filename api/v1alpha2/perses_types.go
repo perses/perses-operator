@@ -18,7 +18,6 @@ package v1alpha2
 
 import (
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -88,7 +87,6 @@ type PersesSpec struct {
 	TLS *TLS `json:"tls,omitempty"`
 	// Storage configuration used by the StatefulSet
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
-	// +kubebuilder:default:={size: "1Gi"}
 	// +optional
 	Storage *StorageConfiguration `json:"storage,omitempty"`
 	// ServiceAccountName is the name of the ServiceAccount to use for the Perses deployment or statefulset
@@ -256,15 +254,18 @@ type Certificate struct {
 }
 
 // StorageConfiguration is the configuration used to create and reconcile PVCs
+// +kubebuilder:validation:XValidation:rule="!(has(self.emptyDir) && has(self.pvcTemplate))",message="emptyDir and pvcTemplate are mutually exclusive"
 type StorageConfiguration struct {
-	// StorageClass specifies the StorageClass to use for PersistentVolumeClaims
-	// If not specified, the default StorageClass will be used
+	// EmptyDir to use for ephemeral storage.
+	// When set, data will be lost when the pod is deleted or restarted.
+	// Mutually exclusive with PersistentVolumeClaimTemplate.
 	// +optional
-	StorageClass *string `json:"storageClass,omitempty"`
-	// Size specifies the storage capacity for the PersistentVolumeClaim
-	// Once set, the size cannot be decreased (only increased if the StorageClass supports volume expansion)
+	EmptyDir *corev1.EmptyDirVolumeSource `json:"emptyDir,omitempty"`
+
+	// PersistentVolumeClaimTemplate is the template for PVCs that will be created.
+	// Mutually exclusive with EmptyDir.
 	// +optional
-	Size *resource.Quantity `json:"size,omitempty"`
+	PersistentVolumeClaimTemplate *corev1.PersistentVolumeClaimSpec `json:"pvcTemplate,omitempty"`
 }
 
 // PersesStatus defines the observed state of Perses
@@ -293,6 +294,22 @@ type Perses struct {
 
 	Spec   PersesSpec   `json:"spec,omitempty"`
 	Status PersesStatus `json:"status,omitempty"`
+}
+
+// RequiresDeployment returns true if the Perses instance should be deployed as a Deployment.
+// This is the case when using SQL database OR file database with EmptyDir storage.
+func (p *Perses) RequiresDeployment() bool {
+	usesSQLDatabase := p.Spec.Config.Database.SQL != nil
+	usesFileWithEmptyDir := p.Spec.Config.Database.File != nil &&
+		p.Spec.Storage != nil && p.Spec.Storage.EmptyDir != nil
+	return usesSQLDatabase || usesFileWithEmptyDir
+}
+
+// RequiresStatefulSet returns true if the Perses instance should be deployed as a StatefulSet.
+// This is the case when using file database with persistent volume storage (not EmptyDir).
+func (p *Perses) RequiresStatefulSet() bool {
+	return p.Spec.Config.Database.File != nil &&
+		(p.Spec.Storage == nil || p.Spec.Storage.EmptyDir == nil)
 }
 
 //+kubebuilder:object:root=true
