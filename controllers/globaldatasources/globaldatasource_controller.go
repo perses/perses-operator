@@ -28,6 +28,7 @@ import (
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	"github.com/perses/perses/pkg/model/api/v1/secret"
 	logger "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -77,6 +78,10 @@ func (r *PersesGlobalDatasourceReconciler) reconcileGlobalDatasourcesInAllInstan
 	}
 
 	for _, persesInstance := range persesInstances.Items {
+		if !meta.IsStatusConditionTrue(persesInstance.Status.Conditions, persescommon.TypeAvailablePerses) {
+			gdlog.Infof("Skipping Perses instance %s/%s (not yet available)", persesInstance.Namespace, persesInstance.Name)
+			continue
+		}
 		if res, reason, err := r.syncPersesGlobalDatasource(ctx, persesInstance, globaldatasource); subreconciler.ShouldHaltOrRequeue(res, err) {
 			return r.setStatusToDegraded(ctx, req, res, reason, err)
 		}

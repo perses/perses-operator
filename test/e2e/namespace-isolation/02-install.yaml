@@ -1,0 +1,61 @@
+apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  name: dashboard-in-ns-a
+  namespace: perses-test-ns-a
+spec:
+  instanceSelector:
+    matchLabels:
+      env: team-a
+  config:
+    display:
+      name: Dashboard in Namespace A
+    duration: 5m
+    panels:
+      testPanel:
+        kind: Panel
+        spec:
+          display:
+            name: Test Panel A
+          plugin:
+            kind: TimeSeriesChart
+            spec: {}
+          queries:
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: up
+    layouts:
+      - kind: Grid
+        spec:
+          display:
+            title: Row 1
+            collapse:
+              open: true
+          items:
+            - x: 0
+              "y": 0
+              width: 24
+              height: 6
+              content:
+                "$ref": "#/spec/panels/testPanel"
+---
+apiVersion: perses.dev/v1alpha2
+kind: PersesDatasource
+metadata:
+  name: datasource-in-ns-b
+  namespace: perses-test-ns-b
+spec:
+  instanceSelector:
+    matchLabels:
+      env: team-b
+  config:
+    display:
+      name: Datasource in Namespace B
+    default: true
+    plugin:
+      kind: PrometheusDatasource
+      spec:
+        directUrl: http://prometheus.perses-test-ns-b.svc:9090

@@ -1,0 +1,9 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - command: kubectl delete persesdashboard dashboard-in-ns-a -n perses-test-ns-a --ignore-not-found
+  - command: kubectl delete persesdatasource datasource-in-ns-b -n perses-test-ns-b --ignore-not-found
+  - command: kubectl delete perses perses-instance-a -n perses-test-ns-a --ignore-not-found
+  - command: kubectl delete perses perses-instance-b -n perses-test-ns-b --ignore-not-found
+  - command: kubectl delete namespace perses-test-ns-a --ignore-not-found
+  - command: kubectl delete namespace perses-test-ns-b --ignore-not-found

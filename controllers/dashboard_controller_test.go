@@ -73,6 +73,24 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 
 				err = k8sClient.Create(ctx, perses)
 				Expect(err).To(Not(HaveOccurred()))
+
+				// Set the Perses instance status to Available so child controllers
+				// consider it ready for syncing.
+				// Use Eventually to handle potential resource version conflicts
+				Eventually(func() error {
+					// Fetch the latest version of the resource
+					if err := k8sClient.Get(ctx, persesNamespaceName, perses); err != nil {
+						return err
+					}
+					perses.Status.Conditions = []metav1.Condition{{
+						Type:               common.TypeAvailablePerses,
+						Status:             metav1.ConditionTrue,
+						Reason:             "Testing",
+						Message:            "Available for testing",
+						LastTransitionTime: metav1.Now(),
+					}}
+					return k8sClient.Status().Update(ctx, perses)
+				}, time.Second*10, time.Millisecond*250).Should(Succeed())
 			}
 
 			newDashboard = &persesv1.Dashboard{
@@ -395,6 +413,21 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 			err = k8sClient.Create(ctx, matchingPerses)
 			Expect(err).To(Not(HaveOccurred()))
 
+			// Set the matching Perses instance status to Available
+			Eventually(func() error {
+				if err := k8sClient.Get(ctx, types.NamespacedName{Name: MatchingPersesName, Namespace: SelectorNamespace}, matchingPerses); err != nil {
+					return err
+				}
+				matchingPerses.Status.Conditions = []metav1.Condition{{
+					Type:               common.TypeAvailablePerses,
+					Status:             metav1.ConditionTrue,
+					Reason:             "Testing",
+					Message:            "Available for testing",
+					LastTransitionTime: metav1.Now(),
+				}}
+				return k8sClient.Status().Update(ctx, matchingPerses)
+			}, time.Second*10, time.Millisecond*250).Should(Succeed())
+
 			By("Creating a Perses instance with non-matching labels")
 			nonMatchingPerses := &persesv1alpha2.Perses{
 				ObjectMeta: metav1.ObjectMeta{
@@ -411,6 +444,21 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 			}
 			err = k8sClient.Create(ctx, nonMatchingPerses)
 			Expect(err).To(Not(HaveOccurred()))
+
+			// Set the non-matching Perses instance status to Available
+			Eventually(func() error {
+				if err := k8sClient.Get(ctx, types.NamespacedName{Name: NonMatchingPersesName, Namespace: SelectorNamespace}, nonMatchingPerses); err != nil {
+					return err
+				}
+				nonMatchingPerses.Status.Conditions = []metav1.Condition{{
+					Type:               common.TypeAvailablePerses,
+					Status:             metav1.ConditionTrue,
+					Reason:             "Testing",
+					Message:            "Available for testing",
+					LastTransitionTime: metav1.Now(),
+				}}
+				return k8sClient.Status().Update(ctx, nonMatchingPerses)
+			}, time.Second*10, time.Millisecond*250).Should(Succeed())
 
 			selectorDashboard = &persesv1.Dashboard{
 				Kind: persesv1.KindDashboard,
@@ -519,12 +567,17 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 		})
 
 		It("should sync the dashboard with all Perses instances when no instance selector is provided", func() {
-			By("Counting the total number of Perses instances in the cluster")
+			By("Counting the total number of available Perses instances in the cluster")
 			allPerses := &persesv1alpha2.PersesList{}
 			err := k8sClient.List(ctx, allPerses)
 			Expect(err).To(Not(HaveOccurred()))
-			totalInstances := len(allPerses.Items)
-			Expect(totalInstances).To(BeNumerically(">", 1), "Expected more than 1 Perses instance to validate no-selector behavior")
+			availableInstances := 0
+			for _, p := range allPerses.Items {
+				if apimeta.IsStatusConditionTrue(p.Status.Conditions, common.TypeAvailablePerses) {
+					availableInstances++
+				}
+			}
+			Expect(availableInstances).To(BeNumerically(">", 1), "Expected more than 1 available Perses instance to validate no-selector behavior")
 
 			By("Creating the custom resource for the Kind PersesDashboard without instance selector")
 			dashboard := &persesv1alpha2.PersesDashboard{
@@ -569,9 +622,9 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 
 			Expect(err).To(Not(HaveOccurred()))
 
-			By("Checking that the Perses API was called for all instances")
-			mockDashboard.AssertNumberOfCalls(GinkgoT(), "Get", totalInstances)
-			mockDashboard.AssertNumberOfCalls(GinkgoT(), "Create", totalInstances)
+			By("Checking that the Perses API was called for all available instances")
+			mockDashboard.AssertNumberOfCalls(GinkgoT(), "Get", availableInstances)
+			mockDashboard.AssertNumberOfCalls(GinkgoT(), "Create", availableInstances)
 
 			By("Cleaning up the dashboard resource")
 			mockDashboard.On("Delete", SelectorDashboardName).Return(nil)

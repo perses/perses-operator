@@ -1,0 +1,6 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 60
+commands:
+  - command: kubectl wait --for=delete perses/perses-instance-a -n perses-test-ns-a --timeout=60s
+  - command: kubectl wait --for=delete perses/perses-instance-b -n perses-test-ns-b --timeout=60s

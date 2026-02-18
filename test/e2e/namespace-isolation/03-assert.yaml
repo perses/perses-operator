@@ -1,0 +1,53 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 90
+commands:
+  # Verify dashboard-in-ns-a exists in perses-instance-a (matching label env=team-a)
+  - script: |
+      kubectl port-forward -n perses-test-ns-a svc/perses-instance-a 18080:8080 &
+      PF_PID=$!
+      trap "kill $PF_PID 2>/dev/null" EXIT
+      sleep 3
+      RESULT=$(curl -sf http://localhost:18080/api/v1/projects/perses-test-ns-a/dashboards/dashboard-in-ns-a) || {
+        echo "FAIL: Dashboard dashboard-in-ns-a not found in perses-instance-a (matching label)"
+        exit 1
+      }
+      echo "✓ Dashboard dashboard-in-ns-a found in perses-instance-a (instance selector working)"
+
+  # Verify dashboard-in-ns-a does NOT exist in perses-instance-b (non-matching label env=team-b)
+  - script: |
+      kubectl port-forward -n perses-test-ns-b svc/perses-instance-b 18081:8080 &
+      PF_PID=$!
+      trap "kill $PF_PID 2>/dev/null" EXIT
+      sleep 3
+      # This should fail (return non-zero) because the dashboard's instanceSelector doesn't match
+      if curl -sf http://localhost:18081/api/v1/projects/perses-test-ns-a/dashboards/dashboard-in-ns-a >/dev/null 2>&1; then
+        echo "FAIL: Dashboard dashboard-in-ns-a incorrectly synced to perses-instance-b (non-matching label)"
+        exit 1
+      fi
+      echo "✓ Dashboard dashboard-in-ns-a correctly NOT in perses-instance-b (instance selector working)"
+
+  # Verify datasource-in-ns-b exists in perses-instance-b (matching label env=team-b)
+  - script: |
+      kubectl port-forward -n perses-test-ns-b svc/perses-instance-b 18082:8080 &
+      PF_PID=$!
+      trap "kill $PF_PID 2>/dev/null" EXIT
+      sleep 3
+      RESULT=$(curl -sf http://localhost:18082/api/v1/projects/perses-test-ns-b/datasources/datasource-in-ns-b) || {
+        echo "FAIL: Datasource datasource-in-ns-b not found in perses-instance-b (matching label)"
+        exit 1
+      }
+      echo "✓ Datasource datasource-in-ns-b found in perses-instance-b (instance selector working)"
+
+  # Verify datasource-in-ns-b does NOT exist in perses-instance-a (non-matching label env=team-a)
+  - script: |
+      kubectl port-forward -n perses-test-ns-a svc/perses-instance-a 18083:8080 &
+      PF_PID=$!
+      trap "kill $PF_PID 2>/dev/null" EXIT
+      sleep 3
+      # This should fail (return non-zero) because the datasource's instanceSelector doesn't match
+      if curl -sf http://localhost:18083/api/v1/projects/perses-test-ns-b/datasources/datasource-in-ns-b >/dev/null 2>&1; then
+        echo "FAIL: Datasource datasource-in-ns-b incorrectly synced to perses-instance-a (non-matching label)"
+        exit 1
+      fi
+      echo "✓ Datasource datasource-in-ns-b correctly NOT in perses-instance-a (instance selector working)"
