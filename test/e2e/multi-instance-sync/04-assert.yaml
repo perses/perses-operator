@@ -1,0 +1,17 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 60
+commands:
+  # Verify that the dashboard created in step 02 is available on the
+  # second Perses instance created in step 03.
+  - script: |
+      kubectl port-forward -n $NAMESPACE svc/perses-instance-2 18080:8080 &
+      PF_PID=$!
+      trap "kill $PF_PID 2>/dev/null" EXIT
+      sleep 3
+      RESULT=$(curl -sf http://localhost:18080/api/v1/projects/$NAMESPACE/dashboards/sync-test-dashboard) || {
+        echo "FAIL: Dashboard not synced to perses-instance-2"
+        exit 1
+      }
+      echo "Dashboard found on perses-instance-2:"
+      echo "$RESULT"

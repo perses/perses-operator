@@ -75,6 +75,24 @@ var _ = Describe("Datasource controller", Ordered, func() {
 
 				err = k8sClient.Create(ctx, perses)
 				Expect(err).To(Not(HaveOccurred()))
+
+				// Set the Perses instance status to Available so child controllers
+				// consider it ready for syncing.
+				// Use Eventually to handle potential resource version conflicts
+				Eventually(func() error {
+					// Fetch the latest version of the resource
+					if err := k8sClient.Get(ctx, persesNamespaceName, perses); err != nil {
+						return err
+					}
+					perses.Status.Conditions = []metav1.Condition{{
+						Type:               common.TypeAvailablePerses,
+						Status:             metav1.ConditionTrue,
+						Reason:             "Testing",
+						Message:            "Available for testing",
+						LastTransitionTime: metav1.Now(),
+					}}
+					return k8sClient.Status().Update(ctx, perses)
+				}, time.Second*10, time.Millisecond*250).Should(Succeed())
 			}
 
 			newSecret = &persesv1.Secret{

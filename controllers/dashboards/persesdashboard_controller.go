@@ -25,10 +25,14 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -207,8 +211,43 @@ func (r *PersesDashboardReconciler) setStatusToDegraded(
 	return degradedResult, degradedError
 }
 
+// findDashboardsForPerses returns reconcile requests for all PersesDashboards
+// across all namespaces when a Perses instance becomes available.
+// Each dashboard's instanceSelector labels determine which Perses instances it syncs to.
+// If no instanceSelector is set, the dashboard syncs to all Perses instances.
+func (r *PersesDashboardReconciler) findDashboardsForPerses(ctx context.Context, _ client.Object) []reconcile.Request {
+	dashboards := &persesv1alpha2.PersesDashboardList{}
+	if err := r.List(ctx, dashboards); err != nil {
+		log.WithError(err).Error("Failed to list dashboards for Perses instance change")
+		return nil
+	}
+
+	requests := make([]reconcile.Request, len(dashboards.Items))
+	for i, d := range dashboards.Items {
+		requests[i] = reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      d.Name,
+				Namespace: d.Namespace,
+			},
+		}
+	}
+	return requests
+}
+
+// SetupWithManager sets up the controller with the Manager.
+// It watches PersesDashboard resources and also watches Perses instances
+// to trigger re-reconciliation of all dashboards when a Perses instance becomes
+// available. Dashboards are matched to Perses instances via instanceSelector labels.
+// Create and delete events for Perses instances are ignored because
+// the instance is not yet ready at creation, and deletion is handled by the dashboard's
+// own reconciliation loop.
 func (r *PersesDashboardReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&persesv1alpha2.PersesDashboard{}).
+		Watches(
+			&persesv1alpha2.Perses{},
+			handler.EnqueueRequestsFromMapFunc(r.findDashboardsForPerses),
+			builder.WithPredicates(common.PersesAvailabilityPredicate()),
+		).
 		Complete(r)
 }
