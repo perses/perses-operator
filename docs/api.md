@@ -30,8 +30,8 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `type` _[SecretSourceType](#secretsourcetype)_ | Type specifies the source type for secret data (secret, configmap, or file) |  | Enum: [secret configmap file] <br />Required: \{\} <br /> |
-| `name` _string_ | Name is the name of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | Optional: \{\} <br /> |
-| `namespace` _string_ | Namespace is the namespace of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | Optional: \{\} <br /> |
+| `name` _string_ | Name is the name of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | MinLength: 1 <br />Optional: \{\} <br /> |
+| `namespace` _string_ | Namespace is the namespace of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | MinLength: 1 <br />Optional: \{\} <br /> |
 | `username` _string_ | Username is the username credential for basic authentication |  | MinLength: 1 <br />Required: \{\} <br /> |
 | `passwordPath` _string_ | PasswordPath specifies the key name within the secret/configmap or filesystem path<br />(depending on SecretSource.Type) where the password is stored |  | MinLength: 1 <br />Required: \{\} <br /> |
 
@@ -50,8 +50,8 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `type` _[SecretSourceType](#secretsourcetype)_ | Type specifies the source type for secret data (secret, configmap, or file) |  | Enum: [secret configmap file] <br />Required: \{\} <br /> |
-| `name` _string_ | Name is the name of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | Optional: \{\} <br /> |
-| `namespace` _string_ | Namespace is the namespace of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | Optional: \{\} <br /> |
+| `name` _string_ | Name is the name of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | MinLength: 1 <br />Optional: \{\} <br /> |
+| `namespace` _string_ | Namespace is the namespace of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | MinLength: 1 <br />Optional: \{\} <br /> |
 | `certPath` _string_ | CertPath specifies the key name within the secret/configmap or filesystem path<br />(depending on SecretSource.Type) where the certificate is stored |  | MinLength: 1 <br />Required: \{\} <br /> |
 | `privateKeyPath` _string_ | PrivateKeyPath specifies the key name within the secret/configmap or filesystem path<br />(depending on SecretSource.Type) where the private key is stored<br />Required for client certificates (UserCert), optional for CA certificates (CaCert) |  | Optional: \{\} <br /> |
 
@@ -184,8 +184,8 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `type` _[SecretSourceType](#secretsourcetype)_ | Type specifies the source type for secret data (secret, configmap, or file) |  | Enum: [secret configmap file] <br />Required: \{\} <br /> |
-| `name` _string_ | Name is the name of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | Optional: \{\} <br /> |
-| `namespace` _string_ | Namespace is the namespace of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | Optional: \{\} <br /> |
+| `name` _string_ | Name is the name of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | MinLength: 1 <br />Optional: \{\} <br /> |
+| `namespace` _string_ | Namespace is the namespace of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | MinLength: 1 <br />Optional: \{\} <br /> |
 | `clientIDPath` _string_ | ClientIDPath specifies the key name within the secret/configmap or filesystem path<br />(depending on SecretSource.Type) where the OAuth client ID is stored |  | Optional: \{\} <br /> |
 | `clientSecretPath` _string_ | ClientSecretPath specifies the key name within the secret/configmap or filesystem path<br />(depending on SecretSource.Type) where the OAuth client secret is stored |  | Optional: \{\} <br /> |
 | `tokenURL` _string_ | TokenURL is the OAuth 2.0 provider's token endpoint URL<br />This is a constant specific to each OAuth provider |  | MinLength: 1 <br />Required: \{\} <br /> |
@@ -483,8 +483,8 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `type` _[SecretSourceType](#secretsourcetype)_ | Type specifies the source type for secret data (secret, configmap, or file) |  | Enum: [secret configmap file] <br />Required: \{\} <br /> |
-| `name` _string_ | Name is the name of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | Optional: \{\} <br /> |
-| `namespace` _string_ | Namespace is the namespace of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | Optional: \{\} <br /> |
+| `name` _string_ | Name is the name of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | MinLength: 1 <br />Optional: \{\} <br /> |
+| `namespace` _string_ | Namespace is the namespace of the Kubernetes Secret or ConfigMap resource<br />Required when Type is "secret" or "configmap", ignored when Type is "file" |  | MinLength: 1 <br />Optional: \{\} <br /> |
 
 
 #### SecretSourceType

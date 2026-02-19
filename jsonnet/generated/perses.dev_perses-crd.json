@@ -3638,10 +3638,12 @@
                         "properties": {
                           "name": {
                             "description": "Name is the name of the Kubernetes Secret or ConfigMap resource\nRequired when Type is \"secret\" or \"configmap\", ignored when Type is \"file\"",
+                            "minLength": 1,
                             "type": "string"
                           },
                           "namespace": {
                             "description": "Namespace is the namespace of the Kubernetes Secret or ConfigMap resource\nRequired when Type is \"secret\" or \"configmap\", ignored when Type is \"file\"",
+                            "minLength": 1,
                             "type": "string"
                           },
                           "passwordPath": {
@@ -3669,7 +3671,17 @@
                           "type",
                           "username"
                         ],
-                        "type": "object"
+                        "type": "object",
+                        "x-kubernetes-validations": [
+                          {
+                            "message": "name is required when type is secret or configmap",
+                            "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.name)"
+                          },
+                          {
+                            "message": "namespace is required when type is secret or configmap",
+                            "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.namespace)"
+                          }
+                        ]
                       },
                       "kubernetesAuth": {
                         "description": "KubernetesAuth enables Kubernetes native authentication for the Perses client",
@@ -3709,10 +3721,12 @@
                           },
                           "name": {
                             "description": "Name is the name of the Kubernetes Secret or ConfigMap resource\nRequired when Type is \"secret\" or \"configmap\", ignored when Type is \"file\"",
+                            "minLength": 1,
                             "type": "string"
                           },
                           "namespace": {
                             "description": "Namespace is the namespace of the Kubernetes Secret or ConfigMap resource\nRequired when Type is \"secret\" or \"configmap\", ignored when Type is \"file\"",
+                            "minLength": 1,
                             "type": "string"
                           },
                           "scopes": {
@@ -3741,7 +3755,17 @@
                           "tokenURL",
                           "type"
                         ],
-                        "type": "object"
+                        "type": "object",
+                        "x-kubernetes-validations": [
+                          {
+                            "message": "name is required when type is secret or configmap",
+                            "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.name)"
+                          },
+                          {
+                            "message": "namespace is required when type is secret or configmap",
+                            "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.namespace)"
+                          }
+                        ]
                       },
                       "tls": {
                         "description": "TLS provides TLS/SSL configuration for secure connections to Perses",
@@ -3756,10 +3780,12 @@
                               },
                               "name": {
                                 "description": "Name is the name of the Kubernetes Secret or ConfigMap resource\nRequired when Type is \"secret\" or \"configmap\", ignored when Type is \"file\"",
+                                "minLength": 1,
                                 "type": "string"
                               },
                               "namespace": {
                                 "description": "Namespace is the namespace of the Kubernetes Secret or ConfigMap resource\nRequired when Type is \"secret\" or \"configmap\", ignored when Type is \"file\"",
+                                "minLength": 1,
                                 "type": "string"
                               },
                               "privateKeyPath": {
@@ -3780,7 +3806,17 @@
                               "certPath",
                               "type"
                             ],
-                            "type": "object"
+                            "type": "object",
+                            "x-kubernetes-validations": [
+                              {
+                                "message": "name is required when type is secret or configmap",
+                                "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.name)"
+                              },
+                              {
+                                "message": "namespace is required when type is secret or configmap",
+                                "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.namespace)"
+                              }
+                            ]
                           },
                           "enable": {
                             "description": "Enable determines whether TLS is enabled for connections to Perses",
@@ -3800,10 +3836,12 @@
                               },
                               "name": {
                                 "description": "Name is the name of the Kubernetes Secret or ConfigMap resource\nRequired when Type is \"secret\" or \"configmap\", ignored when Type is \"file\"",
+                                "minLength": 1,
                                 "type": "string"
                               },
                               "namespace": {
                                 "description": "Namespace is the namespace of the Kubernetes Secret or ConfigMap resource\nRequired when Type is \"secret\" or \"configmap\", ignored when Type is \"file\"",
+                                "minLength": 1,
                                 "type": "string"
                               },
                               "privateKeyPath": {
@@ -3824,7 +3862,17 @@
                               "certPath",
                               "type"
                             ],
-                            "type": "object"
+                            "type": "object",
+                            "x-kubernetes-validations": [
+                              {
+                                "message": "name is required when type is secret or configmap",
+                                "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.name)"
+                              },
+                              {
+                                "message": "namespace is required when type is secret or configmap",
+                                "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.namespace)"
+                              }
+                            ]
                           }
                         },
                         "type": "object"
@@ -5927,10 +5975,12 @@
                           },
                           "name": {
                             "description": "Name is the name of the Kubernetes Secret or ConfigMap resource\nRequired when Type is \"secret\" or \"configmap\", ignored when Type is \"file\"",
+                            "minLength": 1,
                             "type": "string"
                           },
                           "namespace": {
                             "description": "Namespace is the namespace of the Kubernetes Secret or ConfigMap resource\nRequired when Type is \"secret\" or \"configmap\", ignored when Type is \"file\"",
+                            "minLength": 1,
                             "type": "string"
                           },
                           "privateKeyPath": {
@@ -5951,7 +6001,17 @@
                           "certPath",
                           "type"
                         ],
-                        "type": "object"
+                        "type": "object",
+                        "x-kubernetes-validations": [
+                          {
+                            "message": "name is required when type is secret or configmap",
+                            "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.name)"
+                          },
+                          {
+                            "message": "namespace is required when type is secret or configmap",
+                            "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.namespace)"
+                          }
+                        ]
                       },
                       "enable": {
                         "description": "Enable determines whether TLS is enabled for connections to Perses",
@@ -5971,10 +6031,12 @@
                           },
                           "name": {
                             "description": "Name is the name of the Kubernetes Secret or ConfigMap resource\nRequired when Type is \"secret\" or \"configmap\", ignored when Type is \"file\"",
+                            "minLength": 1,
                             "type": "string"
                           },
                           "namespace": {
                             "description": "Namespace is the namespace of the Kubernetes Secret or ConfigMap resource\nRequired when Type is \"secret\" or \"configmap\", ignored when Type is \"file\"",
+                            "minLength": 1,
                             "type": "string"
                           },
                           "privateKeyPath": {
@@ -5995,7 +6057,17 @@
                           "certPath",
                           "type"
                         ],
-                        "type": "object"
+                        "type": "object",
+                        "x-kubernetes-validations": [
+                          {
+                            "message": "name is required when type is secret or configmap",
+                            "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.name)"
+                          },
+                          {
+                            "message": "namespace is required when type is secret or configmap",
+                            "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.namespace)"
+                          }
+                        ]
                       }
                     },
                     "type": "object"
