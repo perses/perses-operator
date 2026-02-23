@@ -245,8 +245,8 @@ test-unit: fmt vet ## Run unit tests.
 	go test $(shell go list ./... | grep -v ./controllers) -v -coverprofile cover-unit.out
 
 .PHONY: test-integration
-test-integration: manifests generate fmt vet envtest ## Run integration tests using envtest.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" go test ./controllers/... -v -coverprofile cover-integration.out
+test-integration: manifests generate fmt vet envtest ginkgo ## Run integration tests in parallel using envtest.
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) --procs=4 -v --coverprofile=cover-integration.out --output-dir=. ./controllers/...
 
 .PHONY: lint-jsonnet
 lint-jsonnet: $(JSONNETLINT_BINARY)

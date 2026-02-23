@@ -428,6 +428,7 @@ var _ = Describe("Perses controller", func() {
 			typeNamespaceName := types.NamespacedName{Name: PersesProvisioningName, Namespace: persesNamespace}
 			secretName := "encrypted-key-secret"
 			secretNamespaceName := types.NamespacedName{Name: secretName, Namespace: persesNamespace}
+			var err error
 
 			By("Creating the provisioning secret")
 			secretKey := "encrypted-key"
@@ -490,10 +491,12 @@ var _ = Describe("Perses controller", func() {
 			}
 
 			By("Reconciling the custom resource created")
-			_, err := persesReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespaceName,
-			})
-			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() error {
+				_, err := persesReconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespaceName,
+				})
+				return err
+			}, time.Second*10, time.Millisecond*250).Should(Succeed())
 
 			var initialHash string
 			var initialResourceVersion string
@@ -598,17 +601,12 @@ var _ = Describe("Perses controller", func() {
 			}
 
 			By("Reconciling to add the finalizer")
-			// First reconcile sets status to unknown
-			_, err = persesReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespaceName,
-			})
-			Expect(err).To(Not(HaveOccurred()))
-
-			// Second reconcile adds the finalizer and creates resources
-			_, err = persesReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespaceName,
-			})
-			Expect(err).To(Not(HaveOccurred()))
+			Eventually(func() error {
+				_, err := persesReconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespaceName,
+				})
+				return err
+			}, time.Second*10, time.Millisecond*250).Should(Succeed())
 
 			By("Checking if the finalizer was added")
 			Eventually(func() bool {
@@ -628,12 +626,12 @@ var _ = Describe("Perses controller", func() {
 			Expect(err).To(Not(HaveOccurred()))
 
 			By("Reconciling after deletion to trigger finalizer removal")
-			//nolint:staticcheck,ineffassign
-			_, err = persesReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespaceName,
-			})
-			// Error is expected if the resource is already gone, or nil if handleDelete succeeded
-			// We just care that the reconcile doesn't panic
+			Eventually(func() error {
+				_, err := persesReconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespaceName,
+				})
+				return err
+			}, time.Second*10, time.Millisecond*250).Should(Succeed())
 
 			By("Checking if the Perses resource was fully deleted (finalizer removed)")
 			Eventually(func() bool {

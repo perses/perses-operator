@@ -33,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/perses/perses-operator/api/v1alpha2"
 	persesController "github.com/perses/perses-operator/controllers/perses"
@@ -48,7 +49,7 @@ var testEnv *envtest.Environment
 var ctx context.Context
 var cancel context.CancelFunc
 
-const persesNamespace = "perses-test"
+var persesNamespace string
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -86,8 +87,13 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
 
+	// Disable metrics server to avoid port conflicts when running tests in parallel
+	// (each Ginkgo parallel process starts its own manager).
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme.Scheme,
+		Metrics: metricsserver.Options{
+			BindAddress: "0",
+		},
 	})
 	Expect(err).ToNot(HaveOccurred())
 
@@ -106,12 +112,12 @@ var _ = BeforeSuite(func() {
 	By("Creating Perses test namespace")
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      persesNamespace,
-			Namespace: persesNamespace,
+			GenerateName: "perses-test-",
 		},
 	}
 	err = k8sClient.Create(ctx, namespace)
 	Expect(err).To(Not(HaveOccurred()))
+	persesNamespace = namespace.Name
 })
 
 var _ = AfterSuite(func() {

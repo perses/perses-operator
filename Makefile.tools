@@ -56,6 +56,9 @@ OPERATOR_SDK_VERSION = v1.42.0
 OPM = $(LOCALBIN)/opm
 OPM_VERSION = v1.61.0
 
+GINKGO = $(LOCALBIN)/ginkgo
+GINKGO_VERSION = $(shell grep 'github.com/onsi/ginkgo/v2' go.mod | awk '{print $$2}')
+
 KUTTL = $(LOCALBIN)/kubectl-kuttl
 KUTTL_VERSION = 0.24.0
 
@@ -166,6 +169,14 @@ $(OPM) opm: $(LOCALBIN) ## Install opm locally if necessary.
 		chmod +x $(OPM) ;\
 	}
 
+.PHONY: ginkgo
+$(GINKGO) ginkgo: $(LOCALBIN) ## Install ginkgo CLI locally if necessary.
+	@{ \
+		set -ex ;\
+		[[ -f $(GINKGO) ]] && exit 0 ;\
+		GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/v2/ginkgo@$(GINKGO_VERSION) ;\
+	}
+
 .PHONY: kuttl
 $(KUTTL) kuttl: $(LOCALBIN) ## Install kubectl-kuttl locally if necessary.
 	@{ \
@@ -189,6 +200,7 @@ build-tools: $(KUSTOMIZE) \
 		$(YQ) \
 		$(CRD_REF_DOCS) \
 		$(ENVTEST) \
+		$(GINKGO) \
 		$(OPERATOR_SDK) \
 		$(OPM) \
 		$(KUTTL)
@@ -211,6 +223,7 @@ validate-tools: build-tools ## Validate that all tools are installed and working
 	@echo -n "  yq: " && $(YQ) --version 2>&1 | head -n 1
 	@echo -n "  crd-ref-docs: " && $(CRD_REF_DOCS) --version 2>&1 | head -n 1
 	@echo -n "  setup-envtest: " && [ -x $(ENVTEST) ] && echo "installed" || echo "missing"
+	@echo -n "  ginkgo: " && $(GINKGO) version 2>&1 | head -n 1
 	@echo -n "  operator-sdk: " && $(OPERATOR_SDK) version 2>&1 | head -n 1
 	@echo -n "  opm: " && $(OPM) version 2>&1 | head -n 1
 	@echo -n "  kuttl: " && $(KUTTL) version 2>&1 | head -n 1
