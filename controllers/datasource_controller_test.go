@@ -28,21 +28,15 @@ import (
 var _ = Describe("Datasource controller", Ordered, func() {
 	Context("Datasource controller test", func() {
 		const PersesName = "perses-for-datasource"
-		const PersesNamespace = "perses-datasource-test"
 		const DatasourceName = "my-custom-datasource"
 		const PersesSecretName = DatasourceName + "-secret"
 
 		ctx := context.Background()
 
-		namespace := &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      PersesNamespace,
-				Namespace: PersesNamespace,
-			},
-		}
-
-		persesNamespaceName := types.NamespacedName{Name: PersesName, Namespace: PersesNamespace}
-		datasourceNamespaceName := types.NamespacedName{Name: DatasourceName, Namespace: PersesNamespace}
+		var namespace *corev1.Namespace
+		var PersesNamespace string
+		var persesNamespaceName types.NamespacedName
+		var datasourceNamespaceName types.NamespacedName
 
 		persesImage := "perses-dev.io/perses:test"
 
@@ -51,8 +45,16 @@ var _ = Describe("Datasource controller", Ordered, func() {
 
 		BeforeAll(func() {
 			By("Creating the Namespace to perform the tests")
+			namespace = &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "perses-datasource-test-",
+				},
+			}
 			err := k8sClient.Create(ctx, namespace)
 			Expect(err).To(Not(HaveOccurred()))
+			PersesNamespace = namespace.Name
+			persesNamespaceName = types.NamespacedName{Name: PersesName, Namespace: PersesNamespace}
+			datasourceNamespaceName = types.NamespacedName{Name: DatasourceName, Namespace: PersesNamespace}
 
 			By("Setting the Image ENV VAR which stores the Operand image")
 			err = os.Setenv("PERSES_IMAGE", persesImage)

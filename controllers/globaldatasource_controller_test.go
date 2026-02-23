@@ -28,20 +28,14 @@ import (
 var _ = Describe("GlobalDatasource controller", Ordered, func() {
 	Context("GlobalDatasource controller test", func() {
 		const PersesName = "perses-for-globaldatasource"
-		const PersesNamespace = "perses-globaldatasource-test"
 		const GlobalDatasourceName = "my-custom-globaldatasource"
 		const PersesSecretName = GlobalDatasourceName + "-secret"
 
 		ctx := context.Background()
 
-		namespace := &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      PersesNamespace,
-				Namespace: PersesNamespace,
-			},
-		}
-
-		persesNamespaceName := types.NamespacedName{Name: PersesName, Namespace: PersesNamespace}
+		var namespace *corev1.Namespace
+		var PersesNamespace string
+		var persesNamespaceName types.NamespacedName
 		globaldatasourceNamespaceName := types.NamespacedName{Name: GlobalDatasourceName}
 
 		persesImage := "perses-dev.io/perses:test"
@@ -51,8 +45,15 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 
 		BeforeAll(func() {
 			By("Creating the Namespace to perform the tests")
+			namespace = &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "perses-globaldatasource-test-",
+				},
+			}
 			err := k8sClient.Create(ctx, namespace)
 			Expect(err).To(Not(HaveOccurred()))
+			PersesNamespace = namespace.Name
+			persesNamespaceName = types.NamespacedName{Name: PersesName, Namespace: PersesNamespace}
 
 			By("Setting the Image ENV VAR which stores the Operand image")
 			err = os.Setenv("PERSES_IMAGE", persesImage)

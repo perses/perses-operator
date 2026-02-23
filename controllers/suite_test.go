@@ -48,7 +48,7 @@ var testEnv *envtest.Environment
 var ctx context.Context
 var cancel context.CancelFunc
 
-const persesNamespace = "perses-test"
+var persesNamespace string
 
 func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -106,12 +106,12 @@ var _ = BeforeSuite(func() {
 	By("Creating Perses test namespace")
 	namespace := &corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      persesNamespace,
-			Namespace: persesNamespace,
+			GenerateName: "perses-test-",
 		},
 	}
 	err = k8sClient.Create(ctx, namespace)
 	Expect(err).To(Not(HaveOccurred()))
+	persesNamespace = namespace.Name
 })
 
 var _ = AfterSuite(func() {
