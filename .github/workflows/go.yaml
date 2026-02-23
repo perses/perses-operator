@@ -15,6 +15,26 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' || github.ref_name != 'main' }}
 
 jobs:
+  build:
+    name: "build"
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - uses: perses/github-actions@v0.11.0
+      - uses: ./.github/perses-ci/actions/setup_environment
+        with:
+          enable_go: true
+      - name: Cache Go build artifacts
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/go-build
+          key: go-build-${{ runner.os }}-${{ hashFiles('go.sum') }}-${{ hashFiles('**/*.go') }}
+          restore-keys: |
+            go-build-${{ runner.os }}-${{ hashFiles('go.sum') }}-
+            go-build-${{ runner.os }}-
+      - name: Build
+        run: make build
   gofmt:
     name: "check code format"
     runs-on: ubuntu-latest
@@ -43,6 +63,7 @@ jobs:
         run: make test-unit
   test-integration:
     name: "integration tests"
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -51,6 +72,14 @@ jobs:
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
+      - name: Restore Go build cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ~/.cache/go-build
+          key: go-build-${{ runner.os }}-${{ hashFiles('go.sum') }}-${{ hashFiles('**/*.go') }}
+          restore-keys: |
+            go-build-${{ runner.os }}-${{ hashFiles('go.sum') }}-
+            go-build-${{ runner.os }}-
       - name: integration tests
         run: make test-integration
   golangci:
