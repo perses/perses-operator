@@ -22,7 +22,7 @@ import (
 
 // PersesGlobalDatasourceStatus defines the observed state of PersesGlobalDatasource
 type PersesGlobalDatasourceStatus struct {
-	// Conditions represent the latest observations of the PersesGlobalDatasource resource state
+	// conditions represent the latest observations of the PersesGlobalDatasource resource state
 	// +operator-sdk:csv:customresourcedefinitions:type=status
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`

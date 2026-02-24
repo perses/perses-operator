@@ -2781,10 +2781,10 @@ spec:
           metadata:
             type: object
           spec:
-            description: PersesSpec defines the desired state of Perses
+            description: spec is the desired state of the Perses resource
             properties:
               affinity:
-                description: Affinity specifies the pod's scheduling constraints
+                description: affinity specifies the pod's scheduling constraints
                 properties:
                   nodeAffinity:
                     description: Describes node affinity scheduling rules for the
@@ -3696,38 +3696,38 @@ spec:
                     type: object
                 type: object
               args:
-                description: Args are extra command-line arguments to pass to the
+                description: args are extra command-line arguments to pass to the
                   Perses server
                 items:
                   type: string
                 type: array
               client:
-                description: Client specifies the Perses client configuration
+                description: client specifies the Perses client configuration
                 properties:
                   basicAuth:
-                    description: BasicAuth provides username/password authentication
+                    description: basicAuth provides username/password authentication
                       configuration for the Perses client
                     properties:
                       name:
                         description: |-
-                          Name is the name of the Kubernetes Secret or ConfigMap resource
+                          name is the name of the Kubernetes Secret or ConfigMap resource
                           Required when Type is "secret" or "configmap", ignored when Type is "file"
                         minLength: 1
                         type: string
                       namespace:
                         description: |-
-                          Namespace is the namespace of the Kubernetes Secret or ConfigMap resource
+                          namespace is the namespace of the Kubernetes Secret or ConfigMap resource
                           Required when Type is "secret" or "configmap", ignored when Type is "file"
                         minLength: 1
                         type: string
                       passwordPath:
                         description: |-
-                          PasswordPath specifies the key name within the secret/configmap or filesystem path
+                          passwordPath specifies the key name within the secret/configmap or filesystem path
                           (depending on SecretSource.Type) where the password is stored
                         minLength: 1
                         type: string
                       type:
-                        description: Type specifies the source type for secret data
+                        description: type specifies the source type for secret data
                           (secret, configmap, or file)
                         enum:
                         - secret
@@ -3735,7 +3735,7 @@ spec:
                         - file
                         type: string
                       username:
-                        description: Username is the username credential for basic
+                        description: username is the username credential for basic
                           authentication
                         minLength: 1
                         type: string
@@ -3750,32 +3750,32 @@ spec:
                     - message: namespace is required when type is secret or configmap
                       rule: self.type != 'secret' && self.type != 'configmap' || has(self.namespace)
                   kubernetesAuth:
-                    description: KubernetesAuth enables Kubernetes native authentication
+                    description: kubernetesAuth enables Kubernetes native authentication
                       for the Perses client
                     properties:
                       enable:
-                        description: Enable determines whether Kubernetes authentication
+                        description: enable determines whether Kubernetes authentication
                           is enabled for the Perses client
                         type: boolean
                     type: object
                   oauth:
-                    description: OAuth provides OAuth 2.0 authentication configuration
+                    description: oauth provides OAuth 2.0 authentication configuration
                       for the Perses client
                     properties:
                       authStyle:
                         description: |-
-                          AuthStyle specifies how the endpoint wants the client ID and client secret sent
+                          authStyle specifies how the endpoint wants the client ID and client secret sent
                           The zero value means to auto-detect
                         format: int32
                         type: integer
                       clientIDPath:
                         description: |-
-                          ClientIDPath specifies the key name within the secret/configmap or filesystem path
+                          clientIDPath specifies the key name within the secret/configmap or filesystem path
                           (depending on SecretSource.Type) where the OAuth client ID is stored
                         type: string
                       clientSecretPath:
                         description: |-
-                          ClientSecretPath specifies the key name within the secret/configmap or filesystem path
+                          clientSecretPath specifies the key name within the secret/configmap or filesystem path
                           (depending on SecretSource.Type) where the OAuth client secret is stored
                         type: string
                       endpointParams:
@@ -3783,35 +3783,35 @@ spec:
                           items:
                             type: string
                           type: array
-                        description: EndpointParams specifies additional parameters
+                        description: endpointParams specifies additional parameters
                           to include in requests to the token endpoint
                         type: object
                       name:
                         description: |-
-                          Name is the name of the Kubernetes Secret or ConfigMap resource
+                          name is the name of the Kubernetes Secret or ConfigMap resource
                           Required when Type is "secret" or "configmap", ignored when Type is "file"
                         minLength: 1
                         type: string
                       namespace:
                         description: |-
-                          Namespace is the namespace of the Kubernetes Secret or ConfigMap resource
+                          namespace is the namespace of the Kubernetes Secret or ConfigMap resource
                           Required when Type is "secret" or "configmap", ignored when Type is "file"
                         minLength: 1
                         type: string
                       scopes:
-                        description: Scopes specifies optional requested permissions
+                        description: scopes specifies optional requested permissions
                           for the OAuth token
                         items:
                           type: string
                         type: array
                       tokenURL:
                         description: |-
-                          TokenURL is the OAuth 2.0 provider's token endpoint URL
+                          tokenURL is the OAuth 2.0 provider's token endpoint URL
                           This is a constant specific to each OAuth provider
                         minLength: 1
                         type: string
                       type:
-                        description: Type specifies the source type for secret data
+                        description: type specifies the source type for secret data
                           (secret, configmap, or file)
                         enum:
                         - secret
@@ -3828,39 +3828,39 @@ spec:
                     - message: namespace is required when type is secret or configmap
                       rule: self.type != 'secret' && self.type != 'configmap' || has(self.namespace)
                   tls:
-                    description: TLS provides TLS/SSL configuration for secure connections
+                    description: tls provides TLS/SSL configuration for secure connections
                       to Perses
                     properties:
                       caCert:
-                        description: CaCert specifies the CA certificate to verify
+                        description: caCert specifies the CA certificate to verify
                           the Perses server's certificate
                         properties:
                           certPath:
                             description: |-
-                              CertPath specifies the key name within the secret/configmap or filesystem path
+                              certPath specifies the key name within the secret/configmap or filesystem path
                               (depending on SecretSource.Type) where the certificate is stored
                             minLength: 1
                             type: string
                           name:
                             description: |-
-                              Name is the name of the Kubernetes Secret or ConfigMap resource
+                              name is the name of the Kubernetes Secret or ConfigMap resource
                               Required when Type is "secret" or "configmap", ignored when Type is "file"
                             minLength: 1
                             type: string
                           namespace:
                             description: |-
-                              Namespace is the namespace of the Kubernetes Secret or ConfigMap resource
+                              namespace is the namespace of the Kubernetes Secret or ConfigMap resource
                               Required when Type is "secret" or "configmap", ignored when Type is "file"
                             minLength: 1
                             type: string
                           privateKeyPath:
                             description: |-
-                              PrivateKeyPath specifies the key name within the secret/configmap or filesystem path
+                              privateKeyPath specifies the key name within the secret/configmap or filesystem path
                               (depending on SecretSource.Type) where the private key is stored
                               Required for client certificates (UserCert), optional for CA certificates (CaCert)
                             type: string
                           type:
-                            description: Type specifies the source type for secret
+                            description: type specifies the source type for secret
                               data (secret, configmap, or file)
                             enum:
                             - secret
@@ -3879,44 +3879,44 @@ spec:
                           rule: self.type != 'secret' && self.type != 'configmap'
                             || has(self.namespace)
                       enable:
-                        description: Enable determines whether TLS is enabled for
+                        description: enable determines whether TLS is enabled for
                           connections to Perses
                         type: boolean
                       insecureSkipVerify:
                         description: |-
-                          InsecureSkipVerify determines whether to skip verification of the Perses server's certificate
+                          insecureSkipVerify determines whether to skip verification of the Perses server's certificate
                           Setting this to true is insecure and should only be used for testing
                         type: boolean
                       userCert:
-                        description: UserCert specifies the client certificate and
+                        description: userCert specifies the client certificate and
                           key for mutual TLS (mTLS) authentication
                         properties:
                           certPath:
                             description: |-
-                              CertPath specifies the key name within the secret/configmap or filesystem path
+                              certPath specifies the key name within the secret/configmap or filesystem path
                               (depending on SecretSource.Type) where the certificate is stored
                             minLength: 1
                             type: string
                           name:
                             description: |-
-                              Name is the name of the Kubernetes Secret or ConfigMap resource
+                              name is the name of the Kubernetes Secret or ConfigMap resource
                               Required when Type is "secret" or "configmap", ignored when Type is "file"
                             minLength: 1
                             type: string
                           namespace:
                             description: |-
-                              Namespace is the namespace of the Kubernetes Secret or ConfigMap resource
+                              namespace is the namespace of the Kubernetes Secret or ConfigMap resource
                               Required when Type is "secret" or "configmap", ignored when Type is "file"
                             minLength: 1
                             type: string
                           privateKeyPath:
                             description: |-
-                              PrivateKeyPath specifies the key name within the secret/configmap or filesystem path
+                              privateKeyPath specifies the key name within the secret/configmap or filesystem path
                               (depending on SecretSource.Type) where the private key is stored
                               Required for client certificates (UserCert), optional for CA certificates (CaCert)
                             type: string
                           type:
-                            description: Type specifies the source type for secret
+                            description: type specifies the source type for secret
                               data (secret, configmap, or file)
                             enum:
                             - secret
@@ -3937,7 +3937,7 @@ spec:
                     type: object
                 type: object
               config:
-                description: Config specifies the Perses server configuration
+                description: config specifies the Perses server configuration
                 properties:
                   api_prefix:
                     description: Use it in case you want to prefix the API path.
@@ -5024,18 +5024,18 @@ spec:
                     type: object
                 type: object
               containerPort:
-                description: ContainerPort is the port on which the Perses server
+                description: containerPort is the port on which the Perses server
                   listens for HTTP requests
                 format: int32
                 maximum: 65535
                 minimum: 1
                 type: integer
               image:
-                description: Image specifies the container image that should be used
+                description: image specifies the container image that should be used
                   for the Perses deployment
                 type: string
               livenessProbe:
-                description: LivenessProbe specifies the liveness probe configuration
+                description: livenessProbe specifies the liveness probe configuration
                   for the Perses container
                 properties:
                   exec:
@@ -5187,7 +5187,7 @@ spec:
                     type: integer
                 type: object
               logLevel:
-                description: LogLevel defines the log level for Perses
+                description: logLevel defines the log level for Perses
                 enum:
                 - panic
                 - fatal
@@ -5199,33 +5199,33 @@ spec:
                 type: string
               logMethodTrace:
                 description: |-
-                  LogMethodTrace when true, includes the calling method as a field in the log
+                  logMethodTrace when true, includes the calling method as a field in the log
                   It can be useful to see immediately where the log comes from
                 type: boolean
               metadata:
-                description: Metadata specifies additional metadata to add to deployed
+                description: metadata specifies additional metadata to add to deployed
                   pods
                 properties:
                   annotations:
                     additionalProperties:
                       type: string
-                    description: Annotations are key/value pairs attached to pods
+                    description: annotations are key/value pairs attached to pods
                       for non-identifying metadata
                     type: object
                   labels:
                     additionalProperties:
                       type: string
-                    description: Labels are key/value pairs attached to pods
+                    description: labels are key/value pairs attached to pods
                     type: object
                 type: object
               nodeSelector:
                 additionalProperties:
                   type: string
-                description: NodeSelector constrains pods to nodes with matching labels
+                description: nodeSelector constrains pods to nodes with matching labels
                 type: object
               podSecurityContext:
                 description: |-
-                  PodSecurityContext holds pod-level security attributes and common container settings
+                  podSecurityContext holds pod-level security attributes and common container settings
                   If not specified, defaults to fsGroup: 65534 to ensure proper volume permissions for the nobody user
                 properties:
                   appArmorProfile:
@@ -5458,10 +5458,10 @@ spec:
                     type: object
                 type: object
               provisioning:
-                description: Provisioning configuration for provisioning secrets
+                description: provisioning configuration for provisioning secrets
                 properties:
                   secretRefs:
-                    description: SecretRefs is a list of references to Kubernetes
+                    description: secretRefs is a list of references to Kubernetes
                       secrets used for provisioning sensitive data.
                     items:
                       properties:
@@ -5489,7 +5489,7 @@ spec:
                     type: array
                 type: object
               readinessProbe:
-                description: ReadinessProbe specifies the readiness probe configuration
+                description: readinessProbe specifies the readiness probe configuration
                   for the Perses container
                 properties:
                   exec:
@@ -5641,12 +5641,12 @@ spec:
                     type: integer
                 type: object
               replicas:
-                description: Replicas is the number of desired pod replicas for the
+                description: replicas is the number of desired pod replicas for the
                   Perses deployment
                 format: int32
                 type: integer
               resources:
-                description: Resources defines the compute resources configured for
+                description: resources defines the compute resources configured for
                   the container
                 properties:
                   claims:
@@ -5706,31 +5706,31 @@ spec:
                     type: object
                 type: object
               service:
-                description: Service specifies the service configuration for the Perses
+                description: service specifies the service configuration for the Perses
                   instance
                 properties:
                   annotations:
                     additionalProperties:
                       type: string
-                    description: Annotations are key/value pairs attached to the Service
+                    description: annotations are key/value pairs attached to the Service
                       for non-identifying metadata
                     type: object
                   name:
                     description: |-
-                      Name is the name of the Kubernetes Service resource
+                      name is the name of the Kubernetes Service resource
                       If not specified, a default name will be generated
                     type: string
                 type: object
               serviceAccountName:
-                description: ServiceAccountName is the name of the ServiceAccount
+                description: serviceAccountName is the name of the ServiceAccount
                   to use for the Perses deployment or statefulset
                 type: string
               storage:
-                description: Storage configuration used by the StatefulSet
+                description: storage configuration used by the StatefulSet
                 properties:
                   emptyDir:
                     description: |-
-                      EmptyDir to use for ephemeral storage.
+                      emptyDir to use for ephemeral storage.
                       When set, data will be lost when the pod is deleted or restarted.
                       Mutually exclusive with PersistentVolumeClaimTemplate.
                     properties:
@@ -5757,7 +5757,7 @@ spec:
                     type: object
                   pvcTemplate:
                     description: |-
-                      PersistentVolumeClaimTemplate is the template for PVCs that will be created.
+                      pvcTemplate is the template for PVCs that will be created.
                       Mutually exclusive with EmptyDir.
                     properties:
                       accessModes:
@@ -5957,38 +5957,38 @@ spec:
                 - message: emptyDir and pvcTemplate are mutually exclusive
                   rule: '!(has(self.emptyDir) && has(self.pvcTemplate))'
               tls:
-                description: TLS specifies the TLS configuration for the Perses instance
+                description: tls specifies the TLS configuration for the Perses instance
                 properties:
                   caCert:
-                    description: CaCert specifies the CA certificate to verify the
+                    description: caCert specifies the CA certificate to verify the
                       Perses server's certificate
                     properties:
                       certPath:
                         description: |-
-                          CertPath specifies the key name within the secret/configmap or filesystem path
+                          certPath specifies the key name within the secret/configmap or filesystem path
                           (depending on SecretSource.Type) where the certificate is stored
                         minLength: 1
                         type: string
                       name:
                         description: |-
-                          Name is the name of the Kubernetes Secret or ConfigMap resource
+                          name is the name of the Kubernetes Secret or ConfigMap resource
                           Required when Type is "secret" or "configmap", ignored when Type is "file"
                         minLength: 1
                         type: string
                       namespace:
                         description: |-
-                          Namespace is the namespace of the Kubernetes Secret or ConfigMap resource
+                          namespace is the namespace of the Kubernetes Secret or ConfigMap resource
                           Required when Type is "secret" or "configmap", ignored when Type is "file"
                         minLength: 1
                         type: string
                       privateKeyPath:
                         description: |-
-                          PrivateKeyPath specifies the key name within the secret/configmap or filesystem path
+                          privateKeyPath specifies the key name within the secret/configmap or filesystem path
                           (depending on SecretSource.Type) where the private key is stored
                           Required for client certificates (UserCert), optional for CA certificates (CaCert)
                         type: string
                       type:
-                        description: Type specifies the source type for secret data
+                        description: type specifies the source type for secret data
                           (secret, configmap, or file)
                         enum:
                         - secret
@@ -6005,44 +6005,44 @@ spec:
                     - message: namespace is required when type is secret or configmap
                       rule: self.type != 'secret' && self.type != 'configmap' || has(self.namespace)
                   enable:
-                    description: Enable determines whether TLS is enabled for connections
+                    description: enable determines whether TLS is enabled for connections
                       to Perses
                     type: boolean
                   insecureSkipVerify:
                     description: |-
-                      InsecureSkipVerify determines whether to skip verification of the Perses server's certificate
+                      insecureSkipVerify determines whether to skip verification of the Perses server's certificate
                       Setting this to true is insecure and should only be used for testing
                     type: boolean
                   userCert:
-                    description: UserCert specifies the client certificate and key
+                    description: userCert specifies the client certificate and key
                       for mutual TLS (mTLS) authentication
                     properties:
                       certPath:
                         description: |-
-                          CertPath specifies the key name within the secret/configmap or filesystem path
+                          certPath specifies the key name within the secret/configmap or filesystem path
                           (depending on SecretSource.Type) where the certificate is stored
                         minLength: 1
                         type: string
                       name:
                         description: |-
-                          Name is the name of the Kubernetes Secret or ConfigMap resource
+                          name is the name of the Kubernetes Secret or ConfigMap resource
                           Required when Type is "secret" or "configmap", ignored when Type is "file"
                         minLength: 1
                         type: string
                       namespace:
                         description: |-
-                          Namespace is the namespace of the Kubernetes Secret or ConfigMap resource
+                          namespace is the namespace of the Kubernetes Secret or ConfigMap resource
                           Required when Type is "secret" or "configmap", ignored when Type is "file"
                         minLength: 1
                         type: string
                       privateKeyPath:
                         description: |-
-                          PrivateKeyPath specifies the key name within the secret/configmap or filesystem path
+                          privateKeyPath specifies the key name within the secret/configmap or filesystem path
                           (depending on SecretSource.Type) where the private key is stored
                           Required for client certificates (UserCert), optional for CA certificates (CaCert)
                         type: string
                       type:
-                        description: Type specifies the source type for secret data
+                        description: type specifies the source type for secret data
                           (secret, configmap, or file)
                         enum:
                         - secret
@@ -6060,7 +6060,7 @@ spec:
                       rule: self.type != 'secret' && self.type != 'configmap' || has(self.namespace)
                 type: object
               tolerations:
-                description: Tolerations allow pods to schedule onto nodes with matching
+                description: tolerations allow pods to schedule onto nodes with matching
                   taints
                 items:
                   description: |-
@@ -6102,10 +6102,10 @@ spec:
                 type: array
             type: object
           status:
-            description: PersesStatus defines the observed state of Perses
+            description: status is the observed state of the Perses resource
             properties:
               conditions:
-                description: Conditions represent the latest observations of the Perses
+                description: conditions represent the latest observations of the Perses
                   resource state
                 items:
                   description: Condition contains details for one aspect of the current
@@ -6163,16 +6163,16 @@ spec:
                   type: object
                 type: array
               provisioning:
-                description: Provisioning contains the versions of provisioning secrets
+                description: provisioning contains the versions of provisioning secrets
                   currently in use
                 items:
                   description: SecretVersion represents a secret version
                   properties:
                     name:
-                      description: Name is the name of the provisioning secret
+                      description: name is the name of the provisioning secret
                       type: string
                     version:
-                      description: Version is the resource version of the provisioning
+                      description: version is the resource version of the provisioning
                         secret
                       type: string
                   required:
