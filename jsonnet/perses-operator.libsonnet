@@ -207,4 +207,21 @@ function(params) {
       },
     },
   },
+
+  local mixin = (import 'mixin/mixin.libsonnet') {
+    _config+:: {
+      persesOperatorSelector: 'job="%s"' % po.config.name,
+    },
+  },
+
+  prometheusRule: {
+    apiVersion: 'monitoring.coreos.com/v1',
+    kind: 'PrometheusRule',
+    metadata: {
+      name: po.config.name,
+      namespace: po.config.namespace,
+      labels: po.config.commonLabels,
+    },
+    spec: mixin.prometheusAlerts,
+  },
 }
