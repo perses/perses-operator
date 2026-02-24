@@ -253,9 +253,16 @@ lint-jsonnet: $(JSONNETLINT_BINARY)
 	@echo ">>>>> Running linter"
 	echo ${JSONNET_SRC} | $(XARGS) -n 1 -- $(JSONNETLINT_BINARY)
 
+.PHONY: lint-golang
+lint-golang: golangci-lint ## Run Go linting.
+	$(GOLANGCI_LINT) run --timeout 5m
+
 .PHONY: lint
-lint: lint-jsonnet ## Run linting.
-	golangci-lint run
+lint: lint-jsonnet lint-golang ## Run all linters.
+
+.PHONY: lint-api
+lint-api: golangci-lint-kube-api-linter ## Lint API types using kube-api-linter.
+	$(GOLANGCI_LINT_KAL) run -c .golangci-kube-api-linter.yml
 
 ##@ E2E Testing
 

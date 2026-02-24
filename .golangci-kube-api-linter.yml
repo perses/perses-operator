@@ -1,0 +1,35 @@
+# golangci-lint configuration for kube-api-linter (KAL).
+# Used by the custom golangci-lint binary built via .custom-gcl.yml to lint
+# Kubernetes API types against API conventions.
+#
+# The linters documentation is at
+# https://github.com/kubernetes-sigs/kube-api-linter/blob/main/docs/linters.md
+version: "2"
+
+run:
+  go: "1.25"
+  allow-parallel-runners: true
+
+linters:
+  default: none
+  enable:
+    - kubeapilinter
+
+  settings:
+    custom:
+      kubeapilinter:
+        type: module
+        description: KAL is the Kube-API-Linter and lints Kubernetes API types based on API conventions and best practices.
+        settings:
+          linters: {}
+          lintersConfig: {}
+
+  exclusions:
+    generated: strict
+    paths:
+      - _test\.go
+      - zz_generated.*\.go$
+    rules:
+      - linters:
+          - kubeapilinter
+        path-except: api/v1alpha2/
