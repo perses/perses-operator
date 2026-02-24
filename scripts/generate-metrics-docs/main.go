@@ -70,6 +70,12 @@ func parseMetrics() []Metric {
 			Labels: []string{"resource", "state"},
 		},
 		{
+			Name:   "perses_operator_reconcile_operations_total",
+			Type:   "Counter",
+			Help:   "Total number of reconciliation operations by controller",
+			Labels: []string{"controller"},
+		},
+		{
 			Name:   "perses_operator_reconcile_errors_total",
 			Type:   "Counter",
 			Help:   "Total number of reconciliation errors by controller and reason",
@@ -85,7 +91,7 @@ func parseMetrics() []Metric {
 			Name:   "perses_operator_ready",
 			Type:   "Gauge",
 			Help:   "Whether the operator is ready (1=yes, 0=no)",
-			Labels: []string{},
+			Labels: []string{"controller"},
 		},
 	}
 

@@ -205,8 +205,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Mark operator as ready
-	opMetrics.Ready().Set(1)
+	// Mark all controllers as ready
+	opMetrics.Ready("perses").Set(1)
+	opMetrics.Ready("persesdashboard").Set(1)
+	opMetrics.Ready("persesdatasource").Set(1)
+	opMetrics.Ready("persesglobaldatasource").Set(1)
 
 	setupLog.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

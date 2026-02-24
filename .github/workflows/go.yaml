@@ -26,7 +26,7 @@ jobs:
         with:
           enable_go: true
       - name: check format
-        run: make checkformat
+        run: make checkformat || (echo "Please run 'make format' locally and commit the changes." && exit 1)
       - name: verify go modules
         run: make tidy
   test-unit:

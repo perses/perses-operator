@@ -74,6 +74,10 @@ func (r *PersesDatasourceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	start := time.Now()
 	objKey := req.String()
 
+	if r.Metrics != nil {
+		r.Metrics.ReconcileOperations("persesdatasource").Inc()
+	}
+
 	log.Infof("Reconciling PersesDatasource: %s/%s", req.Namespace, req.Name)
 
 	// Find once and store in context for all sub-reconcilers, handle deletion if not found
