@@ -208,9 +208,9 @@ Perses is the Schema for the perses API
 | --- | --- | --- | --- |
 | `apiVersion` _string_ | `perses.dev/v1alpha2` | | |
 | `kind` _string_ | `Perses` | | |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[PersesSpec](#persesspec)_ | spec is the desired state of the Perses resource |  |  |
-| `status` _[PersesStatus](#persesstatus)_ | status is the observed state of the Perses resource |  |  |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  | Optional: \{\} <br /> |
+| `spec` _[PersesSpec](#persesspec)_ | spec is the desired state of the Perses resource |  | Optional: \{\} <br /> |
+| `status` _[PersesStatus](#persesstatus)_ | status is the observed state of the Perses resource |  | Optional: \{\} <br /> |
 
 
 #### PersesConfig
@@ -255,9 +255,9 @@ PersesDashboard is the Schema for the persesdashboards API
 | --- | --- | --- | --- |
 | `apiVersion` _string_ | `perses.dev/v1alpha2` | | |
 | `kind` _string_ | `PersesDashboard` | | |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[PersesDashboardSpec](#persesdashboardspec)_ |  |  |  |
-| `status` _[PersesDashboardStatus](#persesdashboardstatus)_ |  |  |  |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  | Optional: \{\} <br /> |
+| `spec` _[PersesDashboardSpec](#persesdashboardspec)_ | spec is the desired state of the PersesDashboard resource |  | Required: \{\} <br /> |
+| `status` _[PersesDashboardStatus](#persesdashboardstatus)_ | status is the observed state of the PersesDashboard resource |  | Optional: \{\} <br /> |
 
 
 #### PersesDashboardSpec
@@ -307,9 +307,9 @@ PersesDatasource is the Schema for the PersesDatasources API
 | --- | --- | --- | --- |
 | `apiVersion` _string_ | `perses.dev/v1alpha2` | | |
 | `kind` _string_ | `PersesDatasource` | | |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[DatasourceSpec](#datasourcespec)_ |  |  |  |
-| `status` _[PersesDatasourceStatus](#persesdatasourcestatus)_ |  |  |  |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  | Optional: \{\} <br /> |
+| `spec` _[DatasourceSpec](#datasourcespec)_ | spec is the desired state of the PersesDatasource resource |  | Required: \{\} <br /> |
+| `status` _[PersesDatasourceStatus](#persesdatasourcestatus)_ | status is the observed state of the PersesDatasource resource |  | Optional: \{\} <br /> |
 
 
 #### PersesDatasourceStatus
@@ -342,9 +342,9 @@ PersesGlobalDatasource is the Schema for the PersesGlobalDatasources API
 | --- | --- | --- | --- |
 | `apiVersion` _string_ | `perses.dev/v1alpha2` | | |
 | `kind` _string_ | `PersesGlobalDatasource` | | |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  |  |
-| `spec` _[DatasourceSpec](#datasourcespec)_ |  |  |  |
-| `status` _[PersesGlobalDatasourceStatus](#persesglobaldatasourcestatus)_ |  |  |  |
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  | Optional: \{\} <br /> |
+| `spec` _[DatasourceSpec](#datasourcespec)_ | spec is the desired state of the PersesGlobalDatasource resource |  | Required: \{\} <br /> |
+| `status` _[PersesGlobalDatasourceStatus](#persesglobaldatasourcestatus)_ | status is the observed state of the PersesGlobalDatasource resource |  | Optional: \{\} <br /> |
 
 
 #### PersesGlobalDatasourceStatus
@@ -521,8 +521,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `name` _string_ | name is the name of the provisioning secret |  | Required: \{\} <br /> |
-| `version` _string_ | version is the resource version of the provisioning secret |  | Required: \{\} <br /> |
+| `name` _string_ | name is the name of the provisioning secret |  | MinLength: 1 <br />Required: \{\} <br /> |
+| `version` _string_ | version is the resource version of the provisioning secret |  | MinLength: 1 <br />Required: \{\} <br /> |
 
 
 #### StorageConfiguration

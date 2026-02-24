@@ -34,10 +34,12 @@ type PersesSpec struct {
 	// config specifies the Perses server configuration
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
+	//nolint:kubeapilinter // non-pointer struct is intentional; PersesConfig fields are all optional
 	Config PersesConfig `json:"config,omitempty"`
 	// args are extra command-line arguments to pass to the Perses server
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
+	// +listType=atomic
 	Args []string `json:"args,omitempty"`
 	// containerPort is the port on which the Perses server listens for HTTP requests
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
@@ -60,6 +62,7 @@ type PersesSpec struct {
 	// tolerations allow pods to schedule onto nodes with matching taints
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
+	// +listType=atomic
 	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 	// affinity specifies the pod's scheduling constraints
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
@@ -163,12 +166,12 @@ type BasicAuth struct {
 	// username is the username credential for basic authentication
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	Username string `json:"username"`
+	Username string `json:"username,omitempty"`
 	// passwordPath specifies the key name within the secret/configmap or filesystem path
 	// (depending on SecretSource.Type) where the password is stored
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	PasswordPath string `json:"passwordPath"`
+	PasswordPath string `json:"passwordPath,omitempty"`
 }
 
 type OAuth struct {
@@ -185,12 +188,14 @@ type OAuth struct {
 	// This is a constant specific to each OAuth provider
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	TokenURL string `json:"tokenURL"`
+	TokenURL string `json:"tokenURL,omitempty"`
 	// scopes specifies optional requested permissions for the OAuth token
 	// +optional
+	// +listType=atomic
 	Scopes []string `json:"scopes,omitempty"`
 	// endpointParams specifies additional parameters to include in requests to the token endpoint
 	// +optional
+	//nolint:kubeapilinter // map type matches the upstream Go OAuth2 library EndpointParams
 	EndpointParams map[string][]string `json:"endpointParams,omitempty"`
 	// authStyle specifies how the endpoint wants the client ID and client secret sent
 	// The zero value means to auto-detect
@@ -230,7 +235,7 @@ type SecretSource struct {
 	// type specifies the source type for secret data (secret, configmap, or file)
 	// +required
 	// +kubebuilder:validation:Enum=secret;configmap;file
-	Type SecretSourceType `json:"type"`
+	Type SecretSourceType `json:"type,omitempty"`
 	// name is the name of the Kubernetes Secret or ConfigMap resource
 	// Required when Type is "secret" or "configmap", ignored when Type is "file"
 	// +optional
@@ -249,7 +254,7 @@ type Certificate struct {
 	// (depending on SecretSource.Type) where the certificate is stored
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	CertPath string `json:"certPath"`
+	CertPath string `json:"certPath,omitempty"`
 	// privateKeyPath specifies the key name within the secret/configmap or filesystem path
 	// (depending on SecretSource.Type) where the private key is stored
 	// Required for client certificates (UserCert), optional for CA certificates (CaCert)
@@ -277,10 +282,15 @@ type PersesStatus struct {
 	// conditions represent the latest observations of the Perses resource state
 	// +operator-sdk:csv:customresourcedefinitions:type=status
 	// +optional
+	// +listType=map
+	// +listMapKey=type
+	// +patchStrategy=merge
+	// +patchMergeKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 	// provisioning contains the versions of provisioning secrets currently in use
 	// +operator-sdk:csv:customresourcedefinitions:type=status
 	// +optional
+	// +listType=atomic
 	Provisioning []SecretVersion `json:"provisioning,omitempty"`
 }
 
@@ -295,11 +305,16 @@ type PersesStatus struct {
 type Perses struct {
 	metav1.TypeMeta `json:",inline"`
 	// metadata is the standard Kubernetes ObjectMeta
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// spec is the desired state of the Perses resource
+	// +optional
+	//nolint:kubeapilinter // non-pointer Spec avoids nil checks across the codebase
 	Spec PersesSpec `json:"spec,omitempty"`
 	// status is the observed state of the Perses resource
+	// +optional
+	//nolint:kubeapilinter // non-pointer Status is the standard pattern for Kubernetes controllers
 	Status PersesStatus `json:"status,omitempty"`
 }
 

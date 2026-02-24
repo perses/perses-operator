@@ -61,8 +61,10 @@ func (p *ProvisioningSecret) GetSecretVolumeName() string {
 type SecretVersion struct {
 	// name is the name of the provisioning secret
 	// +required
-	Name string `json:"name"`
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name,omitempty"`
 	// version is the resource version of the provisioning secret
 	// +required
-	Version string `json:"version"`
+	// +kubebuilder:validation:MinLength=1
+	Version string `json:"version,omitempty"`
 }

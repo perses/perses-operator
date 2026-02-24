@@ -224,8 +224,7 @@ build-tools: $(KUSTOMIZE) \
 		$(GINKGO) \
 		$(OPERATOR_SDK) \
 		$(OPM) \
-		$(KUTTL) \
-		$(GOLANGCI_LINT_KAL)
+		$(KUTTL)
 
 
 .PHONY: clean-tools
@@ -249,6 +248,4 @@ validate-tools: build-tools ## Validate that all tools are installed and working
 	@echo -n "  operator-sdk: " && $(OPERATOR_SDK) version 2>&1 | head -n 1
 	@echo -n "  opm: " && $(OPM) version 2>&1 | head -n 1
 	@echo -n "  kuttl: " && $(KUTTL) version 2>&1 | head -n 1
-	@echo -n "  golangci-lint: " && $(GOLANGCI_LINT) version 2>&1 | head -n 1
-	@echo -n "  golangci-lint-kube-api-linter: " && [ -x $(GOLANGCI_LINT_KAL) ] && echo "installed" || echo "missing"
 	@echo "✅ All tools validated successfully!"

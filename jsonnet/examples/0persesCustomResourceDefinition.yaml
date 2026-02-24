@@ -3506,6 +3506,7 @@ spec:
                 items:
                   type: string
                 type: array
+                x-kubernetes-list-type: atomic
               client:
                 description: client specifies the Perses client configuration
                 properties:
@@ -3601,6 +3602,7 @@ spec:
                         items:
                           type: string
                         type: array
+                        x-kubernetes-list-type: atomic
                       tokenURL:
                         description: |-
                           tokenURL is the OAuth 2.0 provider's token endpoint URL
@@ -5759,6 +5761,7 @@ spec:
                       type: string
                   type: object
                 type: array
+                x-kubernetes-list-type: atomic
             type: object
           status:
             description: status is the observed state of the Perses resource
@@ -5819,6 +5822,9 @@ spec:
                   - type
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
               provisioning:
                 description: provisioning contains the versions of provisioning secrets currently in use
                 items:
@@ -5826,15 +5832,18 @@ spec:
                   properties:
                     name:
                       description: name is the name of the provisioning secret
+                      minLength: 1
                       type: string
                     version:
                       description: version is the resource version of the provisioning secret
+                      minLength: 1
                       type: string
                   required:
                   - name
                   - version
                   type: object
                 type: array
+                x-kubernetes-list-type: atomic
             type: object
         type: object
     served: true
