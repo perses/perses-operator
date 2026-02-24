@@ -1,0 +1,11 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+delete:
+  - apiVersion: perses.dev/v1alpha2
+    kind: PersesGlobalDatasource
+    metadata:
+      name: e2e-global-datasource
+  - apiVersion: perses.dev/v1alpha2
+    kind: Perses
+    metadata:
+      name: perses-gds-test

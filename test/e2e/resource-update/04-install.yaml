@@ -1,0 +1,59 @@
+apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  name: update-test-dashboard
+spec:
+  instanceSelector:
+    matchLabels:
+      app.kubernetes.io/instance: perses-update-test
+  config:
+    display:
+      name: Updated Dashboard Name
+    duration: 10m
+    panels:
+      testPanel:
+        kind: Panel
+        spec:
+          display:
+            name: Updated Panel
+          plugin:
+            kind: TimeSeriesChart
+            spec: {}
+          queries:
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: up{job="prometheus"}
+    layouts:
+      - kind: Grid
+        spec:
+          display:
+            title: Row 1
+            collapse:
+              open: true
+          items:
+            - x: 0
+              "y": 0
+              width: 24
+              height: 6
+              content:
+                "$ref": "#/spec/panels/testPanel"
+---
+apiVersion: perses.dev/v1alpha2
+kind: PersesDatasource
+metadata:
+  name: update-test-datasource
+spec:
+  instanceSelector:
+    matchLabels:
+      app.kubernetes.io/instance: perses-update-test
+  config:
+    display:
+      name: "Updated Datasource Name"
+    default: false
+    plugin:
+      kind: "PrometheusDatasource"
+      spec:
+        directUrl: "https://prometheus.updated.example.com"

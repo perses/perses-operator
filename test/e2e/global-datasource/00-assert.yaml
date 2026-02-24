@@ -1,0 +1,27 @@
+apiVersion: perses.dev/v1alpha2
+kind: Perses
+metadata:
+  name: perses-gds-test
+status:
+  conditions:
+    - type: Available
+      status: "True"
+      reason: Reconciled
+    - type: Degraded
+      status: "False"
+      reason: Reconciled
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: perses-gds-test-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: perses-gds-test
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: perses-gds-test
