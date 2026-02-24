@@ -286,7 +286,7 @@ spec:
             description: PersesDashboardSpec defines the desired state of PersesDashboard
             properties:
               config:
-                description: Config specifies the Perses dashboard configuration
+                description: config specifies the Perses dashboard configuration
                 properties:
                   datasources:
                     additionalProperties:
@@ -444,7 +444,7 @@ spec:
                 - panels
                 type: object
               instanceSelector:
-                description: InstanceSelector selects Perses instances where this dashboard will be created
+                description: instanceSelector selects Perses instances where this dashboard will be created
                 properties:
                   matchExpressions:
                     description: matchExpressions is a list of label selector requirements. The requirements are ANDed.
@@ -494,7 +494,7 @@ spec:
             description: PersesDashboardStatus defines the observed state of PersesDashboard
             properties:
               conditions:
-                description: Conditions represent the latest observations of the PersesDashboard resource state
+                description: conditions represent the latest observations of the PersesDashboard resource state
                 items:
                   description: Condition contains details for one aspect of the current state of this API Resource.
                   properties:

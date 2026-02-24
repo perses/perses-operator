@@ -22,7 +22,7 @@ import (
 
 // PersesDashboardStatus defines the observed state of PersesDashboard
 type PersesDashboardStatus struct {
-	// Conditions represent the latest observations of the PersesDashboard resource state
+	// conditions represent the latest observations of the PersesDashboard resource state
 	// +operator-sdk:csv:customresourcedefinitions:type=status
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
@@ -30,11 +30,11 @@ type PersesDashboardStatus struct {
 
 // PersesDashboardSpec defines the desired state of PersesDashboard
 type PersesDashboardSpec struct {
-	// Config specifies the Perses dashboard configuration
+	// config specifies the Perses dashboard configuration
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +required
 	Config Dashboard `json:"config"`
-	// InstanceSelector selects Perses instances where this dashboard will be created
+	// instanceSelector selects Perses instances where this dashboard will be created
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	InstanceSelector *metav1.LabelSelector `json:"instanceSelector,omitempty"`

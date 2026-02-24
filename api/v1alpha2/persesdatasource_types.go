@@ -22,7 +22,7 @@ import (
 
 // PersesDatasourceStatus defines the observed state of PersesDatasource
 type PersesDatasourceStatus struct {
-	// Conditions represent the latest observations of the PersesDatasource resource state
+	// conditions represent the latest observations of the PersesDatasource resource state
 	// +operator-sdk:csv:customresourcedefinitions:type=status
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
@@ -30,15 +30,15 @@ type PersesDatasourceStatus struct {
 
 // DatasourceSpec defines the desired state of a Perses datasource
 type DatasourceSpec struct {
-	// Config specifies the Perses datasource configuration
+	// config specifies the Perses datasource configuration
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +required
 	Config Datasource `json:"config"`
-	// Client specifies authentication and TLS configuration for the datasource
+	// client specifies authentication and TLS configuration for the datasource
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Client *Client `json:"client,omitempty"`
-	// InstanceSelector selects Perses instances where this datasource will be created
+	// instanceSelector selects Perses instances where this datasource will be created
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	InstanceSelector *metav1.LabelSelector `json:"instanceSelector,omitempty"`
