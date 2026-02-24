@@ -327,7 +327,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: DatasourceSpec defines the desired state of a Perses datasource
+            description: spec is the desired state of the PersesDatasource resource
             properties:
               client:
                 description: client specifies authentication and TLS configuration
@@ -433,6 +433,7 @@ spec:
                         items:
                           type: string
                         type: array
+                        x-kubernetes-list-type: atomic
                       tokenURL:
                         description: |-
                           tokenURL is the OAuth 2.0 provider's token endpoint URL
@@ -645,7 +646,7 @@ spec:
             - config
             type: object
           status:
-            description: PersesDatasourceStatus defines the observed state of PersesDatasource
+            description: status is the observed state of the PersesDatasource resource
             properties:
               conditions:
                 description: conditions represent the latest observations of the PersesDatasource
@@ -705,7 +706,12 @@ spec:
                   - type
                   type: object
                 type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
             type: object
+        required:
+        - spec
         type: object
     served: true
     storage: true

@@ -25,6 +25,10 @@ type PersesDatasourceStatus struct {
 	// conditions represent the latest observations of the PersesDatasource resource state
 	// +operator-sdk:csv:customresourcedefinitions:type=status
 	// +optional
+	// +listType=map
+	// +listMapKey=type
+	// +patchStrategy=merge
+	// +patchMergeKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 
@@ -33,6 +37,7 @@ type DatasourceSpec struct {
 	// config specifies the Perses datasource configuration
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +required
+	//nolint:kubeapilinter // Datasource uses flexible JSON schema; struct-level required fields are not applicable
 	Config Datasource `json:"config"`
 	// client specifies authentication and TLS configuration for the datasource
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
@@ -53,10 +58,17 @@ type DatasourceSpec struct {
 
 // PersesDatasource is the Schema for the PersesDatasources API
 type PersesDatasource struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// metadata is the standard Kubernetes ObjectMeta
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   DatasourceSpec         `json:"spec,omitempty"`
+	// spec is the desired state of the PersesDatasource resource
+	// +required
+	Spec DatasourceSpec `json:"spec,omitzero"`
+	// status is the observed state of the PersesDatasource resource
+	// +optional
+	//nolint:kubeapilinter // non-pointer Status is the standard pattern for Kubernetes controllers
 	Status PersesDatasourceStatus `json:"status,omitempty"`
 }
 
