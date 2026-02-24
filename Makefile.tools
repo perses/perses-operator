@@ -62,6 +62,11 @@ GINKGO_VERSION = $(shell grep 'github.com/onsi/ginkgo/v2' go.mod | awk '{print $
 KUTTL = $(LOCALBIN)/kubectl-kuttl
 KUTTL_VERSION = 0.24.0
 
+GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
+GOLANGCI_LINT_VERSION = v2.10.1
+
+GOLANGCI_LINT_KAL = $(LOCALBIN)/golangci-lint-kube-api-linter
+
 ## Kustomize - uses custom install script
 KUSTOMIZE_INSTALL_SCRIPT = https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh
 .PHONY: kustomize
@@ -188,6 +193,22 @@ $(KUTTL) kuttl: $(LOCALBIN) ## Install kubectl-kuttl locally if necessary.
 		chmod +x $(KUTTL) ;\
 	}
 
+.PHONY: golangci-lint
+$(GOLANGCI_LINT) golangci-lint: $(LOCALBIN) ## Install golangci-lint locally if necessary.
+	@{ \
+		set -ex ;\
+		[[ -f $(GOLANGCI_LINT) ]] && exit 0 ;\
+		GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) ;\
+	}
+
+.PHONY: golangci-lint-kube-api-linter
+$(GOLANGCI_LINT_KAL) golangci-lint-kube-api-linter: $(GOLANGCI_LINT) $(LOCALBIN) ## Build custom golangci-lint with kube-api-linter plugin.
+	@{ \
+		set -ex ;\
+		[[ -f $(GOLANGCI_LINT_KAL) ]] && exit 0 ;\
+		$(GOLANGCI_LINT) custom ;\
+	}
+
 .PHONY: build-tools
 build-tools: ## Install all tools.
 build-tools: $(KUSTOMIZE) \
@@ -203,7 +224,8 @@ build-tools: $(KUSTOMIZE) \
 		$(GINKGO) \
 		$(OPERATOR_SDK) \
 		$(OPM) \
-		$(KUTTL)
+		$(KUTTL) \
+		$(GOLANGCI_LINT_KAL)
 
 
 .PHONY: clean-tools
@@ -227,4 +249,6 @@ validate-tools: build-tools ## Validate that all tools are installed and working
 	@echo -n "  operator-sdk: " && $(OPERATOR_SDK) version 2>&1 | head -n 1
 	@echo -n "  opm: " && $(OPM) version 2>&1 | head -n 1
 	@echo -n "  kuttl: " && $(KUTTL) version 2>&1 | head -n 1
+	@echo -n "  golangci-lint: " && $(GOLANGCI_LINT) version 2>&1 | head -n 1
+	@echo -n "  golangci-lint-kube-api-linter: " && [ -x $(GOLANGCI_LINT_KAL) ] && echo "installed" || echo "missing"
 	@echo "✅ All tools validated successfully!"
