@@ -29,20 +29,14 @@ import (
 var _ = Describe("Dashboard controller", Ordered, func() {
 	Context("Dashboard controller test", func() {
 		const PersesName = "perses-for-dashboard"
-		const PersesNamespace = "perses-dashboard-test"
 		const DashboardName = "my-custom-dashboard"
 
 		ctx := context.Background()
 
-		namespace := &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      PersesNamespace,
-				Namespace: PersesNamespace,
-			},
-		}
-
-		persesNamespaceName := types.NamespacedName{Name: PersesName, Namespace: PersesNamespace}
-		dashboardNamespaceName := types.NamespacedName{Name: DashboardName, Namespace: PersesNamespace}
+		var namespace *corev1.Namespace
+		var persesNamespaceName types.NamespacedName
+		var dashboardNamespaceName types.NamespacedName
+		var PersesNamespace string
 
 		persesImage := "perses-dev.io/perses:test"
 
@@ -50,8 +44,16 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 
 		BeforeAll(func() {
 			By("Creating the Namespace to perform the tests")
+			namespace = &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "perses-dashboard-test-",
+				},
+			}
 			err := k8sClient.Create(ctx, namespace)
 			Expect(err).To(Not(HaveOccurred()))
+			PersesNamespace = namespace.Name
+			persesNamespaceName = types.NamespacedName{Name: PersesName, Namespace: PersesNamespace}
+			dashboardNamespaceName = types.NamespacedName{Name: DashboardName, Namespace: PersesNamespace}
 
 			By("Setting the Image ENV VAR which stores the Operand image")
 			err = os.Setenv("PERSES_IMAGE", persesImage)
@@ -367,21 +369,15 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 	})
 
 	Context("Dashboard controller instance selector test", func() {
-		const SelectorNamespace = "perses-dashboard-selector-test"
 		const MatchingPersesName = "perses-matching"
 		const NonMatchingPersesName = "perses-non-matching"
 		const SelectorDashboardName = "selector-dashboard"
 
 		ctx := context.Background()
 
-		namespace := &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      SelectorNamespace,
-				Namespace: SelectorNamespace,
-			},
-		}
-
-		selectorDashboardNamespaceName := types.NamespacedName{Name: SelectorDashboardName, Namespace: SelectorNamespace}
+		var namespace *corev1.Namespace
+		var SelectorNamespace string
+		var selectorDashboardNamespaceName types.NamespacedName
 
 		persesImage := "perses-dev.io/perses:test"
 
@@ -389,8 +385,15 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 
 		BeforeAll(func() {
 			By("Creating the Namespace to perform the tests")
+			namespace = &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "perses-selector-test-",
+				},
+			}
 			err := k8sClient.Create(ctx, namespace)
 			Expect(err).To(Not(HaveOccurred()))
+			SelectorNamespace = namespace.Name
+			selectorDashboardNamespaceName = types.NamespacedName{Name: SelectorDashboardName, Namespace: SelectorNamespace}
 
 			By("Setting the Image ENV VAR which stores the Operand image")
 			err = os.Setenv("PERSES_IMAGE", persesImage)

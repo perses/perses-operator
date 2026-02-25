@@ -22,9 +22,13 @@ import (
 
 // PersesGlobalDatasourceStatus defines the observed state of PersesGlobalDatasource
 type PersesGlobalDatasourceStatus struct {
-	// Conditions represent the latest observations of the PersesGlobalDatasource resource state
+	// conditions represent the latest observations of the PersesGlobalDatasource resource state
 	// +operator-sdk:csv:customresourcedefinitions:type=status
 	// +optional
+	// +listType=map
+	// +listMapKey=type
+	// +patchStrategy=merge
+	// +patchMergeKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 
@@ -37,10 +41,17 @@ type PersesGlobalDatasourceStatus struct {
 
 // PersesGlobalDatasource is the Schema for the PersesGlobalDatasources API
 type PersesGlobalDatasource struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// metadata is the standard Kubernetes ObjectMeta
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   DatasourceSpec               `json:"spec,omitempty"`
+	// spec is the desired state of the PersesGlobalDatasource resource
+	// +required
+	Spec DatasourceSpec `json:"spec,omitzero"`
+	// status is the observed state of the PersesGlobalDatasource resource
+	// +optional
+	//nolint:kubeapilinter // non-pointer Status is the standard pattern for Kubernetes controllers
 	Status PersesGlobalDatasourceStatus `json:"status,omitempty"`
 }
 

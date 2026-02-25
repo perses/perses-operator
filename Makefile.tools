@@ -56,8 +56,16 @@ OPERATOR_SDK_VERSION = v1.42.0
 OPM = $(LOCALBIN)/opm
 OPM_VERSION = v1.61.0
 
+GINKGO = $(LOCALBIN)/ginkgo
+GINKGO_VERSION = $(shell grep 'github.com/onsi/ginkgo/v2' go.mod | awk '{print $$2}')
+
 KUTTL = $(LOCALBIN)/kubectl-kuttl
 KUTTL_VERSION = 0.24.0
+
+GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
+GOLANGCI_LINT_VERSION = v2.10.1
+
+GOLANGCI_LINT_KAL = $(LOCALBIN)/golangci-lint-kube-api-linter
 
 ## Kustomize - uses custom install script
 KUSTOMIZE_INSTALL_SCRIPT = https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh
@@ -166,6 +174,14 @@ $(OPM) opm: $(LOCALBIN) ## Install opm locally if necessary.
 		chmod +x $(OPM) ;\
 	}
 
+.PHONY: ginkgo
+$(GINKGO) ginkgo: $(LOCALBIN) ## Install ginkgo CLI locally if necessary.
+	@{ \
+		set -ex ;\
+		[[ -f $(GINKGO) ]] && exit 0 ;\
+		GOBIN=$(LOCALBIN) go install github.com/onsi/ginkgo/v2/ginkgo@$(GINKGO_VERSION) ;\
+	}
+
 .PHONY: kuttl
 $(KUTTL) kuttl: $(LOCALBIN) ## Install kubectl-kuttl locally if necessary.
 	@{ \
@@ -175,6 +191,22 @@ $(KUTTL) kuttl: $(LOCALBIN) ## Install kubectl-kuttl locally if necessary.
 		[ "$${ARCH}" = "amd64" ] && ARCH="x86_64" ;\
 		curl -sSLo $(KUTTL) https://github.com/kudobuilder/kuttl/releases/download/v$(KUTTL_VERSION)/kubectl-kuttl_$(KUTTL_VERSION)_$${OS}_$${ARCH} ;\
 		chmod +x $(KUTTL) ;\
+	}
+
+.PHONY: golangci-lint
+$(GOLANGCI_LINT) golangci-lint: $(LOCALBIN) ## Install golangci-lint locally if necessary.
+	@{ \
+		set -ex ;\
+		[[ -f $(GOLANGCI_LINT) ]] && exit 0 ;\
+		GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) ;\
+	}
+
+.PHONY: golangci-lint-kube-api-linter
+$(GOLANGCI_LINT_KAL) golangci-lint-kube-api-linter: $(GOLANGCI_LINT) $(LOCALBIN) ## Build custom golangci-lint with kube-api-linter plugin.
+	@{ \
+		set -ex ;\
+		[[ -f $(GOLANGCI_LINT_KAL) ]] && exit 0 ;\
+		$(GOLANGCI_LINT) custom ;\
 	}
 
 .PHONY: build-tools
@@ -189,6 +221,7 @@ build-tools: $(KUSTOMIZE) \
 		$(YQ) \
 		$(CRD_REF_DOCS) \
 		$(ENVTEST) \
+		$(GINKGO) \
 		$(OPERATOR_SDK) \
 		$(OPM) \
 		$(KUTTL)
@@ -211,6 +244,7 @@ validate-tools: build-tools ## Validate that all tools are installed and working
 	@echo -n "  yq: " && $(YQ) --version 2>&1 | head -n 1
 	@echo -n "  crd-ref-docs: " && $(CRD_REF_DOCS) --version 2>&1 | head -n 1
 	@echo -n "  setup-envtest: " && [ -x $(ENVTEST) ] && echo "installed" || echo "missing"
+	@echo -n "  ginkgo: " && $(GINKGO) version 2>&1 | head -n 1
 	@echo -n "  operator-sdk: " && $(OPERATOR_SDK) version 2>&1 | head -n 1
 	@echo -n "  opm: " && $(OPM) version 2>&1 | head -n 1
 	@echo -n "  kuttl: " && $(KUTTL) version 2>&1 | head -n 1

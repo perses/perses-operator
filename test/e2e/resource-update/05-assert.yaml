@@ -1,0 +1,34 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 90
+commands:
+  # Verify updated dashboard in Perses
+  - script: |
+      kubectl port-forward -n $NAMESPACE svc/perses-update-test 18086:8080 &
+      PF_PID=$!
+      trap "kill $PF_PID 2>/dev/null" EXIT
+      sleep 3
+      RESULT=$(curl -sf http://localhost:18086/api/v1/projects/$NAMESPACE/dashboards/update-test-dashboard) || {
+        echo "FAIL: Dashboard not found in Perses after update"
+        exit 1
+      }
+      echo "$RESULT" | grep -q "Updated Dashboard Name" || {
+        echo "FAIL: Dashboard was not updated. Response: $RESULT"
+        exit 1
+      }
+      echo "Dashboard successfully updated in Perses"
+  # Verify updated datasource in Perses
+  - script: |
+      kubectl port-forward -n $NAMESPACE svc/perses-update-test 18087:8080 &
+      PF_PID=$!
+      trap "kill $PF_PID 2>/dev/null" EXIT
+      sleep 3
+      RESULT=$(curl -sf http://localhost:18087/api/v1/projects/$NAMESPACE/datasources/update-test-datasource) || {
+        echo "FAIL: Datasource not found in Perses after update"
+        exit 1
+      }
+      echo "$RESULT" | grep -q "Updated Datasource Name" || {
+        echo "FAIL: Datasource was not updated. Response: $RESULT"
+        exit 1
+      }
+      echo "Datasource successfully updated in Perses"

@@ -1,0 +1,21 @@
+apiVersion: perses.dev/v1alpha2
+kind: Perses
+metadata:
+  name: perses-emptydir-test
+  labels:
+    app.kubernetes.io/instance: perses-emptydir-test
+spec:
+  metadata:
+    labels:
+      instance: perses-emptydir-test
+  config:
+    database:
+      file:
+        folder: "/perses"
+        extension: "yaml"
+  storage:
+    emptyDir: {}
+  containerPort: 8080
+  resources:
+    requests:
+      memory: 128Mi

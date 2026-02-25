@@ -1,0 +1,26 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+commands:
+  # Verify it created a Deployment (not StatefulSet) for file DB + emptyDir
+  - script: |
+      if kubectl get statefulset perses-emptydir-test -n $NAMESPACE 2>/dev/null; then
+        echo "FAIL: StatefulSet should not exist for emptyDir storage"
+        exit 1
+      fi
+      echo "Verified: No StatefulSet created for emptyDir storage"
+  - script: |
+      READY=$(kubectl get deployment perses-emptydir-test -n $NAMESPACE -o jsonpath='{.status.readyReplicas}')
+      if [ "$READY" != "1" ]; then
+        echo "FAIL: Deployment not ready, readyReplicas=$READY"
+        exit 1
+      fi
+      echo "Deployment is ready with 1 replica"
+  # Verify the emptyDir volume is mounted
+  - script: |
+      VOLUMES=$(kubectl get deployment perses-emptydir-test -n $NAMESPACE -o jsonpath='{.spec.template.spec.volumes[*].name}')
+      echo "$VOLUMES" | grep -q "storage" || {
+        echo "FAIL: emptyDir volume 'storage' not found in deployment volumes: $VOLUMES"
+        exit 1
+      }
+      echo "Verified: emptyDir volume is present in deployment"
