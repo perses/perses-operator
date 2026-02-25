@@ -253,6 +253,13 @@ test-unit: fmt vet ## Run unit tests.
 test-integration: manifests generate fmt vet envtest ginkgo ## Run integration tests in parallel using envtest.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) --procs=4 -v --coverprofile=cover-integration.out --output-dir=. ./controllers/...
 
+.PHONY: test-alerts
+test-alerts: jsonnet-resources yq ## Run promtool unit tests for alerting rules (requires promtool).
+	@command -v promtool >/dev/null 2>&1 || { echo "promtool is required but not installed."; exit 1; }
+	@echo ">>>>> Testing alerting rules"
+	$(YQ) '.spec' jsonnet/examples/prometheusRule.yaml > test/promtool/rules.yaml
+	promtool test rules test/promtool/alerts_test.yaml; ret=$$?; rm -f test/promtool/rules.yaml; exit $$ret
+
 .PHONY: lint-jsonnet
 lint-jsonnet: $(JSONNETLINT_BINARY)
 	@echo ">>>>> Running linter"

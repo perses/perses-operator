@@ -36,7 +36,10 @@ spec:
         description: '{{ $value | humanizePercentage }} of reconciling operations failed for {{ $labels.controller }} controller in {{ $labels.namespace }} namespace.'
         summary: Errors while reconciling objects.
       expr: |
-        (sum by (controller,namespace) (rate(perses_operator_reconcile_errors_total{job="perses-operator"}[5m]))) / (sum by (controller,namespace) (rate(perses_operator_reconcile_operations_total{job="perses-operator"}[5m]))) > 0.1
+        sum by (controller,namespace) (rate(perses_operator_reconcile_errors_total{job="perses-operator"}[5m]))
+        /
+        (sum by (controller,namespace) (rate(perses_operator_reconcile_operations_total{job="perses-operator"}[5m])) > 0)
+        > 0.1
       for: 10m
       labels:
         severity: warning

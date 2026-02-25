@@ -35,7 +35,10 @@
           {
             alert: 'PersesOperatorReconcileErrors',
             expr: |||
-              (sum by (%(groupLabels)s) (rate(perses_operator_reconcile_errors_total{%(persesOperatorSelector)s}[5m]))) / (sum by (%(groupLabels)s) (rate(perses_operator_reconcile_operations_total{%(persesOperatorSelector)s}[5m]))) > 0.1
+              sum by (%(groupLabels)s) (rate(perses_operator_reconcile_errors_total{%(persesOperatorSelector)s}[5m]))
+              /
+              (sum by (%(groupLabels)s) (rate(perses_operator_reconcile_operations_total{%(persesOperatorSelector)s}[5m])) > 0)
+              > 0.1
             ||| % $._config,
             'for': '10m',
             labels: {
