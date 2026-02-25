@@ -1,0 +1,19 @@
+apiVersion: perses.dev/v1alpha2
+kind: Perses
+metadata:
+  name: perses-gds-test
+  labels:
+    app.kubernetes.io/instance: perses-gds-test
+spec:
+  metadata:
+    labels:
+      instance: perses-gds-test
+  config:
+    database:
+      file:
+        folder: "/perses"
+        extension: "yaml"
+  containerPort: 8080
+  resources:
+    requests:
+      memory: 128Mi

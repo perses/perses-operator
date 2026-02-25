@@ -1,0 +1,18 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 90
+commands:
+  - script: |
+      kubectl port-forward -n $NAMESPACE svc/perses-gds-test 18090:8080 &
+      PF_PID=$!
+      trap "kill $PF_PID 2>/dev/null" EXIT
+      sleep 3
+      RESULT=$(curl -sf http://localhost:18090/api/v1/globaldatasources/e2e-global-datasource) || {
+        echo "FAIL: Global datasource e2e-global-datasource not found in Perses instance"
+        exit 1
+      }
+      echo "$RESULT" | grep -q "E2E Global Datasource" || {
+        echo "FAIL: Global datasource display name mismatch"
+        exit 1
+      }
+      echo "Global datasource e2e-global-datasource found in Perses instance"

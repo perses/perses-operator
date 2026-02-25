@@ -1,0 +1,19 @@
+apiVersion: perses.dev/v1alpha2
+kind: Perses
+metadata:
+  name: perses-update-test
+  labels:
+    app.kubernetes.io/instance: perses-update-test
+spec:
+  metadata:
+    labels:
+      instance: perses-update-test
+  config:
+    database:
+      file:
+        folder: "/perses"
+        extension: "yaml"
+  containerPort: 8080
+  resources:
+    requests:
+      memory: 128Mi

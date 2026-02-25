@@ -1,0 +1,10 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: perses-gds-test
+status:
+  readyReplicas: 1
