@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/perses/perses/scripts/changelog"
+	"github.com/perses/perses/scripts/pkg/changelog"
 	"github.com/stretchr/testify/assert"
 )
 

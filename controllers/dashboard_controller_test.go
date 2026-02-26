@@ -106,12 +106,13 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 					Display: &persescommon.Display{
 						Name: DashboardName,
 					},
-					Layouts: []persesdashboard.Layout{},
+					Duration: "5m",
+					Layouts:  []persesdashboard.Layout{},
 					Panels: map[string]*persesv1.Panel{
 						"panel1": {
 							Kind: "Panel",
 							Spec: persesv1.PanelSpec{
-								Display: persesv1.PanelDisplay{
+								Display: &persesv1.PanelDisplay{
 									Name: "test-panel",
 								},
 								Plugin: persescommon.Plugin{
@@ -474,12 +475,13 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 					Display: &persescommon.Display{
 						Name: SelectorDashboardName,
 					},
-					Layouts: []persesdashboard.Layout{},
+					Duration: "5m",
+					Layouts:  []persesdashboard.Layout{},
 					Panels: map[string]*persesv1.Panel{
 						"panel1": {
 							Kind: "Panel",
 							Spec: persesv1.PanelSpec{
-								Display: persesv1.PanelDisplay{
+								Display: &persesv1.PanelDisplay{
 									Name: "test-panel",
 								},
 								Plugin: persescommon.Plugin{
