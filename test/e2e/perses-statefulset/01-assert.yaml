@@ -1,6 +1,23 @@
 apiVersion: kuttl.dev/v1beta1
 kind: TestAssert
 timeout: 120
+commands:
+  # Verify the plugins emptyDir volume is present
+  - script: |
+      VOLUMES=$(kubectl get statefulset perses-e2e-test -n $NAMESPACE -o jsonpath='{.spec.template.spec.volumes[*].name}')
+      echo "$VOLUMES" | grep -q "plugins" || {
+        echo "FAIL: emptyDir volume 'plugins' not found in statefulset volumes: $VOLUMES"
+        exit 1
+      }
+      echo "Verified: emptyDir plugins volume is present in statefulset"
+  # Verify the plugins volume is mounted at /etc/perses/plugins
+  - script: |
+      MOUNTS=$(kubectl get statefulset perses-e2e-test -n $NAMESPACE -o jsonpath='{.spec.template.spec.containers[0].volumeMounts[*].mountPath}')
+      echo "$MOUNTS" | grep -q "/etc/perses/plugins" || {
+        echo "FAIL: plugins volume mount '/etc/perses/plugins' not found in container mounts: $MOUNTS"
+        exit 1
+      }
+      echo "Verified: plugins volume is mounted at /etc/perses/plugins"
 ---
 apiVersion: apps/v1
 kind: StatefulSet

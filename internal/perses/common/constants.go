@@ -37,6 +37,7 @@ const (
 	// Volume names
 	configVolumeName  = "config"
 	StorageVolumeName = "storage"
+	pluginsVolumeName = "plugins"
 
 	// TLS volume names
 	caVolumeName     = "ca"
@@ -48,6 +49,7 @@ const (
 	storageMountPath  = "/perses"
 	secretsMountPath  = "/etc/perses/provisioning/secrets"
 	configMountPath   = "/etc/perses/config"
+	pluginsMountPath  = "/etc/perses/plugins"
 	defaultConfigPath = configMountPath + "/config.yaml"
 
 	defaultFileMode = 420
