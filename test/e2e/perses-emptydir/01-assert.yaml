@@ -16,11 +16,27 @@ commands:
         exit 1
       fi
       echo "Deployment is ready with 1 replica"
-  # Verify the emptyDir volume is mounted
+  # Verify the storage emptyDir volume is present
   - script: |
       VOLUMES=$(kubectl get deployment perses-emptydir-test -n $NAMESPACE -o jsonpath='{.spec.template.spec.volumes[*].name}')
       echo "$VOLUMES" | grep -q "storage" || {
         echo "FAIL: emptyDir volume 'storage' not found in deployment volumes: $VOLUMES"
         exit 1
       }
-      echo "Verified: emptyDir volume is present in deployment"
+      echo "Verified: emptyDir storage volume is present in deployment"
+  # Verify the plugins emptyDir volume is present
+  - script: |
+      VOLUMES=$(kubectl get deployment perses-emptydir-test -n $NAMESPACE -o jsonpath='{.spec.template.spec.volumes[*].name}')
+      echo "$VOLUMES" | grep -q "plugins" || {
+        echo "FAIL: emptyDir volume 'plugins' not found in deployment volumes: $VOLUMES"
+        exit 1
+      }
+      echo "Verified: emptyDir plugins volume is present in deployment"
+  # Verify the plugins volume is mounted at /etc/perses/plugins
+  - script: |
+      MOUNTS=$(kubectl get deployment perses-emptydir-test -n $NAMESPACE -o jsonpath='{.spec.template.spec.containers[0].volumeMounts[*].mountPath}')
+      echo "$MOUNTS" | grep -q "/etc/perses/plugins" || {
+        echo "FAIL: plugins volume mount '/etc/perses/plugins' not found in container mounts: $MOUNTS"
+        exit 1
+      }
+      echo "Verified: plugins volume is mounted at /etc/perses/plugins"

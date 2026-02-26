@@ -30,6 +30,12 @@ func GetVolumes(perses *v1alpha2.Perses) []corev1.Volume {
 				},
 			},
 		},
+		{
+			Name: pluginsVolumeName,
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
+			},
+		},
 	}
 
 	// Add storage volume only for file-based database
@@ -136,6 +142,11 @@ func GetVolumeMounts(perses *v1alpha2.Perses) []corev1.VolumeMount {
 			Name:      configVolumeName,
 			ReadOnly:  true,
 			MountPath: configMountPath,
+		},
+		{
+			Name:      pluginsVolumeName,
+			ReadOnly:  false,
+			MountPath: pluginsMountPath,
 		},
 	}
 
