@@ -1,6 +1,12 @@
 # Perses Operator
 
-An operator to install [Perses](https://github.com/perses/perses) in a k8s cluster.
+[![ci](https://github.com/perses/perses-operator/actions/workflows/ci.yaml/badge.svg)](https://github.com/perses/perses-operator/actions/workflows/ci.yaml)
+[![go](https://github.com/perses/perses-operator/actions/workflows/go.yaml/badge.svg)](https://github.com/perses/perses-operator/actions/workflows/go.yaml)
+[![e2e](https://github.com/perses/perses-operator/actions/workflows/e2e.yaml/badge.svg)](https://github.com/perses/perses-operator/actions/workflows/e2e.yaml)
+[![docs](https://github.com/perses/perses-operator/actions/workflows/docs.yaml/badge.svg)](https://github.com/perses/perses-operator/actions/workflows/docs.yaml)
+[![join slack](https://img.shields.io/badge/join%20slack-%23perses--dev-brightgreen.svg)](https://cloud-native.slack.com/messages/C07KQR95WBE)
+
+An operator to install [Perses](https://github.com/perses/perses) on a Kubernetes cluster.
 
 ## Getting Started
 
