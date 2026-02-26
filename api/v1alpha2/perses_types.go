@@ -115,6 +115,24 @@ type PersesSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Provisioning *Provisioning `json:"provisioning,omitempty"`
+	// volumes allows configuration of additional volumes on the Deployment or StatefulSet definitions.
+	// Volumes specified here will be appended to other operator-managed volumes.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	// +listType=map
+	// +listMapKey=name
+	// +kubebuilder:validation:MaxItems=20
+	// +kubebuilder:validation:XValidation:rule="self.all(v, !(v.name in ['config', 'plugins', 'storage', 'ca', 'tls']) && !v.name.startsWith('provisioning-'))",message="volume name must not conflict with operator-reserved names (config, plugins, storage, ca, tls) or use the 'provisioning-' prefix"
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
+	// volumeMounts allows configuration of additional VolumeMounts on the Deployment or StatefulSet definitions.
+	// VolumeMounts specified here will be appended to other operator-managed volume mounts.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	// +listType=map
+	// +listMapKey=mountPath
+	// +kubebuilder:validation:MaxItems=20
+	// +kubebuilder:validation:XValidation:rule="self.all(m, !m.mountPath.startsWith('/etc/perses/config') && !m.mountPath.startsWith('/etc/perses/plugins') && !m.mountPath.startsWith('/etc/perses/provisioning') && !(m.mountPath in ['/etc/perses', '/perses', '/ca', '/tls']))",message="volumeMount mountPath must not conflict with or shadow operator-reserved paths under /etc/perses/config, /etc/perses/plugins, /etc/perses/provisioning, or /etc/perses, /perses, /ca, /tls"
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 }
 
 // Metadata to add to deployed pods

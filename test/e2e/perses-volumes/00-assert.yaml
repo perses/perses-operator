@@ -1,0 +1,27 @@
+apiVersion: perses.dev/v1alpha2
+kind: Perses
+metadata:
+  name: perses-volumes-test
+status:
+  conditions:
+    - type: Available
+      status: "True"
+      reason: Reconciled
+    - type: Degraded
+      status: "False"
+      reason: Reconciled
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: perses-volumes-test-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: perses-volumes-test
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: perses-volumes-test

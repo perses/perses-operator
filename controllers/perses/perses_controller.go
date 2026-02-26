@@ -118,6 +118,7 @@ func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		r.handleDelete,
 		r.setStatusToUnknown,
 		r.addFinalizer,
+		r.validateVolumes,
 		r.reconcileProvisioning,
 		r.reconcileService,
 		r.reconcileConfigMap,
@@ -351,6 +352,41 @@ func (r *PersesReconciler) doFinalizerOperationsForPerses(perses *v1alpha2.Perse
 				perses.Name,
 				perses.Namespace))
 	}
+}
+
+func (r *PersesReconciler) validateVolumes(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
+	perses, ok := persesFromContext(ctx)
+	if !ok {
+		log.Error("perses not found in context")
+		return subreconciler.RequeueWithError(fmt.Errorf("perses not found in context"))
+	}
+
+	if len(perses.Spec.VolumeMounts) > 0 {
+		volumeNames := make(map[string]struct{}, len(perses.Spec.Volumes))
+		for _, v := range perses.Spec.Volumes {
+			volumeNames[v.Name] = struct{}{}
+		}
+		for _, m := range perses.Spec.VolumeMounts {
+			if _, exists := volumeNames[m.Name]; !exists {
+				msg := fmt.Sprintf("volumeMount at %q references volume %q which is not defined in spec.volumes", m.MountPath, m.Name)
+				log.WithField("volumeMount", m.Name).WithField("mountPath", m.MountPath).Error("volumeMount references undefined volume")
+				_, err := r.updatePersesStatus(ctx, req, func(p *v1alpha2.Perses) {
+					meta.SetStatusCondition(&p.Status.Conditions, metav1.Condition{
+						Type:    common.TypeDegradedPerses,
+						Status:  metav1.ConditionTrue,
+						Reason:  "InvalidConfiguration",
+						Message: msg,
+					})
+				})
+				if err != nil {
+					return subreconciler.RequeueWithError(err)
+				}
+				return subreconciler.RequeueWithError(fmt.Errorf("%s", msg))
+			}
+		}
+	}
+
+	return subreconciler.ContinueReconciling()
 }
 
 func (r *PersesReconciler) setStatusToComplete(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {

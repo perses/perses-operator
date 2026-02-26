@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -639,6 +640,391 @@ var _ = Describe("Perses controller", func() {
 				err := k8sClient.Get(ctx, typeNamespaceName, found)
 				return errors.IsNotFound(err)
 			}, time.Minute, time.Second).Should(BeTrue(), "Perses resource should be deleted after finalizer removal")
+		})
+
+		It("should include user-defined volumes and volumeMounts in the workload", func() {
+			const PersesVolumesName = "test-perses-volumes"
+			typeNamespaceName := types.NamespacedName{Name: PersesVolumesName, Namespace: persesNamespace}
+
+			By("Creating a Perses CR with user-defined volumes and volumeMounts")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      PersesVolumesName,
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					Image: ptr.To(persesImage),
+					Config: persesv1alpha2.PersesConfig{
+						Config: persesconfig.Config{
+							Database: persesconfig.Database{
+								File: &persesconfig.File{
+									Folder: "/etc/perses/storage",
+								},
+							},
+						},
+					},
+					Storage: &persesv1alpha2.StorageConfiguration{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "extra-config",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
+							},
+						},
+					},
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "extra-config",
+							MountPath: "/etc/perses/extra",
+							ReadOnly:  true,
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, perses)).To(Succeed())
+
+			persesReconciler := &persescontroller.PersesReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+
+			By("Reconciling the custom resource")
+			Eventually(func() error {
+				_, err := persesReconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespaceName,
+				})
+				return err
+			}, time.Second*10, time.Millisecond*250).Should(Succeed())
+
+			By("Checking that the Deployment has the user-defined volume and volumeMount")
+			Eventually(func() error {
+				deployment := &appsv1.Deployment{}
+				if err := k8sClient.Get(ctx, typeNamespaceName, deployment); err != nil {
+					return err
+				}
+				volumes := deployment.Spec.Template.Spec.Volumes
+				if !slices.ContainsFunc(volumes, func(v corev1.Volume) bool {
+					return v.Name == "extra-config" && v.VolumeSource.EmptyDir != nil
+				}) {
+					return fmt.Errorf("user-defined volume 'extra-config' not found in deployment")
+				}
+				mounts := deployment.Spec.Template.Spec.Containers[0].VolumeMounts
+				if !slices.ContainsFunc(mounts, func(m corev1.VolumeMount) bool {
+					return m.Name == "extra-config" && m.MountPath == "/etc/perses/extra"
+				}) {
+					return fmt.Errorf("user-defined volumeMount 'extra-config' not found in deployment")
+				}
+				return nil
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Deleting the custom resource")
+			persesToDelete := &persesv1alpha2.Perses{}
+			Expect(k8sClient.Get(ctx, typeNamespaceName, persesToDelete)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, persesToDelete)).To(Succeed())
+		})
+
+		It("should reject a Perses CR with a volume using the provisioning- prefix", func() {
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-perses-provisioning-prefix",
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					Image: ptr.To(persesImage),
+					Volumes: []corev1.Volume{
+						{
+							Name: "provisioning-my-secret",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
+							},
+						},
+					},
+				},
+			}
+			err := k8sClient.Create(ctx, perses)
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("'provisioning-' prefix"))
+		})
+
+		DescribeTable("should reject a Perses CR with any reserved volume name",
+			func(name string) {
+				perses := &persesv1alpha2.Perses{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fmt.Sprintf("test-reserved-vol-%s", name),
+						Namespace: persesNamespace,
+					},
+					Spec: persesv1alpha2.PersesSpec{
+						Image: ptr.To(persesImage),
+						Volumes: []corev1.Volume{
+							{
+								Name: name,
+								VolumeSource: corev1.VolumeSource{
+									EmptyDir: &corev1.EmptyDirVolumeSource{},
+								},
+							},
+						},
+					},
+				}
+				err := k8sClient.Create(ctx, perses)
+				Expect(err).To(HaveOccurred())
+			},
+			Entry("config", "config"),
+			Entry("plugins", "plugins"),
+			Entry("storage", "storage"),
+			Entry("ca", "ca"),
+			Entry("tls", "tls"),
+		)
+
+		DescribeTable("should reject a Perses CR with any reserved or shadowed volumeMount path",
+			func(path string) {
+				volName := fmt.Sprintf("vol-%s", path[1:3])
+				perses := &persesv1alpha2.Perses{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      fmt.Sprintf("test-reserved-path-%s", volName),
+						Namespace: persesNamespace,
+					},
+					Spec: persesv1alpha2.PersesSpec{
+						Image: ptr.To(persesImage),
+						Volumes: []corev1.Volume{
+							{
+								Name: volName,
+								VolumeSource: corev1.VolumeSource{
+									EmptyDir: &corev1.EmptyDirVolumeSource{},
+								},
+							},
+						},
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      volName,
+								MountPath: path,
+							},
+						},
+					},
+				}
+				err := k8sClient.Create(ctx, perses)
+				Expect(err).To(HaveOccurred())
+			},
+			Entry("/etc/perses (root)", "/etc/perses"),
+			Entry("/etc/perses/config", "/etc/perses/config"),
+			Entry("/etc/perses/config/subdir", "/etc/perses/config/subdir"),
+			Entry("/etc/perses/plugins", "/etc/perses/plugins"),
+			Entry("/etc/perses/plugins/custom", "/etc/perses/plugins/custom"),
+			Entry("/etc/perses/provisioning", "/etc/perses/provisioning"),
+			Entry("/etc/perses/provisioning/secrets", "/etc/perses/provisioning/secrets"),
+			Entry("/perses (storage)", "/perses"),
+			Entry("/ca", "/ca"),
+			Entry("/tls", "/tls"),
+		)
+
+		DescribeTable("should allow a Perses CR with a non-reserved volumeMount path",
+			func(path string) {
+				name := fmt.Sprintf("test-allowed-path-%s", strings.ReplaceAll(path[1:], "/", "-"))
+				perses := &persesv1alpha2.Perses{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name,
+						Namespace: persesNamespace,
+					},
+					Spec: persesv1alpha2.PersesSpec{
+						Image: ptr.To(persesImage),
+						Volumes: []corev1.Volume{
+							{
+								Name: "user-vol",
+								VolumeSource: corev1.VolumeSource{
+									EmptyDir: &corev1.EmptyDirVolumeSource{},
+								},
+							},
+						},
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name:      "user-vol",
+								MountPath: path,
+							},
+						},
+					},
+				}
+				Expect(k8sClient.Create(ctx, perses)).To(Succeed())
+
+				persesToDelete := &persesv1alpha2.Perses{}
+				Expect(k8sClient.Get(ctx, types.NamespacedName{Name: name, Namespace: persesNamespace}, persesToDelete)).To(Succeed())
+				Expect(k8sClient.Delete(ctx, persesToDelete)).To(Succeed())
+			},
+			Entry("/etc/perses/extra", "/etc/perses/extra"),
+			Entry("/data/custom", "/data/custom"),
+		)
+
+		It("should reject a Perses CR with duplicate volume names", func() {
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-perses-dup-vol",
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					Image: ptr.To(persesImage),
+					Volumes: []corev1.Volume{
+						{
+							Name: "my-vol",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
+							},
+						},
+						{
+							Name: "my-vol",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
+							},
+						},
+					},
+				},
+			}
+			err := k8sClient.Create(ctx, perses)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should reject a Perses CR with duplicate volumeMount mountPaths", func() {
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-perses-dup-mount",
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					Image: ptr.To(persesImage),
+					Volumes: []corev1.Volume{
+						{
+							Name: "vol-a",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
+							},
+						},
+						{
+							Name: "vol-b",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
+							},
+						},
+					},
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "vol-a",
+							MountPath: "/data/shared",
+						},
+						{
+							Name:      "vol-b",
+							MountPath: "/data/shared",
+						},
+					},
+				},
+			}
+			err := k8sClient.Create(ctx, perses)
+			Expect(err).To(HaveOccurred())
+		})
+
+		It("should set Degraded status when a volumeMount has no corresponding volume", func() {
+			const orphanName = "test-perses-orphan-mount"
+			typeNamespaceName := types.NamespacedName{Name: orphanName, Namespace: persesNamespace}
+
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      orphanName,
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					Image: ptr.To(persesImage),
+					Volumes: []corev1.Volume{
+						{
+							Name: "existing-vol",
+							VolumeSource: corev1.VolumeSource{
+								EmptyDir: &corev1.EmptyDirVolumeSource{},
+							},
+						},
+					},
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "nonexistent-vol",
+							MountPath: "/data/orphan",
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, perses)).To(Succeed())
+
+			persesReconciler := &persescontroller.PersesReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+
+			By("Reconciling until validateVolumes catches the orphan volumeMount")
+			Eventually(func() string {
+				_, err := persesReconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespaceName,
+				})
+				if err != nil {
+					return err.Error()
+				}
+				return ""
+			}, time.Second*10, time.Millisecond*250).Should(ContainSubstring("not defined in spec.volumes"))
+
+			By("Checking the Degraded status condition")
+			Eventually(func() string {
+				found := &persesv1alpha2.Perses{}
+				if err := k8sClient.Get(ctx, typeNamespaceName, found); err != nil {
+					return ""
+				}
+				cond := apimeta.FindStatusCondition(found.Status.Conditions, common.TypeDegradedPerses)
+				if cond == nil {
+					return ""
+				}
+				return cond.Message
+			}, time.Minute, time.Second).Should(ContainSubstring("not defined in spec.volumes"))
+
+			By("Deleting the custom resource")
+			persesToDelete := &persesv1alpha2.Perses{}
+			Expect(k8sClient.Get(ctx, typeNamespaceName, persesToDelete)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, persesToDelete)).To(Succeed())
+		})
+
+		It("should set Degraded status when volumeMounts exist but no volumes defined", func() {
+			const noVolName = "test-perses-mount-no-vol"
+			typeNamespaceName := types.NamespacedName{Name: noVolName, Namespace: persesNamespace}
+
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      noVolName,
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					Image: ptr.To(persesImage),
+					VolumeMounts: []corev1.VolumeMount{
+						{
+							Name:      "my-vol",
+							MountPath: "/data/test",
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, perses)).To(Succeed())
+
+			persesReconciler := &persescontroller.PersesReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+
+			By("Reconciling until validateVolumes catches the missing volumes")
+			Eventually(func() string {
+				_, err := persesReconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespaceName,
+				})
+				if err != nil {
+					return err.Error()
+				}
+				return ""
+			}, time.Second*10, time.Millisecond*250).Should(ContainSubstring("not defined in spec.volumes"))
+
+			By("Deleting the custom resource")
+			persesToDelete := &persesv1alpha2.Perses{}
+			Expect(k8sClient.Get(ctx, typeNamespaceName, persesToDelete)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, persesToDelete)).To(Succeed())
 		})
 	})
 })

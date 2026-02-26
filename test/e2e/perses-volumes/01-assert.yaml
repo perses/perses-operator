@@ -1,0 +1,45 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+commands:
+  # Verify the Deployment exists (pod readiness not checked — no real MySQL in the test cluster)
+  - script: |
+      kubectl get deployment perses-volumes-test -n $NAMESPACE -o name || {
+        echo "FAIL: Deployment perses-volumes-test not found"
+        exit 1
+      }
+      echo "Verified: Deployment perses-volumes-test exists"
+  # Verify user-defined volume is present
+  - script: |
+      VOLUMES=$(kubectl get deployment perses-volumes-test -n $NAMESPACE -o jsonpath='{.spec.template.spec.volumes[*].name}')
+      echo "$VOLUMES" | grep -q "extra-config" || {
+        echo "FAIL: user-defined volume 'extra-config' not found in deployment volumes: $VOLUMES"
+        exit 1
+      }
+      echo "Verified: user-defined volume 'extra-config' is present in deployment"
+  # Verify user-defined volume is backed by the expected ConfigMap
+  - script: |
+      CM=$(kubectl get deployment perses-volumes-test -n $NAMESPACE -o jsonpath='{.spec.template.spec.volumes[?(@.name=="extra-config")].configMap.name}')
+      if [ "$CM" != "perses-extra-config" ]; then
+        echo "FAIL: expected configMap 'perses-extra-config', got '$CM'"
+        exit 1
+      fi
+      echo "Verified: user-defined volume is backed by ConfigMap 'perses-extra-config'"
+  # Verify user-defined volume is mounted at /etc/perses/extra
+  - script: |
+      MOUNTS=$(kubectl get deployment perses-volumes-test -n $NAMESPACE -o jsonpath='{.spec.template.spec.containers[0].volumeMounts[*].mountPath}')
+      echo "$MOUNTS" | grep -q "/etc/perses/extra" || {
+        echo "FAIL: volume mount '/etc/perses/extra' not found in container mounts: $MOUNTS"
+        exit 1
+      }
+      echo "Verified: user-defined volume is mounted at /etc/perses/extra"
+  # Verify operator-managed volumes are still present alongside user-defined ones
+  - script: |
+      VOLUMES=$(kubectl get deployment perses-volumes-test -n $NAMESPACE -o jsonpath='{.spec.template.spec.volumes[*].name}')
+      for vol in config plugins; do
+        echo "$VOLUMES" | grep -q "$vol" || {
+          echo "FAIL: operator-managed volume '$vol' not found in deployment volumes: $VOLUMES"
+          exit 1
+        }
+      done
+      echo "Verified: operator-managed volumes (config, plugins) are present alongside user-defined volume"
