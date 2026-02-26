@@ -414,6 +414,8 @@ _Appears in:_
 | `logLevel` _string_ | logLevel defines the log level for Perses |  | Enum: [panic fatal error warning info debug trace] <br />Optional: \{\} <br /> |
 | `logMethodTrace` _boolean_ | logMethodTrace when true, includes the calling method as a field in the log<br />It can be useful to see immediately where the log comes from |  | Optional: \{\} <br /> |
 | `provisioning` _[Provisioning](#provisioning)_ | provisioning configuration for provisioning secrets |  | Optional: \{\} <br /> |
+| `volumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#volume-v1-core) array_ | volumes allows configuration of additional volumes on the Deployment or StatefulSet definitions.<br />Volumes specified here will be appended to other operator-managed volumes. |  | MaxItems: 20 <br />Optional: \{\} <br /> |
+| `volumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#volumemount-v1-core) array_ | volumeMounts allows configuration of additional VolumeMounts on the Deployment or StatefulSet definitions.<br />VolumeMounts specified here will be appended to other operator-managed volume mounts. |  | MaxItems: 20 <br />Optional: \{\} <br /> |
 
 
 #### PersesStatus

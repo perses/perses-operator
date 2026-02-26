@@ -108,6 +108,16 @@ spec:
     timeoutSeconds: 5
     successThreshold: 1
     failureThreshold: 3
+
+  # Optional additional volumes and volumeMounts
+  volumes:
+    - name: extra-config
+      configMap:
+        name: my-perses-config
+  volumeMounts:
+    - name: extra-config
+      mountPath: /etc/perses/extra
+      readOnly: true
 ```
 
 ### PersesDatasource
@@ -264,9 +274,9 @@ The api for these types are the same
 but the keys ending in `Path` refer to a key within a secret or configmap
 when using those types.
 
-> [!WARNING]
-> The `file` type is not useful in the current state
-> as there is no way to mount files into the perses pod.
+> [!NOTE]
+> To use the `file` type, you must mount the file into the Perses pod
+> using `spec.volumes` and `spec.volumeMounts` on the `Perses` CR.
 
 ```yaml
 apiVersion: perses.dev/v1alpha1

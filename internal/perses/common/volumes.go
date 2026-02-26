@@ -96,6 +96,9 @@ func GetVolumes(perses *v1alpha2.Perses) []corev1.Volume {
 		}
 	}
 
+	// add user-defined volumes
+	volumes = append(volumes, perses.Spec.Volumes...)
+
 	return volumes
 }
 
@@ -189,6 +192,9 @@ func GetVolumeMounts(perses *v1alpha2.Perses) []corev1.VolumeMount {
 			})
 		}
 	}
+
+	// add user-defined volume mounts
+	volumeMounts = append(volumeMounts, perses.Spec.VolumeMounts...)
 
 	return volumeMounts
 }

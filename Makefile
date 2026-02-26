@@ -311,7 +311,7 @@ endif
 	@echo ">> Installing cert-manager..."
 	$(MAKE) install-cert-manager
 	@echo ">> Installing CRDs and deploying operator..."
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	$(KUSTOMIZE) build config/default | kubectl apply --server-side -f -
 	kubectl set image -n perses-operator-system deployment/perses-operator-controller-manager manager=$(E2E_IMG)
 	kubectl patch deployment perses-operator-controller-manager -n perses-operator-system \
 		-p '{"spec":{"template":{"spec":{"containers":[{"name":"manager","imagePullPolicy":"IfNotPresent"}]}}}}'
@@ -401,7 +401,7 @@ install-cert-manager: ## Install cert-manager into the K8s cluster specified in 
 
 .PHONY: install-crds
 install-crds: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | kubectl apply -f -
+	$(KUSTOMIZE) build config/crd | kubectl apply --server-side -f -
 
 .PHONY: uninstall-cert-manager
 uninstall-cert-manager: ## Uninstall cert-manager from the K8s cluster specified in ~/.kube/config.
@@ -417,7 +417,7 @@ deploy: deploy-with-certmanager ## Deploy controller to the K8s cluster specifie
 .PHONY: deploy-with-certmanager
 deploy-with-certmanager: manifests kustomize install-cert-manager
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	$(KUSTOMIZE) build config/default | kubectl apply --server-side -f -
 
 ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 ## This target generates the webhook certs locally and applies them to the cluster
@@ -428,7 +428,7 @@ deploy-local: generate-local-certs manifests kustomize
     	--dry-run=client -o yaml \
 		--cert="/tmp/k8s-webhook-server/serving-certs/tls.crt" \
 		--key="/tmp/k8s-webhook-server/serving-certs/tls.key" > "config/local/certificate.yaml"
-	$(KUSTOMIZE) build config/local | kubectl apply -f -
+	$(KUSTOMIZE) build config/local | kubectl apply --server-side -f -
 
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
