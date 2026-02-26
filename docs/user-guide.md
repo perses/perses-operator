@@ -46,7 +46,7 @@ spec:
         privateKeyPath: tls.key
 
   # Optional container image to use as the Perses server operand
-  image: docker.io/perses/perses:v0.50.3
+  image: docker.io/persesdev/perses:v0.53.0
 
   # Optional service configuration
   service:
@@ -328,7 +328,7 @@ metadata:
   name: perses
   namespace: monitoring
 spec:
-  image: docker.io/perses/perses:v0.50.3
+  image: docker.io/persesdev/perses:v0.53.0
   config:
     database:
       file:
