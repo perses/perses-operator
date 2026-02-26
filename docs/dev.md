@@ -102,7 +102,7 @@ Each instance of the CRD deploys the following resources:
 1. Install Instances of Custom Resources and run the controller:
 
 ```shell
-PERSES_IMAGE=docker.io/persesdev/perses:v0.50.3 make install-crds run
+PERSES_IMAGE=docker.io/persesdev/perses:v0.53.0 make install-crds run
 ```
 
 2. Install a CRD instance:
