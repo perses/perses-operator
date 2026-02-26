@@ -74,6 +74,10 @@ func (r *PersesDashboardReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	start := time.Now()
 	objKey := req.String()
 
+	if r.Metrics != nil {
+		r.Metrics.ReconcileOperations("persesdashboard").Inc()
+	}
+
 	log.Infof("Reconciling PersesDashboard: %s/%s", req.Namespace, req.Name)
 
 	// Find once and store in context for all sub-reconcilers, handle deletion if not found

@@ -120,6 +120,11 @@ help: ## Display this help.
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 
+.PHONY: format
+format:
+	@echo ">> formatting go code"
+	gofmt -w $$(find . -name '*.go' -print)
+
 .PHONY: checkformat
 checkformat:
 	@echo ">> checking go code format"
@@ -247,6 +252,13 @@ test-unit: fmt vet ## Run unit tests.
 .PHONY: test-integration
 test-integration: manifests generate fmt vet envtest ginkgo ## Run integration tests in parallel using envtest.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) --procs=4 -v --coverprofile=cover-integration.out --output-dir=. ./controllers/...
+
+.PHONY: test-alerts
+test-alerts: jsonnet-resources yq ## Run promtool unit tests for alerting rules (requires promtool).
+	@command -v promtool >/dev/null 2>&1 || { echo "promtool is required but not installed."; exit 1; }
+	@echo ">>>>> Testing alerting rules"
+	$(YQ) '.spec' jsonnet/examples/prometheusRule.yaml > test/promtool/rules.yaml
+	promtool test rules test/promtool/alerts_test.yaml; ret=$$?; rm -f test/promtool/rules.yaml; exit $$ret
 
 .PHONY: lint-jsonnet
 lint-jsonnet: $(JSONNETLINT_BINARY)

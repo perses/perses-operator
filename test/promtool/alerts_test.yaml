@@ -1,0 +1,145 @@
+rule_files:
+  - rules.yaml
+
+evaluation_interval: 1m
+
+tests:
+  # PersesOperatorDown: fires when up metric is absent for 5m
+  - interval: 1m
+    input_series: []
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: PersesOperatorDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+            exp_annotations:
+              summary: "Perses Operator is down."
+              description: "Perses Operator has disappeared from Prometheus target discovery."
+
+  # PersesOperatorDown: does NOT fire when operator is up
+  - interval: 1m
+    input_series:
+      - series: 'up{job="perses-operator"}'
+        values: "1 1 1 1 1 1 1 1 1 1"
+    alert_rule_test:
+      - eval_time: 5m
+        alertname: PersesOperatorDown
+        exp_alerts: []
+
+  # PersesOperatorNotReady: fires when ready=0 for 5m
+  - interval: 1m
+    input_series:
+      - series: 'perses_operator_ready{job="perses-operator",controller="perses",namespace="perses-dev"}'
+        values: "0 0 0 0 0 0 0 0 0 0 0"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: PersesOperatorNotReady
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              controller: perses
+              namespace: perses-dev
+            exp_annotations:
+              summary: "Perses operator not ready"
+              description: "Perses operator in perses-dev namespace isn't ready to reconcile perses resources."
+
+  # PersesOperatorNotReady: does NOT fire when ready=1
+  - interval: 1m
+    input_series:
+      - series: 'perses_operator_ready{job="perses-operator",controller="perses",namespace="perses-dev"}'
+        values: "1 1 1 1 1 1 1 1 1 1 1"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: PersesOperatorNotReady
+        exp_alerts: []
+
+  # PersesOperatorReconcileErrors: fires when error ratio > 10% for 10m
+  # 2 errors per 5 operations = 40% error rate
+  - interval: 1m
+    input_series:
+      - series: 'perses_operator_reconcile_errors_total{job="perses-operator",controller="perses",namespace="perses-dev"}'
+        values: "0+2x20"
+      - series: 'perses_operator_reconcile_operations_total{job="perses-operator",controller="perses",namespace="perses-dev"}'
+        values: "0+5x20"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: PersesOperatorReconcileErrors
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              controller: perses
+              namespace: perses-dev
+            exp_annotations:
+              summary: "Errors while reconciling objects."
+              description: "40% of reconciling operations failed for perses controller in perses-dev namespace."
+
+  # PersesOperatorReconcileErrors: does NOT fire when error ratio < 10%
+  # 1 error per 100 operations = 1% error rate
+  - interval: 1m
+    input_series:
+      - series: 'perses_operator_reconcile_errors_total{job="perses-operator",controller="perses",namespace="perses-dev"}'
+        values: "0+1x20"
+      - series: 'perses_operator_reconcile_operations_total{job="perses-operator",controller="perses",namespace="perses-dev"}'
+        values: "0+100x20"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: PersesOperatorReconcileErrors
+        exp_alerts: []
+
+  # PersesOperatorSyncFailed: fires when failed syncs > 0 for 10m
+  - interval: 1m
+    input_series:
+      - series: 'perses_operator_syncs{job="perses-operator",status="failed",namespace="perses-dev"}'
+        values: "1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: PersesOperatorSyncFailed
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: perses-operator
+              status: failed
+              namespace: perses-dev
+            exp_annotations:
+              summary: "Last controller reconciliation failed"
+              description: "Controller in perses-dev namespace fails to reconcile 1 objects."
+
+  # PersesOperatorSyncFailed: does NOT fire when status=ok
+  - interval: 1m
+    input_series:
+      - series: 'perses_operator_syncs{job="perses-operator",status="ok",namespace="perses-dev"}'
+        values: "5 5 5 5 5 5 5 5 5 5 5 5 5 5 5 5"
+    alert_rule_test:
+      - eval_time: 15m
+        alertname: PersesOperatorSyncFailed
+        exp_alerts: []
+
+  # PersesOperatorResourceSyncFailures: fires when failed resources > 0 for 5m
+  - interval: 1m
+    input_series:
+      - series: 'perses_operator_managed_resources{job="perses-operator",state="failed",namespace="perses-dev",resource="dashboard"}'
+        values: "2 2 2 2 2 2 2 2 2 2"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: PersesOperatorResourceSyncFailures
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              job: perses-operator
+              state: failed
+              namespace: perses-dev
+              resource: dashboard
+            exp_annotations:
+              summary: "Resources failing to sync by Perses operator"
+              description: "Perses operator in perses-dev namespace has 2 dashboard resources in failed state."
+
+  # PersesOperatorResourceSyncFailures: does NOT fire when state=synced
+  - interval: 1m
+    input_series:
+      - series: 'perses_operator_managed_resources{job="perses-operator",state="synced",namespace="perses-dev",resource="dashboard"}'
+        values: "5 5 5 5 5 5 5 5 5 5"
+    alert_rule_test:
+      - eval_time: 10m
+        alertname: PersesOperatorResourceSyncFailures
+        exp_alerts: []

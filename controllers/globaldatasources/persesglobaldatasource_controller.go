@@ -74,6 +74,10 @@ func (r *PersesGlobalDatasourceReconciler) Reconcile(ctx context.Context, req ct
 	start := time.Now()
 	objKey := req.String()
 
+	if r.Metrics != nil {
+		r.Metrics.ReconcileOperations("persesglobaldatasource").Inc()
+	}
+
 	log.Infof("Reconciling PersesGlobalDatasource: %s", req.Name)
 
 	globaldatasource := &persesv1alpha2.PersesGlobalDatasource{}

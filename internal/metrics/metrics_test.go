@@ -31,6 +31,13 @@ func TestNewMetrics(t *testing.T) {
 
 	// Create metrics but register with our test registry instead of global
 	m := &Metrics{
+		reconcileOperations: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "perses_operator_reconcile_operations_total",
+				Help: "Total number of reconciliation operations by controller",
+			},
+			[]string{"controller"},
+		),
 		reconcileErrors: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "perses_operator_reconcile_errors_total",
@@ -45,21 +52,23 @@ func TestNewMetrics(t *testing.T) {
 			},
 			[]string{"resource_namespace"},
 		),
-		ready: prometheus.NewGauge(
+		ready: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Name: "perses_operator_ready",
 				Help: "Whether the operator is ready (1=yes, 0=no)",
 			},
+			[]string{"controller"},
 		),
 		resources: make(map[resourceKey]map[string]int),
 	}
 
-	reg.MustRegister(m.reconcileErrors, m.persesInstances, m.ready, m)
+	reg.MustRegister(m.reconcileOperations, m.reconcileErrors, m.persesInstances, m.ready, m)
 
 	// Set some values so metrics appear in output
+	m.reconcileOperations.WithLabelValues("test").Add(1)
 	m.reconcileErrors.WithLabelValues("test", "test_reason").Add(0)
 	m.persesInstances.WithLabelValues("test-ns").Set(1)
-	m.ready.Set(1)
+	m.Ready("test").Set(1)
 
 	// Verify metrics are registered
 	metricFamilies, err := reg.Gather()
@@ -68,6 +77,7 @@ func TestNewMetrics(t *testing.T) {
 
 	// Check that expected metrics exist
 	metricNames := []string{
+		"perses_operator_reconcile_operations_total",
 		"perses_operator_reconcile_errors_total",
 		"perses_operator_managed_perses_instances",
 		"perses_operator_ready",
@@ -81,6 +91,37 @@ func TestNewMetrics(t *testing.T) {
 	for _, name := range metricNames {
 		assert.True(t, foundMetrics[name], "Expected metric %s to be registered", name)
 	}
+}
+
+func TestReconcileOperationsCounter(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	m := &Metrics{
+		reconcileOperations: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "perses_operator_reconcile_operations_total",
+				Help: "Total number of reconciliation operations by controller",
+			},
+			[]string{"controller"},
+		),
+		resources: make(map[resourceKey]map[string]int),
+	}
+	reg.MustRegister(m.reconcileOperations)
+
+	// Increment operations counter
+	m.ReconcileOperations("perses").Inc()
+	m.ReconcileOperations("perses").Inc()
+	m.ReconcileOperations("perses").Inc()
+	m.ReconcileOperations("persesdashboard").Inc()
+
+	// Verify counts
+	expected := `
+		# HELP perses_operator_reconcile_operations_total Total number of reconciliation operations by controller
+		# TYPE perses_operator_reconcile_operations_total counter
+		perses_operator_reconcile_operations_total{controller="perses"} 3
+		perses_operator_reconcile_operations_total{controller="persesdashboard"} 1
+	`
+	err := testutil.CollectAndCompare(m.reconcileOperations, strings.NewReader(expected))
+	assert.NoError(t, err)
 }
 
 func TestReconcileErrorsCounter(t *testing.T) {
@@ -145,20 +186,25 @@ func TestPersesInstancesGauge(t *testing.T) {
 func TestReadyGauge(t *testing.T) {
 	reg := prometheus.NewRegistry()
 	m := &Metrics{
-		ready:     prometheus.NewGauge(prometheus.GaugeOpts{Name: "perses_operator_ready"}),
+		ready:     prometheus.NewGaugeVec(prometheus.GaugeOpts{Name: "perses_operator_ready"}, []string{"controller"}),
 		resources: make(map[resourceKey]map[string]int),
 	}
 	reg.MustRegister(m.ready)
 
 	// Initially not ready
-	m.Ready().Set(0)
-	value := testutil.ToFloat64(m.ready)
+	m.Ready("perses").Set(0)
+	value := testutil.ToFloat64(m.ready.WithLabelValues("perses"))
 	assert.Equal(t, 0.0, value)
 
 	// Mark as ready
-	m.Ready().Set(1)
-	value = testutil.ToFloat64(m.ready)
+	m.Ready("perses").Set(1)
+	value = testutil.ToFloat64(m.ready.WithLabelValues("perses"))
 	assert.Equal(t, 1.0, value)
+
+	// Each controller tracks independently
+	m.Ready("persesdashboard").Set(0)
+	assert.Equal(t, 1.0, testutil.ToFloat64(m.ready.WithLabelValues("perses")))
+	assert.Equal(t, 0.0, testutil.ToFloat64(m.ready.WithLabelValues("persesdashboard")))
 }
 
 func TestManagedResourcesCollector(t *testing.T) {

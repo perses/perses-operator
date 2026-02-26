@@ -44,6 +44,19 @@ Number of resources managed by the operator per state (synced/failed)
 
 ---
 
+### `perses_operator_reconcile_operations_total`
+
+Total number of reconciliation operations by controller
+
+**Type:** Counter  
+**Labels:**
+
+- `controller`
+
+
+
+---
+
 ### `perses_operator_reconcile_errors_total`
 
 Total number of reconciliation errors by controller and reason
@@ -75,7 +88,11 @@ Number of Perses instances managed by the operator
 
 Whether the operator is ready (1=yes, 0=no)
 
-**Type:** Gauge
+**Type:** Gauge  
+**Labels:**
+
+- `controller`
+
 
 
 ---

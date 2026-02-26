@@ -86,6 +86,10 @@ func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	start := time.Now()
 	objKey := req.String()
 
+	if r.Metrics != nil {
+		r.Metrics.ReconcileOperations("perses").Inc()
+	}
+
 	perses := &v1alpha2.Perses{}
 	if err := r.Get(ctx, req.NamespacedName, perses); err != nil {
 		if apierrors.IsNotFound(err) {
