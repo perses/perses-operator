@@ -139,18 +139,24 @@ Undeploy the controller from the cluster:
 make undeploy
 ```
 
-## Docs
+## Documentation
 
-- [API Docs](docs/api.md)
-- [Metrics Documentation](docs/metrics.md)
+### Guides
+
+- [User Guide](https://perses.dev/perses-operator/docs/user-guide/)
 - [Developer Guide](docs/dev.md)
 - [Testing Guide](docs/testing.md)
 
-- **Example Configs**
+### Reference
 
-  - [Kubernetes](config/samples)
-  - [OpenShift](config/samples/openshift)
-  - [Using TLS](config/samples/tls)
+- [API Reference](https://perses.dev/perses-operator/docs/api/)
+- [Metrics](docs/metrics.md)
+
+### Example Configs
+
+- [Kubernetes](config/samples)
+- [OpenShift](config/samples/openshift)
+- [Using TLS](config/samples/tls)
 
 ## Maintainers
 
