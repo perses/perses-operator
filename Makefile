@@ -388,6 +388,10 @@ build-installer: manifests generate kustomize ## Generate a consolidated YAML wi
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default > bundle.yaml
 
+.PHONY: installer-check
+installer-check: build-installer ## Verify bundle.yaml is up-to-date.
+	git diff --exit-code bundle.yaml
+
 ifndef ignore-not-found
   ignore-not-found = false
 endif

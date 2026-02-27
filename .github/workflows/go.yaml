@@ -93,5 +93,7 @@ jobs:
         run: make generate
       - name: check bundle changes
         run: make bundle-check
+      - name: check installer manifest is up-to-date
+        run: make installer-check
       - name: golangci-lint
         run: make lint
