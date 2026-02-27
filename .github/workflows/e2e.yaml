@@ -14,7 +14,11 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' || github.ref_name != 'main' }}
 
 jobs:
+  changed-files:
+    uses: ./.github/workflows/changed-files.yaml
   e2e:
+    needs: changed-files
+    if: ${{ needs.changed-files.outputs.non-markdown-files }}
     name: "kuttl e2e tests"
     runs-on: ubuntu-latest
     steps:

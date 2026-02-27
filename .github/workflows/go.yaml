@@ -15,7 +15,11 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' || github.ref_name != 'main' }}
 
 jobs:
+  changed-files:
+    uses: ./.github/workflows/changed-files.yaml
   gofmt:
+    needs: changed-files
+    if: ${{ needs.changed-files.outputs.non-markdown-files }}
     name: "check code format"
     runs-on: ubuntu-latest
     steps:
@@ -30,6 +34,8 @@ jobs:
       - name: verify go modules
         run: make tidy
   test-unit:
+    needs: changed-files
+    if: ${{ needs.changed-files.outputs.non-markdown-files }}
     name: "unit tests"
     runs-on: ubuntu-latest
     steps:
@@ -42,6 +48,8 @@ jobs:
       - name: unit tests
         run: make test-unit
   test-integration:
+    needs: changed-files
+    if: ${{ needs.changed-files.outputs.non-markdown-files }}
     name: "integration tests"
     runs-on: ubuntu-latest
     steps:
@@ -54,6 +62,8 @@ jobs:
       - name: integration tests
         run: make test-integration
   lint-api:
+    needs: changed-files
+    if: ${{ needs.changed-files.outputs.non-markdown-files }}
     name: "kube-api-linter"
     runs-on: ubuntu-latest
     steps:
@@ -66,6 +76,8 @@ jobs:
       - name: lint API types
         run: make lint-api
   lint:
+    needs: changed-files
+    if: ${{ needs.changed-files.outputs.non-markdown-files }}
     name: lint
     runs-on: ubuntu-latest
     steps:
