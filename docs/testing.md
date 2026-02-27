@@ -1,36 +1,49 @@
 # Testing
 
-## Unit and Integration Tests
+The Perses Operator uses unit, integration, end-to-end (e2e), and alerting rule tests.
 
-| Target | Description |
-| ------ | ----------- |
-| `make test-unit` | Run unit tests only (no envtest, fast) |
-| `make test-integration` | Run controller integration tests with [envtest](https://pkg.go.dev/sigs.k8s.io/controller-runtime/tools/setup-envtest) |
+Some test commands use tools installed locally under `bin/`. Run `make build-tools` to install all tools, or let the Makefile targets (e.g. `make test-unit`, `make test-integration`) install them automatically.
 
-Unit tests (`internal/`, `api/`, `scripts/`) use standard Go testing with [testify](https://github.com/stretchr/testify) or [Ginkgo](https://onsi.github.io/ginkgo/).
+## Unit Tests
 
-Integration tests (`controllers/`) use [Ginkgo](https://onsi.github.io/ginkgo/) with envtest to spin up a lightweight API server with CRDs installed.
+Unit tests validate individual functions and utilities using standard Go testing with [testify](https://github.com/stretchr/testify) or [Ginkgo](https://github.com/onsi/ginkgo).
+
+```bash
+# Run all unit tests
+make test-unit
+
+# Run a single test by name (testify)
+go test ./internal/metrics/... -run TestNewMetrics -v
+
+# Run a single test by name (Ginkgo)
+# --focus matches against Describe/It block descriptions
+bin/ginkgo --focus "GetVolumes" -v ./internal/perses/common/...
+```
+
+## Integration Tests
+
+Integration tests use [Ginkgo](https://github.com/onsi/ginkgo) with [envtest](https://pkg.go.dev/sigs.k8s.io/controller-runtime/tools/setup-envtest) to spin up a lightweight API server with CRDs installed. These tests validate controller reconcile logic, CRD validation, and resource management.
+
+```bash
+# Run all integration tests
+make test-integration
+
+# Run a single integration test by name
+# --focus matches against Ginkgo Describe/It block descriptions
+KUBEBUILDER_ASSETS="$(bin/setup-envtest use -p path)" \
+  bin/ginkgo --focus "should successfully reconcile" -v ./controllers/...
+```
 
 ## E2E Tests (kuttl)
 
-E2E tests use [kuttl](https://kuttl.dev/) to validate the operator in a real [kind](https://kind.sigs.k8s.io/) cluster.
+E2E tests use [kuttl](https://kuttl.dev/) to validate the operator end-to-end in a real [kind](https://kind.sigs.k8s.io/) cluster, including deployment, resource synchronization, and cleanup.
 
 ### Prerequisites
 
 - [Go](https://go.dev/doc/install)
 - [kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation)
-- [Docker](https://docs.docker.com/get-docker/) or [Podman](https://podman.io/docs/installation)
+- [Docker](https://docs.docker.com/get-docker/) or [Podman](https://podman.io/docs/installation) — the Makefile auto-detects the available container runtime
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
-
-### Makefile Targets
-
-| Target | Description |
-| ------ | ----------- |
-| `make e2e-setup` | Create kind cluster and deploy operator |
-| `make e2e-create-cluster` | Create kind cluster only |
-| `make e2e-deploy` | Build image, load into kind, and deploy (requires existing cluster) |
-| `make test-e2e` | Run kuttl tests (requires operator to be deployed) |
-| `make e2e-cleanup` | Delete the kind cluster |
 
 ### Quick Start
 
@@ -40,9 +53,15 @@ make test-e2e     # Run tests
 make e2e-cleanup  # Tear down
 ```
 
-When iterating, run `make e2e-setup` once, then repeat `make test-e2e`. Use `make e2e-deploy` to redeploy after operator code changes without recreating the cluster.
+When iterating:
+
+1. Run `make e2e-setup` once to create the cluster and deploy the operator.
+2. Run `make test-e2e` to run the tests.
+3. After code changes, run `make e2e-deploy` to rebuild and redeploy the operator, then `make test-e2e` again.
 
 ### Configuration
+
+The following Makefile variables can be overridden to customize the e2e environment:
 
 | Variable | Default | Description |
 | -------- | ------- | ----------- |
@@ -57,24 +76,18 @@ Tests are under `test/e2e/` following the [kuttl convention](https://kuttl.dev/d
 ```text
 test/e2e/
 ├── kuttl-test.yaml
-├── perses-statefulset/   # database.file → StatefulSet
-│   ├── 00-install.yaml   # Create Perses instance, assert StatefulSet + sub-resources
-│   ├── 00-assert.yaml
-│   ├── 01-assert.yaml    # Assert pod readiness
-│   ├── 02-install.yaml   # Create PersesDatasource, assert reconciled
-│   ├── 02-assert.yaml
-│   ├── 03-install.yaml   # Create PersesDashboard, assert reconciled
-│   ├── 03-assert.yaml
-│   ├── 04-delete.yaml    # Delete all, assert cleanup
-│   └── 04-assert.yaml
-└── perses-deployment/    # database.sql → Deployment
-    ├── 00-install.yaml   # Create Perses instance with SQL config, assert Deployment + sub-resources
-    ├── 00-assert.yaml
-    ├── 01-delete.yaml    # Delete all, assert cleanup
-    └── 01-assert.yaml
+├── global-datasource/      # Global datasource sync
+├── multi-instance-sync/    # Dashboard/datasource sync across instances
+├── namespace-isolation/    # Namespace-scoped resource isolation
+├── perses-deployment/      # database.sql → Deployment
+├── perses-emptydir/        # emptyDir storage
+├── perses-statefulset/     # database.file → StatefulSet with PVC
+├── perses-volumes/         # Custom volumes and volume mounts
+└── resource-update/        # Update existing resources and assert reconciliation
 ```
 
-To add a new test case, create a directory under `test/e2e/`. To add steps to an existing test case, add numbered files (e.g. `05-install.yaml`, `05-assert.yaml`).
+- To add a new test case, create a directory under `test/e2e/`.
+- To add steps to an existing test case, add numbered files (e.g. `05-install.yaml`, `05-assert.yaml`).
 
 ### Debugging
 
@@ -82,12 +95,28 @@ To add a new test case, create a directory under `test/e2e/`. To add steps to an
 # Operator logs
 kubectl logs -n perses-operator-system deployment/perses-operator-controller-manager -f
 
-# Events in test namespace
-kubectl get events -A --sort-by='.lastTimestamp' | tail -50
-
-# All Perses resources
-kubectl get perses,persesdashboard,persesdatasource -A
-
 # Run a single test case
 bin/kubectl-kuttl test --config test/e2e/kuttl-test.yaml --test perses-statefulset
 ```
+
+## Alerting Rule Tests
+
+> [!NOTE]
+> Requires [`promtool`](https://prometheus.io/download/#prometheus).
+
+Alerting rules are validated using [promtool](https://prometheus.io/docs/prometheus/latest/configuration/unit_testing_rules/). When adding or modifying rules, add corresponding test cases to `test/promtool/alerts_test.yaml` and run:
+
+```bash
+make test-alerts
+```
+
+See [Developer Guide](dev.md#modifying-or-adding-alerting-rules) for the full workflow.
+
+## Integration vs E2E Tests
+
+| Aspect | Integration Tests | E2E Tests |
+| --- | --- | --- |
+| Environment | Lightweight API server via envtest (no real cluster) | Real Kubernetes cluster via kind |
+| Scope | Controller reconcile logic, CRD validation, status updates | Full operator lifecycle including pod scheduling and networking |
+| Speed | Fast (seconds) | Slower (minutes, includes cluster setup) |
+| Framework | Ginkgo + envtest | kuttl |

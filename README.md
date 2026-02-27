@@ -4,6 +4,8 @@
 [![go](https://github.com/perses/perses-operator/actions/workflows/go.yaml/badge.svg)](https://github.com/perses/perses-operator/actions/workflows/go.yaml)
 [![e2e](https://github.com/perses/perses-operator/actions/workflows/e2e.yaml/badge.svg)](https://github.com/perses/perses-operator/actions/workflows/e2e.yaml)
 [![docs](https://github.com/perses/perses-operator/actions/workflows/docs.yaml/badge.svg)](https://github.com/perses/perses-operator/actions/workflows/docs.yaml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/perses/perses-operator)](https://goreportcard.com/report/github.com/perses/perses-operator)
+[![persesdev/perses-operator](https://img.shields.io/docker/v/persesdev/perses-operator?sort=semver&label=persesdev%2Fperses-operator)](https://hub.docker.com/r/persesdev/perses-operator/tags)
 [![join slack](https://img.shields.io/badge/join%20slack-%23perses--dev-brightgreen.svg)](https://cloud-native.slack.com/messages/C07KQR95WBE)
 
 ## Overview
@@ -32,7 +34,7 @@ The Perses Operator includes, but is not limited to, the following features:
 * **Observability**: Built-in Prometheus metrics and alerting rules compatible with
   [Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator).
 
-For an introduction to the Perses Operator, see the [Getting Started](#getting-started) guide. For detailed usage documentation, see the [User Guide](https://perses.dev/perses-operator/docs/user-guide/) and the [API Reference](https://perses.dev/perses-operator/docs/api/).
+For an introduction to the Perses Operator, see the [getting started](#getting-started) guide. For detailed usage documentation, see the [user guide](https://perses.dev/perses-operator/docs/user-guide/) and the [API Reference](https://perses.dev/perses-operator/docs/api/).
 
 ## Project Status
 
@@ -60,7 +62,7 @@ The Operator acts on the following [Custom Resource Definitions (CRDs)](https://
   across all Perses projects.
 
 The Perses Operator automatically detects changes in the Kubernetes API server to any of the above
-objects, and ensures that matching deployments and configurations are kept in sync.
+objects, and ensures that the desired state is reconciled.
 
 ## Getting Started
 
@@ -90,11 +92,11 @@ make deploy
 ```
 
 > [!IMPORTANT]
-> This will deploy the controller with the default image 'docker.io/perses/perses-operator:latest'.
-> To use a different image, set the `IMG` variable:
+> This will deploy the controller with the default image `docker.io/persesdev/perses-operator:v<VERSION>`,
+> where `VERSION` is read from the `VERSION` file. To use a different image, set the `IMG` variable:
 >
 > ```sh
-> make deploy IMG=<your-image>
+> IMG=<your-image> make deploy
 > ```
 
 **Option B: Using self-signed certificates (for development/testing)**
@@ -141,33 +143,23 @@ make undeploy
 
 - [API Docs](docs/api.md)
 - [Metrics Documentation](docs/metrics.md)
-- [Developer Docs](docs/dev.md)
-- [Testing](docs/testing.md)
-- Examples
+- [Developer Guide](docs/dev.md)
+- [Testing Guide](docs/testing.md)
+
+- **Example Configs**
+
   - [Kubernetes](config/samples)
   - [OpenShift](config/samples/openshift)
   - [Using TLS](config/samples/tls)
 
 ## Maintainers
 
-See [MAINTAINERS](MAINTAINERS.md)
+See [MAINTAINERS](MAINTAINERS.md).
 
 ## Contributing
 
-See [CONTRIBUTING](CONTRIBUTING.md)
+We welcome contributions! Please see [CONTRIBUTING](CONTRIBUTING.md) for guidelines. If you are unsure about what to do and eager to contribute, reach out on the [#perses-dev](https://cloud-native.slack.com/messages/C07KQR95WBE) channel on [CNCF Slack](https://slack.cncf.io/).
 
 ## License
 
-Copyright The Perses Authors.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+Apache License 2.0, see [LICENSE](LICENSE).
