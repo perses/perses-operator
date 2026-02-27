@@ -28,6 +28,7 @@ func PersesOperatorDockerConfig(cfg TestConfig) *goreleaser.DockerConfig {
 		ImageName:  "perses-operator",
 		DebugImage: true,
 		BinaryIDs:  []string{"operator"},
+		ExtraFiles: []string{"LICENSE"},
 		Branch:     cfg.Branch,
 		Commit:     cfg.Commit,
 		Date:       cfg.Date,

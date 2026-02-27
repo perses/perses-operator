@@ -11,13 +11,17 @@ builds:
       - amd64
       - arm
       - arm64
+    ignore:
+      - goos: windows
+        goarch: arm
     env:
       - CGO_ENABLED=0
 archives:
   - id: "default"
-    builds:
+    ids:
       - "operator"
-    format: "tar.gz"
+    formats:
+      - "tar.gz"
     files:
       - LICENSE
       - README.md
