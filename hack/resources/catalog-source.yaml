@@ -5,4 +5,4 @@ metadata:
   namespace: olm
 spec:
   sourceType: grpc
-  image: docker.io/perses-dev/perses-operator-catalog:v0.1.3
+  image: docker.io/persesdev/perses-operator-catalog:v0.2.0

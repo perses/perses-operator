@@ -15,6 +15,9 @@ We are using GitHub as our main development and discussion forum.
 If you are unsure about what to do, and you are eager to contribute, you can reach us on the development
 channel [#perses-dev](https://cloud-native.slack.com/messages/C07KQR95WBE) on [CNCF slack](https://slack.cncf.io/).
 
+- For setting up your development environment, see the [Developer Guide](docs/dev.md).
+- For running tests, see the [Testing Guide](docs/testing.md).
+
 ## Opening a PR
 
 To help during the release process, we created a script that generates the changelog based on the git history.
