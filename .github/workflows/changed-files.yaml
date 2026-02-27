@@ -1,0 +1,28 @@
+name: changed-files
+
+on:
+  workflow_call:
+    outputs:
+      non-markdown-files:
+        description: "Non-empty if non-markdown files changed"
+        value: ${{ jobs.changed-files.outputs.non-markdown-files }}
+
+jobs:
+  changed-files:
+    outputs:
+      non-markdown-files: ${{ steps.changed-files.outputs.non-markdown-files }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: get changed files
+        id: changed-files
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "non-markdown-files=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -iv '\.md$' | xargs)" >> "$GITHUB_OUTPUT"
+          else
+            # Always run on push and merge_group events
+            echo "non-markdown-files=true" >> "$GITHUB_OUTPUT"
+          fi
