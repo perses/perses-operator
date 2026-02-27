@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -38,8 +37,6 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 		var persesNamespaceName types.NamespacedName
 		globaldatasourceNamespaceName := types.NamespacedName{Name: GlobalDatasourceName}
 
-		persesImage := "perses-dev.io/perses:test"
-
 		var newSecret *persesv1.GlobalSecret
 		var newGlobalDatasource *persesv1.GlobalDatasource
 
@@ -54,10 +51,6 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 			Expect(err).To(Not(HaveOccurred()))
 			PersesNamespace = namespace.Name
 			persesNamespaceName = types.NamespacedName{Name: PersesName, Namespace: PersesNamespace}
-
-			By("Setting the Image ENV VAR which stores the Operand image")
-			err = os.Setenv("PERSES_IMAGE", persesImage)
-			Expect(err).To(Not(HaveOccurred()))
 
 			By("Creating the custom resource for the Kind Perses")
 			perses := &persesv1alpha2.Perses{}
@@ -125,9 +118,6 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 		AfterAll(func() {
 			By("Deleting the Namespace to perform the tests")
 			_ = k8sClient.Delete(ctx, namespace)
-
-			By("Removing the Image ENV VAR which stores the Operand image")
-			_ = os.Unsetenv("PERSES_IMAGE")
 		})
 
 		It("should successfully reconcile a custom resource globaldatasource for Perses", func() {
