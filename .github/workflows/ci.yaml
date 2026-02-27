@@ -57,7 +57,6 @@ jobs:
           distribution: goreleaser
           install-only: true
       - name: Build main Go binaries and docker images
-        if: ${{ github.event_name == 'push' && github.ref_name == 'main' }}
         run: |
           make cross-build
           BUNDLE_IMG=docker.io/persesdev/perses-operator-bundle:$(make -s print-image-tag) make bundle-build
