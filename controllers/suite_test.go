@@ -37,6 +37,7 @@ import (
 
 	"github.com/perses/perses-operator/api/v1alpha2"
 	persesController "github.com/perses/perses-operator/controllers/perses"
+	"github.com/perses/perses-operator/internal/operator"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -100,6 +101,9 @@ var _ = BeforeSuite(func() {
 	err = (&persesController.PersesReconciler{
 		Client: k8sManager.GetClient(),
 		Scheme: k8sManager.GetScheme(),
+		Config: persesController.Config{
+			PersesImage: operator.DefaultPersesImage,
+		},
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

@@ -18,7 +18,6 @@ package common
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/perses/perses-operator/api/v1alpha2"
@@ -74,27 +73,22 @@ func LabelsForPerses(name string, perses *v1alpha2.Perses) map[string]string {
 
 }
 
-// imageForPerses gets the Operand image which is managed by this controller
-// from the image field in the CR or PERSES_IMAGE environment variable defined in the config/manager/manager.yaml
+// ImageForPerses resolves the Perses server image in priority order:
+//  1. spec.image from the Perses CR (highest)
+//  2. --perses-default-base-image flag (persesImageFromFlags)
 func ImageForPerses(perses *v1alpha2.Perses, persesImageFromFlags string) (string, error) {
-	image := os.Getenv("PERSES_IMAGE")
-
-	if persesImageFromFlags != "" {
-		image = persesImageFromFlags
-	}
-
-	if perses.Spec.Image != nil && len(*perses.Spec.Image) > 0 {
+	var image string
+	switch {
+	case perses.Spec.Image != nil && *perses.Spec.Image != "":
 		image = *perses.Spec.Image
+	case persesImageFromFlags != "":
+		image = persesImageFromFlags
+	default:
+		return "", fmt.Errorf("no image specified: set spec.image in the Perses CR or pass --perses-default-base-image")
 	}
 
-	if image == "" {
-		return "", fmt.Errorf("perses image operand was not provided")
-	}
-
-	imageParts := strings.Split(image, ":")
-
-	if len(imageParts) < 2 {
-		return "", fmt.Errorf("image provided for perses %s does not have a tag version", image)
+	if !strings.Contains(image, ":") {
+		return "", fmt.Errorf("image %q must include a tag (e.g. :v1.0.0)", image)
 	}
 
 	return image, nil

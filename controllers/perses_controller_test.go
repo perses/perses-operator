@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -24,6 +23,7 @@ import (
 
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 	persescontroller "github.com/perses/perses-operator/controllers/perses"
+	"github.com/perses/perses-operator/internal/operator"
 	"github.com/perses/perses-operator/internal/perses/common"
 )
 
@@ -33,19 +33,8 @@ var _ = Describe("Perses controller", func() {
 
 		ctx := context.Background()
 
-		persesImage := "perses-dev.io/perses:test"
+		persesImage := operator.DefaultPersesImage
 		persesServiceName := "perses-custom-service-name"
-
-		BeforeEach(func() {
-			By("Setting the Image ENV VAR which stores the Operand image")
-			err := os.Setenv("PERSES_IMAGE", persesImage)
-			Expect(err).To(Not(HaveOccurred()))
-		})
-
-		AfterEach(func() {
-			By("Removing the Image ENV VAR which stores the Operand image")
-			_ = os.Unsetenv("PERSES_IMAGE")
-		})
 
 		It("should successfully reconcile a custom resource for Perses", func() {
 			typeNamespaceName := types.NamespacedName{Name: PersesName, Namespace: persesNamespace}

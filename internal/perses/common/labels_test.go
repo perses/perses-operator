@@ -35,6 +35,41 @@ func TestLabels(t *testing.T) {
 	RunSpecs(t, "Labels Suite")
 }
 
+var _ = Describe("ImageForPerses", func() {
+	DescribeTable("resolves the correct image",
+		func(specImage *string, flagImage string, expectedImage string, expectErr bool, errSubstring string) {
+			perses := &v1alpha2.Perses{
+				Spec: v1alpha2.PersesSpec{
+					Image: specImage,
+				},
+			}
+			image, err := ImageForPerses(perses, flagImage)
+			if expectErr {
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring(errSubstring))
+			} else {
+				Expect(err).NotTo(HaveOccurred())
+				Expect(image).To(Equal(expectedImage))
+			}
+		},
+		Entry("spec.image takes priority over flag",
+			ptr.To("custom/perses:v1.0.0"), "default/perses:v2.0.0",
+			"custom/perses:v1.0.0", false, ""),
+		Entry("falls back to flag when spec.image is nil",
+			nil, "default/perses:v2.0.0",
+			"default/perses:v2.0.0", false, ""),
+		Entry("falls back to flag when spec.image is empty",
+			ptr.To(""), "default/perses:v2.0.0",
+			"default/perses:v2.0.0", false, ""),
+		Entry("errors when neither spec.image nor flag is set",
+			nil, "",
+			"", true, "no image specified"),
+		Entry("errors when image has no tag",
+			ptr.To("perses/perses"), "",
+			"", true, "must include a tag"),
+	)
+})
+
 var _ = Describe("LabelsForPerses", func() {
 	DescribeTable("when creating labels for Perses components",
 		func(persesImageFromFlag string, componentName string, perses *v1alpha2.Perses, verifyFunc func(labels map[string]string)) {
