@@ -42,33 +42,66 @@ patches:
 # Note: webhookcainjection_patch.yaml is not needed since this operator only has conversion webhooks, not admission webhooks
 #- webhookcainjection_patch.yaml
 
-# the following config is for teaching kustomize how to do var substitution
-vars:
-# [CERTMANAGER] To enable cert-manager, uncomment all sections with 'CERTMANAGER' prefix.
-- name: CERTIFICATE_NAMESPACE # namespace of the certificate CR
-  objref:
+replacements:
+# Inject cert-manager Certificate namespace/name into CRD CA injection annotations
+- source:
     kind: Certificate
     group: cert-manager.io
     version: v1
-    name: serving-cert # this name should match the one in certificate.yaml
-  fieldref:
-    fieldpath: metadata.namespace
-- name: CERTIFICATE_NAME
-  objref:
+    name: serving-cert
+    fieldPath: metadata.namespace
+  targets:
+  - select:
+      kind: CustomResourceDefinition
+    fieldPaths:
+    - metadata.annotations.[cert-manager.io/inject-ca-from]
+    options:
+      delimiter: /
+      index: 0
+- source:
     kind: Certificate
     group: cert-manager.io
     version: v1
-    name: serving-cert # this name should match the one in certificate.yaml
-# SERVICE_NAME and SERVICE_NAMESPACE variables for cert-manager Certificate DNS names
-- name: SERVICE_NAMESPACE # namespace of the service
-  objref:
+    name: serving-cert
+    fieldPath: metadata.name
+  targets:
+  - select:
+      kind: CustomResourceDefinition
+    fieldPaths:
+    - metadata.annotations.[cert-manager.io/inject-ca-from]
+    options:
+      delimiter: /
+      index: 1
+# Inject webhook Service name/namespace into Certificate dnsNames
+- source:
     kind: Service
     version: v1
     name: webhook-service
-  fieldref:
-    fieldpath: metadata.namespace
-- name: SERVICE_NAME
-  objref:
+    fieldPath: metadata.name
+  targets:
+  - select:
+      kind: Certificate
+      group: cert-manager.io
+      version: v1
+    fieldPaths:
+    - spec.dnsNames.0
+    - spec.dnsNames.1
+    options:
+      delimiter: .
+      index: 0
+- source:
     kind: Service
     version: v1
     name: webhook-service
+    fieldPath: metadata.namespace
+  targets:
+  - select:
+      kind: Certificate
+      group: cert-manager.io
+      version: v1
+    fieldPaths:
+    - spec.dnsNames.0
+    - spec.dnsNames.1
+    options:
+      delimiter: .
+      index: 1
