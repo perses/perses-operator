@@ -1,5 +1,5 @@
 /*
-Copyright 2025 The Perses Authors.
+Copyright The Perses Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -114,6 +114,7 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalDatasource(ctx contex
 		Kind: persesv1.KindGlobalDatasource,
 		Metadata: persesv1.Metadata{
 			Name: globaldatasource.Name,
+			Tags: persescommon.ParseTags(globaldatasource.Annotations),
 		},
 		Spec: globaldatasource.Spec.Config.DatasourceSpec,
 	}
