@@ -277,7 +277,7 @@ spec:
     # ...
 ```
 
-The operator parses the annotation and populates the `tags` field on the corresponding Perses resource metadata when syncing to the Perses server. Tags can then be used for filtering and searching within the Perses UI.
+The operator parses the annotation, normalizes tags to lowercase, and populates the `tags` field on the corresponding Perses resource metadata when syncing to the Perses server. Tags can then be used for filtering and searching within the Perses UI. Duplicate tags (including duplicates resulting from case normalization) are automatically deduplicated.
 
 The same annotation works on `PersesDatasource` and `PersesGlobalDatasource` resources.
 

@@ -25,26 +25,21 @@ import (
 const TagsAnnotation = PersesNamespaceDomain + "/tags"
 
 // ParseTags reads the perses.dev/tags annotation from the given annotations map,
-// splits the comma-separated value, trims whitespace, and returns a set of tags.
-// Empty entries are skipped. Returns nil if the annotation is absent or empty.
+// splits the comma-separated value, trims whitespace, normalizes to lowercase,
+// and returns a set of tags. Empty entries are skipped.
 func ParseTags(annotations map[string]string) set.Set[string] {
 	raw, ok := annotations[TagsAnnotation]
-	if !ok || strings.TrimSpace(raw) == "" {
+	if !ok {
 		return nil
 	}
 
-	parts := strings.Split(raw, ",")
-	tags := make([]string, 0, len(parts))
-	for _, p := range parts {
-		t := strings.TrimSpace(p)
+	tags := set.New[string]()
+	for _, p := range strings.Split(raw, ",") {
+		t := strings.ToLower(strings.TrimSpace(p))
 		if t != "" {
-			tags = append(tags, t)
+			tags.Add(t)
 		}
 	}
 
-	if len(tags) == 0 {
-		return nil
-	}
-
-	return set.New(tags...)
+	return tags
 }

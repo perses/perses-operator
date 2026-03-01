@@ -17,18 +17,11 @@ limitations under the License.
 package common
 
 import (
-	"testing"
-
 	"github.com/perses/common/set"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
-
-func TestTags(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Tags Suite")
-}
 
 var _ = Describe("ParseTags", func() {
 	DescribeTable("parses perses.dev/tags annotation correctly",
@@ -47,9 +40,11 @@ var _ = Describe("ParseTags", func() {
 		Entry("annotation not present",
 			map[string]string{"other": "value"}, nil),
 		Entry("empty annotation value",
-			map[string]string{TagsAnnotation: ""}, nil),
+			map[string]string{TagsAnnotation: ""},
+			set.New[string]()),
 		Entry("whitespace-only annotation value",
-			map[string]string{TagsAnnotation: "   "}, nil),
+			map[string]string{TagsAnnotation: "   "},
+			set.New[string]()),
 		Entry("single tag",
 			map[string]string{TagsAnnotation: "oncall"},
 			set.New("oncall")),
@@ -67,6 +62,15 @@ var _ = Describe("ParseTags", func() {
 			set.New("oncall", "high_severity")),
 		Entry("single tag with whitespace",
 			map[string]string{TagsAnnotation: "  oncall  "},
+			set.New("oncall")),
+		Entry("uppercase tags normalized to lowercase",
+			map[string]string{TagsAnnotation: "OnCall,HIGH_SEVERITY"},
+			set.New("oncall", "high_severity")),
+		Entry("mixed case with whitespace",
+			map[string]string{TagsAnnotation: " Production , Staging "},
+			set.New("production", "staging")),
+		Entry("duplicate tags after normalization",
+			map[string]string{TagsAnnotation: "oncall,OnCall,ONCALL"},
 			set.New("oncall")),
 	)
 })
