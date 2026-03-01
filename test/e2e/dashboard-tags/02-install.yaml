@@ -3,7 +3,7 @@ kind: PersesDashboard
 metadata:
   name: tagged-dashboard
   annotations:
-    perses.dev/tags: "oncall,high_severity"
+    perses.dev/tags: "OnCall,HIGH_SEVERITY"
 spec:
   instanceSelector:
     matchLabels:

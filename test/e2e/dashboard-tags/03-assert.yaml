@@ -12,13 +12,13 @@ commands:
         exit 1
       }
       echo "$RESULT" | grep -q '"oncall"' || {
-        echo "FAIL: Tag 'oncall' not found in dashboard metadata"
+        echo "FAIL: Tag 'oncall' not found (mixed-case input should be normalized to lowercase)"
         echo "Response: $RESULT"
         exit 1
       }
       echo "$RESULT" | grep -q '"high_severity"' || {
-        echo "FAIL: Tag 'high_severity' not found in dashboard metadata"
+        echo "FAIL: Tag 'high_severity' not found (mixed-case input should be normalized to lowercase)"
         echo "Response: $RESULT"
         exit 1
       }
-      echo "Dashboard tags verified in Perses"
+      echo "Dashboard tags verified: mixed-case input normalized to lowercase"
