@@ -1,0 +1,11 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+delete:
+  - apiVersion: perses.dev/v1alpha2
+    kind: PersesDashboard
+    metadata:
+      name: tagged-dashboard
+  - apiVersion: perses.dev/v1alpha2
+    kind: Perses
+    metadata:
+      name: perses-tags-test

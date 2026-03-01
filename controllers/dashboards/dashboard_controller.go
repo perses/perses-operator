@@ -1,5 +1,5 @@
 /*
-Copyright 2023 The Perses Authors.
+Copyright The Perses Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -133,6 +133,7 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 		Metadata: persesv1.ProjectMetadata{
 			Metadata: persesv1.Metadata{
 				Name: dashboard.Name,
+				Tags: common.ParseTags(dashboard.Annotations),
 			},
 		},
 		Spec: dashboard.Spec.Config.DashboardSpec,
