@@ -20,7 +20,7 @@ import (
 )
 
 func main() {
-	l := license.DefaultLicense()
+	l := license.DefaultLicense().AddExcludedPattern("zz_generated.*\\.go")
 	l.RegisterFlags()
 	flag.Parse()
 	l.Execute()
