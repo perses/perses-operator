@@ -21,6 +21,15 @@ rules:
   - apiGroups:
       - ""
     resources:
+      - configmaps
+    verbs:
+      - delete
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
       - events
     verbs:
       - create
@@ -28,16 +37,15 @@ rules:
   - apiGroups:
       - ""
     resources:
-      - services
-      - configmaps
       - secrets
+      - services
     verbs:
-      - get
-      - patch
-      - update
       - create
       - delete
+      - get
       - list
+      - patch
+      - update
       - watch
   - apiGroups:
       - perses.dev
@@ -143,4 +151,3 @@ rules:
       - get
       - patch
       - update
-

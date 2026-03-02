@@ -79,6 +79,8 @@ var log = logger.WithField("module", "perses_controller")
 // +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
 // +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;delete
 func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	start := time.Now()
 	objKey := req.String()
@@ -118,7 +120,8 @@ func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		r.validateVolumes,
 		r.reconcileProvisioning,
 		r.reconcileService,
-		r.reconcileConfigMap,
+		r.reconcileConfigSecret,
+		r.cleanupOldConfigMap,
 		r.reconcileDeployment,
 		r.reconcileStatefulSet,
 		r.setStatusToComplete,
@@ -488,7 +491,7 @@ func (r *PersesReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&v1alpha2.Perses{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&appsv1.StatefulSet{}).
-		Owns(&corev1.ConfigMap{}).
+		Owns(&corev1.Secret{}).
 		Owns(&corev1.Service{}).
 		Watches(
 			&corev1.Secret{},

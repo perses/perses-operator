@@ -12,7 +12,7 @@ status:
       reason: Reconciled
 ---
 apiVersion: v1
-kind: ConfigMap
+kind: Secret
 metadata:
   name: perses-volumes-test-config
 ---

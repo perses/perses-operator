@@ -37,6 +37,8 @@ var _ = Describe("GetVolumes", func() {
 			func(volumes []corev1.Volume) {
 				Expect(volumes).To(HaveLen(2))
 				Expect(volumes[0].Name).To(Equal(configVolumeName))
+				Expect(volumes[0].VolumeSource.Secret).NotTo(BeNil())
+				Expect(volumes[0].VolumeSource.Secret.SecretName).To(Equal("test-config"))
 				Expect(volumes[1].Name).To(Equal(pluginsVolumeName))
 				Expect(volumes[1].VolumeSource.EmptyDir).NotTo(BeNil())
 			},
