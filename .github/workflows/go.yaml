@@ -97,3 +97,15 @@ jobs:
         run: make installer-check
       - name: golangci-lint
         run: make lint
+  checklicense:
+    name: "check license headers"
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - uses: perses/github-actions@v0.11.0
+      - uses: ./.github/perses-ci/actions/setup_environment
+        with:
+          enable_go: true
+      - name: check license headers
+        run: make checklicense
