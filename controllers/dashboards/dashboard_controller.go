@@ -130,6 +130,7 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 		Metadata: persesv1.ProjectMetadata{
 			Metadata: persesv1.Metadata{
 				Name: dashboard.Name,
+				Tags: common.ParseTags(dashboard.Annotations),
 			},
 		},
 		Spec: dashboard.Spec.Config.DashboardSpec,

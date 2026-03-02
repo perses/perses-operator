@@ -20,6 +20,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/perses/common/set"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	persescommon "github.com/perses/perses/pkg/model/api/v1/common"
@@ -637,6 +638,186 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 
 			_, err = dashboardReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: selectorDashboardNamespaceName,
+			})
+			Expect(err).To(Not(HaveOccurred()))
+		})
+	})
+
+	Context("Dashboard controller tags annotation test", func() {
+		const PersesName = "perses-for-tags"
+		const TagsDashboardName = "dashboard-with-tags"
+
+		ctx := context.Background()
+
+		var namespace *corev1.Namespace
+		var persesNamespaceName types.NamespacedName
+		var tagsDashboardNamespaceName types.NamespacedName
+		var TagsNamespace string
+
+		BeforeAll(func() {
+			By("Creating the Namespace to perform the tests")
+			namespace = &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "perses-tags-test-",
+				},
+			}
+			err := k8sClient.Create(ctx, namespace)
+			Expect(err).To(Not(HaveOccurred()))
+			TagsNamespace = namespace.Name
+			persesNamespaceName = types.NamespacedName{Name: PersesName, Namespace: TagsNamespace}
+			tagsDashboardNamespaceName = types.NamespacedName{Name: TagsDashboardName, Namespace: TagsNamespace}
+
+			By("Creating the custom resource for the Kind Perses")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      PersesName,
+					Namespace: TagsNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					ContainerPort: ptr.To(int32(8080)),
+				},
+			}
+			err = k8sClient.Create(ctx, perses)
+			Expect(err).To(Not(HaveOccurred()))
+
+			Eventually(func() error {
+				if err := k8sClient.Get(ctx, persesNamespaceName, perses); err != nil {
+					return err
+				}
+				perses.Status.Conditions = []metav1.Condition{{
+					Type:               common.TypeAvailablePerses,
+					Status:             metav1.ConditionTrue,
+					Reason:             "Testing",
+					Message:            "Available for testing",
+					LastTransitionTime: metav1.Now(),
+				}}
+				return k8sClient.Status().Update(ctx, perses)
+			}, time.Second*10, time.Millisecond*250).Should(Succeed())
+		})
+
+		AfterAll(func() {
+			By("Deleting the Namespace to perform the tests")
+			_ = k8sClient.Delete(ctx, namespace)
+		})
+
+		It("should normalize mixed-case tags from annotation to lowercase and pass them to the Perses API", func() {
+			By("Creating a PersesDashboard with mixed-case tags annotation")
+			dashboard := &persesv1alpha2.PersesDashboard{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      TagsDashboardName,
+					Namespace: TagsNamespace,
+					Annotations: map[string]string{
+						common.TagsAnnotation: "OnCall, HIGH_SEVERITY ,production",
+					},
+				},
+				Spec: persesv1alpha2.PersesDashboardSpec{
+					Config: persesv1alpha2.Dashboard{
+						DashboardSpec: persesv1.DashboardSpec{
+							Display: &persescommon.Display{
+								Name: TagsDashboardName,
+							},
+							Duration: "5m",
+							Layouts:  []persesdashboard.Layout{},
+							Panels: map[string]*persesv1.Panel{
+								"panel1": {
+									Kind: "Panel",
+									Spec: persesv1.PanelSpec{
+										Display: &persesv1.PanelDisplay{
+											Name: "test-panel",
+										},
+										Plugin: persescommon.Plugin{
+											Kind: "PrometheusPlugin",
+											Spec: map[string]any{},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}
+			err := k8sClient.Create(ctx, dashboard)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Checking if the custom resource was successfully created")
+			Eventually(func() error {
+				found := &persesv1alpha2.PersesDashboard{}
+				return k8sClient.Get(ctx, tagsDashboardNamespaceName, found)
+			}, time.Minute, time.Second).Should(Succeed())
+
+			expectedDashboard := &persesv1.Dashboard{
+				Kind: persesv1.KindDashboard,
+				Metadata: persesv1.ProjectMetadata{
+					Metadata: persesv1.Metadata{
+						Name: TagsDashboardName,
+						Tags: set.New("oncall", "high_severity", "production"),
+					},
+				},
+				Spec: dashboard.Spec.Config.DashboardSpec,
+			}
+
+			mockPersesClient := new(internal.MockClient)
+			mockDashboard := new(internal.MockDashboard)
+
+			mockPersesClient.On("Dashboard", TagsNamespace).Return(mockDashboard)
+			getDashboard := mockDashboard.On("Get", TagsDashboardName).Return(&persesv1.Dashboard{}, perseshttp.RequestNotFoundError)
+			mockDashboard.On("Create", expectedDashboard).Return(&persesv1.Dashboard{}, nil)
+
+			By("Reconciling the custom resource created")
+			dashboardReconciler := &dashboardcontroller.PersesDashboardReconciler{
+				Client:        k8sClient,
+				Scheme:        k8sClient.Scheme(),
+				ClientFactory: common.NewWithClient(mockPersesClient),
+			}
+
+			_, err = dashboardReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: tagsDashboardNamespaceName,
+			})
+			Expect(err).To(Not(HaveOccurred()))
+
+			getDashboard.Unset()
+			mockDashboard.On("Get", TagsDashboardName).Return(&persesv1.Dashboard{}, nil)
+
+			By("Checking if the Perses API was called with lowercase-normalized tags")
+			Eventually(func() error {
+				if !mockDashboard.AssertExpectations(GinkgoT()) {
+					return fmt.Errorf("The Perses API was not called with the expected dashboard containing normalized tags")
+				}
+				return nil
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Checking the Status Conditions indicate successful reconciliation")
+			Eventually(func() error {
+				dashboardWithStatus := &persesv1alpha2.PersesDashboard{}
+				err = k8sClient.Get(ctx, tagsDashboardNamespaceName, dashboardWithStatus)
+
+				if len(dashboardWithStatus.Status.Conditions) == 0 {
+					return fmt.Errorf("No status condition was added to the perses dashboard instance")
+				}
+
+				availableCond := apimeta.FindStatusCondition(dashboardWithStatus.Status.Conditions, common.TypeAvailablePerses)
+				if availableCond == nil {
+					return fmt.Errorf("Available condition not found on the perses dashboard instance")
+				}
+				if availableCond.Status != metav1.ConditionTrue {
+					return fmt.Errorf("Expected Available=True but got %s: %s", availableCond.Status, availableCond.Message)
+				}
+
+				return err
+			}, time.Minute, time.Second).Should(Succeed())
+
+			mockDashboard.On("Delete", TagsDashboardName).Return(nil)
+
+			dashboardToDelete := &persesv1alpha2.PersesDashboard{}
+			err = k8sClient.Get(ctx, tagsDashboardNamespaceName, dashboardToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Deleting the custom resource")
+			err = k8sClient.Delete(ctx, dashboardToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+
+			_, err = dashboardReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: tagsDashboardNamespaceName,
 			})
 			Expect(err).To(Not(HaveOccurred()))
 		})

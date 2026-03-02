@@ -111,6 +111,7 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalDatasource(ctx contex
 		Kind: persesv1.KindGlobalDatasource,
 		Metadata: persesv1.Metadata{
 			Name: globaldatasource.Name,
+			Tags: persescommon.ParseTags(globaldatasource.Annotations),
 		},
 		Spec: globaldatasource.Spec.Config.DatasourceSpec,
 	}

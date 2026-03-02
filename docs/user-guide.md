@@ -10,6 +10,7 @@ This documentation provides information on how to use the Perses Operator custom
   - [PersesDashboard](#persesdashboard)
 - [Examples](#examples)
 - [Project Management](#project-management)
+- [Tags](#tags)
 - [Troubleshooting](#troubleshooting)
 
 ## Custom Resources
@@ -256,6 +257,31 @@ spec: # The complete spec of a Perses dashboard: https://perses.dev/perses/docs/
 The Perses operator maps Perses projects to Kubernetes namespaces. When you create a namespace in Kubernetes, it can be used as a project in Perses. This approach simplifies resource management and aligns with Kubernetes native organization principles.
 
 When reconciling Dashboards or Datasources the Perses operator synchronizes the namespace into a Perses project across all Perses servers in the cluster.
+
+## Tags
+
+You can assign tags to Perses resources (dashboards, datasources, global datasources) using the `perses.dev/tags` annotation on the Kubernetes custom resource. Tags are specified as a comma-separated string:
+
+```yaml
+apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  name: kubernetes-overview
+  namespace: monitoring
+  annotations:
+    perses.dev/tags: "oncall,high_severity,production"
+spec:
+  config:
+    display:
+      name: "Kubernetes Overview"
+    # ...
+```
+
+The operator parses the annotation, normalizes tags to lowercase, and populates the `tags` field on the corresponding Perses resource metadata when syncing to the Perses server. Tags can then be used for filtering and searching within the Perses UI. Duplicate tags (including duplicates resulting from case normalization) are automatically deduplicated.
+
+The same annotation works on `PersesDatasource` and `PersesGlobalDatasource` resources.
+
+Tag values must follow Perses tag validation rules: lowercase letters, numbers, spaces, hyphens, and underscores only, with a maximum of 50 characters per tag and 20 tags total.
 
 ## Secrets
 

@@ -1,0 +1,24 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 90
+commands:
+  - script: |
+      kubectl port-forward -n $NAMESPACE svc/perses-tags-test 18093:8080 &
+      PF_PID=$!
+      trap "kill $PF_PID 2>/dev/null" EXIT
+      sleep 3
+      RESULT=$(curl -sf http://localhost:18093/api/v1/projects/$NAMESPACE/dashboards/tagged-dashboard) || {
+        echo "FAIL: Dashboard not found in Perses"
+        exit 1
+      }
+      echo "$RESULT" | grep -q '"oncall"' || {
+        echo "FAIL: Tag 'oncall' not found (mixed-case input should be normalized to lowercase)"
+        echo "Response: $RESULT"
+        exit 1
+      }
+      echo "$RESULT" | grep -q '"high_severity"' || {
+        echo "FAIL: Tag 'high_severity' not found (mixed-case input should be normalized to lowercase)"
+        echo "Response: $RESULT"
+        exit 1
+      }
+      echo "Dashboard tags verified: mixed-case input normalized to lowercase"
