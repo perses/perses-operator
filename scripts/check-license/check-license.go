@@ -11,27 +11,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v1alpha1
+package main
 
 import (
-	"fmt"
+	"flag"
 
-	"github.com/brunoga/deep"
-	"github.com/perses/perses/pkg/model/api/config"
+	"github.com/perses/perses/scripts/pkg/license"
 )
 
-type PersesConfig struct {
-	config.Config `json:",inline"`
-}
-
-func (in *PersesConfig) DeepCopyInto(out *PersesConfig) {
-	if in == nil {
-		return
-	}
-
-	copied, err := deep.Copy(in)
-	if err != nil {
-		panic(fmt.Errorf("failed to deep copy PersesConfig: %w", err))
-	}
-	*out = *copied
+func main() {
+	l := license.DefaultLicense().AddExcludedPattern("zz_generated.*\\.go")
+	l.RegisterFlags()
+	flag.Parse()
+	l.Execute()
 }

@@ -511,3 +511,13 @@ generate-changelog:
 .PHONY: tag
 tag:
 	./scripts/release.sh --tag "${VERSION}"
+
+.PHONY: checklicense
+checklicense:
+	@echo ">> checking license"
+	$(GO) run ./scripts/check-license --check
+
+.PHONY: fixlicense
+fixlicense:
+	@echo ">> adding license header where it's missing"
+	$(GO) run ./scripts/check-license --fix
