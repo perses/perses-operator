@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/logos/perses-operator-logo.png" alt="Perses Operator" width="150">
+</p>
+
 # Perses Operator
 
 [![ci](https://github.com/perses/perses-operator/actions/workflows/ci.yaml/badge.svg)](https://github.com/perses/perses-operator/actions/workflows/ci.yaml)
