@@ -237,6 +237,11 @@ check-metrics-docs: generate-metrics-docs ## Verify that generated metrics docs 
 		git diff docs/metrics.md --exit-code; \
 	fi
 
+.PHONY: fmt-docs
+fmt-docs: mdox ## Format docs and validate links.
+	@echo ">> formatting markdown documents"
+	$(MDOX) fmt --soft-wraps -l $$(find . -name '*.md' -not -path './bin/*' -not -path './bundle/*' -not -path './.git/*' -not -path './docs/api.md' -not -path './docs/metrics.md' -print) --links.validate.config-file=./.mdox.validate.yaml
+
 .PHONY: fmt
 fmt: jsonnet-format ## Run go fmt against code.
 	go fmt ./...

@@ -40,7 +40,6 @@ make run
 
 > [!NOTE]
 > The Perses server image used by the operator is resolved in this order (highest priority first):
->
 > 1. `spec.image` in the Perses CR
 > 2. `--perses-default-base-image` flag passed to the operator binary
 > 3. `DefaultPersesImage` constant in `internal/operator/defaults.go` (compile-time default)

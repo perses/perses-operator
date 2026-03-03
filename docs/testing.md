@@ -36,7 +36,7 @@ KUBEBUILDER_ASSETS="$(bin/setup-envtest use -p path)" \
 
 ## E2E Tests (kuttl)
 
-E2E tests use [kuttl](https://kuttl.dev/) to validate the operator end-to-end in a real [kind](https://kind.sigs.k8s.io/) cluster, including deployment, resource synchronization, and cleanup.
+E2E tests use [kuttl](https://github.com/kudobuilder/kuttl) to validate the operator end-to-end in a real [kind](https://kind.sigs.k8s.io/) cluster, including deployment, resource synchronization, and cleanup.
 
 ### Prerequisites
 
@@ -63,15 +63,15 @@ When iterating:
 
 The following Makefile variables can be overridden to customize the e2e environment:
 
-| Variable | Default | Description |
-| -------- | ------- | ----------- |
-| `KIND_CLUSTER_NAME` | `kuttl-e2e` | Name of the kind cluster |
-| `E2E_TAG` | Git short SHA | Image tag for the operator |
-| `E2E_IMG` | `docker.io/persesdev/perses-operator:<E2E_TAG>` | Full operator image reference |
+| Variable            | Default                                         | Description                   |
+|---------------------|-------------------------------------------------|-------------------------------|
+| `KIND_CLUSTER_NAME` | `kuttl-e2e`                                     | Name of the kind cluster      |
+| `E2E_TAG`           | Git short SHA                                   | Image tag for the operator    |
+| `E2E_IMG`           | `docker.io/persesdev/perses-operator:<E2E_TAG>` | Full operator image reference |
 
 ### Test Structure
 
-Tests are under `test/e2e/` following the [kuttl convention](https://kuttl.dev/docs/kuttl-test-harness.html). Kuttl creates a random namespace per test case for isolation. Steps run sequentially.
+Tests are under `test/e2e/` following the [kuttl convention](https://github.com/kudobuilder/kuttl/blob/main/docs/kuttl-test-harness.md). Kuttl creates a random namespace per test case for isolation. Steps run sequentially.
 
 ```text
 test/e2e/
@@ -114,9 +114,9 @@ See [Developer Guide](dev.md#modifying-or-adding-alerting-rules) for the full wo
 
 ## Integration vs E2E Tests
 
-| Aspect | Integration Tests | E2E Tests |
-| --- | --- | --- |
-| Environment | Lightweight API server via envtest (no real cluster) | Real Kubernetes cluster via kind |
-| Scope | Controller reconcile logic, CRD validation, status updates | Full operator lifecycle including pod scheduling and networking |
-| Speed | Fast (seconds) | Slower (minutes, includes cluster setup) |
-| Framework | Ginkgo + envtest | kuttl |
+| Aspect      | Integration Tests                                          | E2E Tests                                                       |
+|-------------|------------------------------------------------------------|-----------------------------------------------------------------|
+| Environment | Lightweight API server via envtest (no real cluster)       | Real Kubernetes cluster via kind                                |
+| Scope       | Controller reconcile logic, CRD validation, status updates | Full operator lifecycle including pod scheduling and networking |
+| Speed       | Fast (seconds)                                             | Slower (minutes, includes cluster setup)                        |
+| Framework   | Ginkgo + envtest                                           | kuttl                                                           |
