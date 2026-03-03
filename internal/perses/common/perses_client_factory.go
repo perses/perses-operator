@@ -57,7 +57,7 @@ func (f *PersesClientFactoryWithConfig) CreateClient(ctx context.Context, client
 		if perses.Spec.ContainerPort != nil {
 			containerPort = *perses.Spec.ContainerPort
 		}
-		urlStr = fmt.Sprintf("%s://%s.%s.svc.cluster.local:%d", httpProtocol, perses.Name, perses.Namespace, containerPort)
+		urlStr = fmt.Sprintf("%s://%s.%s.svc.cluster.local:%d%s", httpProtocol, perses.Name, perses.Namespace, containerPort, perses.Spec.Config.APIPrefix)
 	}
 	parsedURL, err := common.ParseURL(urlStr)
 	if err != nil {
