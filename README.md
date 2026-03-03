@@ -80,6 +80,33 @@ You’ll need:
 
 ### Running on the cluster
 
+#### Option 1: Helm Chart
+
+The Perses Operator can be installed using the [Helm chart](https://github.com/perses/helm-charts) from the Perses Helm repository.
+
+> [!NOTE]
+> The Perses Operator requires [cert-manager](https://cert-manager.io/docs/installation/) to be installed in the cluster for webhook certificate management.
+
+1. Add the Perses Helm repository:
+
+```sh
+helm repo add perses https://perses.github.io/helm-charts
+helm repo update
+```
+
+2. Install the Perses Operator:
+
+```sh
+helm install perses-operator perses/perses-operator
+```
+
+For detailed configuration options, see the [Perses Operator chart documentation](https://github.com/perses/helm-charts/tree/main/charts/perses-operator).
+
+> [!IMPORTANT]
+> The Perses Operator Helm chart is newly released. If you encounter any issues, please report them in the [perses/helm-charts](https://github.com/perses/helm-charts/issues) repository.
+
+#### Option 2: Kustomize
+
 1. Install custom resource definitions:
 
 ```sh
@@ -88,7 +115,7 @@ make install-crds
 
 2. Deploy the operator:
 
-**Option A: Using cert-manager**
+**Option A: Using cert-manager:**
 
 ```sh
 make install-cert-manager
@@ -103,7 +130,7 @@ make deploy
 > IMG=<your-image> make deploy
 > ```
 
-**Option B: Using self-signed certificates (for development/testing)**
+**Option B: Using self-signed certificates (for development/testing):**
 
 ```sh
 make deploy-local
@@ -155,6 +182,10 @@ make undeploy
 
 - [API Reference](https://perses.dev/perses-operator/docs/api/)
 - [Metrics](docs/metrics.md)
+
+### Helm Chart
+
+- [Perses Operator Helm Chart](https://github.com/perses/helm-charts/tree/main/charts/perses-operator)
 
 ### Example Configs
 
