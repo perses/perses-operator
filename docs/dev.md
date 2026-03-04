@@ -4,7 +4,7 @@ This guide covers the development workflow for the Perses Operator. For general 
 
 ## Prerequisites
 
-* A Kubernetes cluster — use [kind](https://sigs.k8s.io/kind) or [minikube](https://minikube.sigs.k8s.io/docs/) for local development
+* A Kubernetes cluster — use [kind](https://sigs.k8s.io/kind) or [minikube](https://github.com/kubernetes/minikube) for local development
 * [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) configured for your cluster
 * [Go](https://go.dev/doc/install)
 
@@ -84,7 +84,7 @@ For remote clusters, build, push to a registry, and deploy:
 IMG=<some-registry>/perses-operator:tag make test-image-build image-push deploy-local
 ```
 
-**Using [cert-manager](https://cert-manager.io/) (recommended for production-like environments):**
+**Using [cert-manager](https://github.com/cert-manager/cert-manager) (recommended for production-like environments):**
 
 ```shell
 make install-cert-manager

@@ -74,7 +74,7 @@ objects, and ensures that the desired state is reconciled.
 
 You’ll need:
 
-- a Kubernetes cluster to run against. You can use [kind](https://sigs.k8s.io/kind) or [minikube](https://minikube.sigs.k8s.io/docs/) to get a local cluster for testing, or run against a remote cluster.
+- a Kubernetes cluster to run against. You can use [kind](https://sigs.k8s.io/kind) or [minikube](https://github.com/kubernetes/minikube) to get a local cluster for testing, or run against a remote cluster.
   **Note:** Your controller will automatically use the current context in your kubeconfig file (i.e. whatever cluster `kubectl cluster-info` shows).
 - [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) installed and configured to use your cluster.
 
@@ -85,7 +85,7 @@ You’ll need:
 The Perses Operator can be installed using the [Helm chart](https://github.com/perses/helm-charts) from the Perses Helm repository.
 
 > [!NOTE]
-> The Perses Operator requires [cert-manager](https://cert-manager.io/docs/installation/) to be installed in the cluster for webhook certificate management.
+> The Perses Operator requires [cert-manager](https://github.com/cert-manager/cert-manager) to be installed in the cluster for webhook certificate management.
 
 1. Add the Perses Helm repository:
 

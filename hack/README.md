@@ -3,7 +3,7 @@
 ## Pre-requisites
 
 * [operator-sdk](https://sdk.operatorframework.io/docs/installation/) CLI (install via `make operator-sdk`)
-* A Kubernetes cluster like [kind](https://sigs.k8s.io/kind), [minikube](https://minikube.sigs.k8s.io/docs/), or [OpenShift](https://www.redhat.com/en/technologies/cloud-computing/openshift) (OLM is pre-installed on OpenShift)
+* A Kubernetes cluster like [kind](https://sigs.k8s.io/kind), [minikube](https://github.com/kubernetes/minikube), or [OpenShift](https://www.redhat.com/en/technologies/cloud-computing/openshift) (OLM is pre-installed on OpenShift)
 
 ## Quick Start (Testing)
 
