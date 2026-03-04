@@ -51,6 +51,13 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           registry: 'docker.io'
+      - name: Login to Quay.io
+        uses: redhat-actions/podman-login@v1
+        if: ${{ github.event_name == 'push' && (startsWith(github.ref_name, 'v') || github.ref_name == 'main') }}
+        with:
+          username: ${{ secrets.QUAY_USERNAME }}
+          password: ${{ secrets.QUAY_TOKEN }}
+          registry: 'quay.io'
       - name: install goreleaser
         uses: goreleaser/goreleaser-action@v7
         with:
@@ -60,6 +67,7 @@ jobs:
         run: |
           make cross-build
           BUNDLE_IMG=docker.io/persesdev/perses-operator-bundle:$(make -s print-image-tag) make bundle-build
+          BUNDLE_IMG=quay.io/persesdev/perses-operator-bundle:$(make -s print-image-tag) make bundle-build
       - name: Push main branch images
         ## This step will run when main branch is pushed.
         ## It will push docker images with 'main' tag and git SHA tag
@@ -67,6 +75,7 @@ jobs:
         run: |
           make push-main-docker-image
           BUNDLE_IMG=docker.io/persesdev/perses-operator-bundle:$(make -s print-image-tag) make bundle-push
+          BUNDLE_IMG=quay.io/persesdev/perses-operator-bundle:$(make -s print-image-tag) make bundle-push
       - name: Publish Release and binaries
         ## This step will only run when a new tag is pushed.
         ## It will build the Go binaries and the docker images and then publish:
@@ -75,9 +84,9 @@ jobs:
         if: ${{ github.event_name == 'push' && startsWith(github.ref_name, 'v') }}
         run: |
           make cross-release
-          make bundle-build
-          make bundle-push
-          make catalog-build
-          make catalog-push
+          BUNDLE_IMG=docker.io/persesdev/perses-operator-bundle:v$(cat VERSION) make bundle-build bundle-push
+          BUNDLE_IMG=quay.io/persesdev/perses-operator-bundle:v$(cat VERSION) make bundle-build bundle-push
+          CATALOG_IMG=docker.io/persesdev/perses-operator-catalog:v$(cat VERSION) make catalog-build catalog-push
+          CATALOG_IMG=quay.io/persesdev/perses-operator-catalog:v$(cat VERSION) make catalog-build catalog-push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
