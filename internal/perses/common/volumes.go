@@ -35,10 +35,8 @@ func GetVolumes(perses *v1alpha2.Perses) []corev1.Volume {
 		{
 			Name: configVolumeName,
 			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: configName,
-					},
+				Secret: &corev1.SecretVolumeSource{
+					SecretName:  configName,
 					DefaultMode: ptr.To[int32](defaultFileMode),
 				},
 			},

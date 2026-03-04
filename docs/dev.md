@@ -14,7 +14,7 @@ This project follows the Kubernetes [Operator pattern](https://kubernetes.io/doc
 
 Each `Perses` CR instance manages the following resources:
 
-* A ConfigMap holding the Perses server configuration
+* A Secret holding the Perses server configuration (sensitive fields like database credentials and OAuth secrets are preserved)
 * A Deployment (SQL storage) or StatefulSet (file-based storage) running the Perses server
 * A Service for in-cluster API access
 

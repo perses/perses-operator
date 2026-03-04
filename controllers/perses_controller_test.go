@@ -51,7 +51,7 @@ var _ = Describe("Perses controller", func() {
 
 		It("should successfully reconcile a custom resource for Perses", func() {
 			typeNamespaceName := types.NamespacedName{Name: PersesName, Namespace: persesNamespace}
-			configMapNamespaceName := types.NamespacedName{Name: common.GetConfigName(PersesName), Namespace: persesNamespace}
+			configSecretNamespaceName := types.NamespacedName{Name: common.GetConfigName(PersesName), Namespace: persesNamespace}
 
 			By("Creating the custom resource for the Kind Perses")
 			perses := &persesv1alpha2.Perses{}
@@ -159,10 +159,10 @@ var _ = Describe("Perses controller", func() {
 				return err
 			}, time.Minute, time.Second).Should(Succeed())
 
-			By("Checking if ConfigMap was successfully created in the reconciliation")
+			By("Checking if config Secret was successfully created in the reconciliation")
 			Eventually(func() error {
-				found := &corev1.ConfigMap{}
-				return k8sClient.Get(ctx, configMapNamespaceName, found)
+				found := &corev1.Secret{}
+				return k8sClient.Get(ctx, configSecretNamespaceName, found)
 			}, time.Minute*3, time.Second).Should(Succeed())
 
 			By("Checking if StatefulSet was successfully created in the reconciliation")
@@ -262,10 +262,10 @@ var _ = Describe("Perses controller", func() {
 				return k8sClient.Get(ctx, types.NamespacedName{Name: persesServiceName, Namespace: persesNamespace}, found)
 			}, time.Minute, time.Second).Should(Succeed())
 
-			By("Checking if ConfigMap was successfully deleted in the reconciliation")
+			By("Checking if config Secret was successfully deleted in the reconciliation")
 			Eventually(func() error {
-				found := &corev1.ConfigMap{}
-				return k8sClient.Get(ctx, configMapNamespaceName, found)
+				found := &corev1.Secret{}
+				return k8sClient.Get(ctx, configSecretNamespaceName, found)
 			}, time.Minute, time.Second).Should(Succeed())
 
 			By("Checking the latest Status Condition added to the Perses instance")
@@ -286,7 +286,7 @@ var _ = Describe("Perses controller", func() {
 		It("should successfully reconcile a custom resource for Perses with storage", func() {
 			PersesStorageName := "perses-test-with-storage"
 			typeNamespaceName := types.NamespacedName{Name: PersesStorageName, Namespace: persesNamespace}
-			configMapNamespaceName := types.NamespacedName{Name: common.GetConfigName(PersesStorageName), Namespace: persesNamespace}
+			configSecretNamespaceName := types.NamespacedName{Name: common.GetConfigName(PersesStorageName), Namespace: persesNamespace}
 
 			By("Creating the custom resource for the Kind Perses with storage")
 			perses := &persesv1alpha2.Perses{}
@@ -405,10 +405,10 @@ var _ = Describe("Perses controller", func() {
 				return k8sClient.Get(ctx, typeNamespaceName, found)
 			}, time.Minute, time.Second).Should(Succeed())
 
-			By("Checking if ConfigMap was successfully deleted in the reconciliation")
+			By("Checking if config Secret was successfully deleted in the reconciliation")
 			Eventually(func() error {
-				found := &corev1.ConfigMap{}
-				return k8sClient.Get(ctx, configMapNamespaceName, found)
+				found := &corev1.Secret{}
+				return k8sClient.Get(ctx, configSecretNamespaceName, found)
 			}, time.Minute, time.Second).Should(Succeed())
 
 			By("Checking the latest Status Condition added to the Perses instance")
@@ -1028,5 +1028,83 @@ var _ = Describe("Perses controller", func() {
 			Expect(k8sClient.Get(ctx, typeNamespaceName, persesToDelete)).To(Succeed())
 			Expect(k8sClient.Delete(ctx, persesToDelete)).To(Succeed())
 		})
+
+		It("should clean up old ConfigMap when migrating to Secret-based config", func() {
+			const migrationName = "perses-migration-test"
+			typeNamespaceName := types.NamespacedName{Name: migrationName, Namespace: persesNamespace}
+			configName := common.GetConfigName(migrationName)
+			configNamespaceName := types.NamespacedName{Name: configName, Namespace: persesNamespace}
+
+			By("Creating a Perses CR")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      migrationName,
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					Image: ptr.To(persesImage),
+					Config: persesv1alpha2.PersesConfig{
+						Config: persesconfig.Config{
+							Database: persesconfig.Database{
+								File: &persesconfig.File{
+									Folder: "/etc/perses/storage",
+								},
+							},
+						},
+					},
+					Storage: &persesv1alpha2.StorageConfiguration{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, perses)).To(Succeed())
+
+			By("Simulating a pre-existing ConfigMap from before the migration")
+			oldCM := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      configName,
+					Namespace: persesNamespace,
+				},
+				Data: map[string]string{
+					"config.yaml": "database:\n  file:\n    folder: /etc/perses/storage\n",
+				},
+			}
+			Expect(k8sClient.Create(ctx, oldCM)).To(Succeed())
+
+			By("Verifying the old ConfigMap exists")
+			Eventually(func() error {
+				return k8sClient.Get(ctx, configNamespaceName, &corev1.ConfigMap{})
+			}, time.Second*10, time.Millisecond*250).Should(Succeed())
+
+			persesReconciler := &persescontroller.PersesReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+
+			By("Reconciling to trigger the migration")
+			Eventually(func() error {
+				_, err := persesReconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespaceName,
+				})
+				return err
+			}, time.Second*10, time.Millisecond*250).Should(Succeed())
+
+			By("Checking that a config Secret was created")
+			Eventually(func() error {
+				return k8sClient.Get(ctx, configNamespaceName, &corev1.Secret{})
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Checking that the old ConfigMap was deleted")
+			Eventually(func() bool {
+				err := k8sClient.Get(ctx, configNamespaceName, &corev1.ConfigMap{})
+				return errors.IsNotFound(err)
+			}, time.Minute, time.Second).Should(BeTrue(), "Old ConfigMap should be deleted after migration")
+
+			By("Deleting the custom resource")
+			persesToDelete := &persesv1alpha2.Perses{}
+			Expect(k8sClient.Get(ctx, typeNamespaceName, persesToDelete)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, persesToDelete)).To(Succeed())
+		})
+
 	})
 })
