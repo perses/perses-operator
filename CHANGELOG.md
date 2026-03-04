@@ -1,3 +1,8 @@
+## 0.3.1 / 2026-03-04
+
+- [BUGFIX] Bump kube-rbac-proxy from v0.13.1 to v0.21.0 and migrate to quay.io registry (#336)
+- [BUGFIX] Support api_prefix in Perses client factory (#334)
+
 ## 0.3.0 / 2026-03-03
 
 - [FEATURE] Add v1alpha2 resources and conversion webhooks (#172)
