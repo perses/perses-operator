@@ -29,3 +29,17 @@ jobs:
         run: make check-api-docs
       - name: check metrics docs are up-to-date
         run: make check-metrics-docs
+  check-docs:
+    name: 'check markdown formatting and links'
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - uses: perses/github-actions@v0.11.0
+      - uses: ./.github/perses-ci/actions/setup_environment
+        with:
+          enable_go: true
+      - name: format docs
+        run: make fmt-docs
+      - name: check docs are up-to-date
+        run: git diff --exit-code
