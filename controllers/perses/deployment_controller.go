@@ -178,7 +178,7 @@ func (r *PersesReconciler) createPersesDeployment(
 								if perses.Spec.ContainerPort != nil {
 									return *perses.Spec.ContainerPort
 								}
-								return 8080
+								return common.DefaultContainerPort
 							}(),
 							Name: "perses",
 						}},
