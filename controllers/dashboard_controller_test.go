@@ -371,6 +371,55 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 				return nil
 			}, time.Minute, time.Second).Should(Succeed())
 		})
+
+		It("should return an error when the Perses API delete call fails", func() {
+			By("Creating the custom resource for the Kind PersesDashboard")
+			dashboard := &persesv1alpha2.PersesDashboard{}
+			err := k8sClient.Get(ctx, dashboardNamespaceName, dashboard)
+			if err != nil && errors.IsNotFound(err) {
+				perses := &persesv1alpha2.PersesDashboard{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      DashboardName,
+						Namespace: PersesNamespace,
+					},
+					Spec: persesv1alpha2.PersesDashboardSpec{
+						Config: persesv1alpha2.Dashboard{
+							DashboardSpec: newDashboard.Spec,
+						},
+					},
+				}
+
+				err = k8sClient.Create(ctx, perses)
+				Expect(err).To(Not(HaveOccurred()))
+			}
+
+			mockPersesClient := new(internal.MockClient)
+			mockDashboard := new(internal.MockDashboard)
+
+			mockPersesClient.On("Dashboard", PersesNamespace).Return(mockDashboard)
+			mockDashboard.On("Delete", DashboardName).Return(perseshttp.RequestInternalError)
+
+			dashboardReconciler := &dashboardcontroller.PersesDashboardReconciler{
+				Client:        k8sClient,
+				Scheme:        k8sClient.Scheme(),
+				ClientFactory: common.NewWithClient(mockPersesClient),
+			}
+
+			dashboardToDelete := &persesv1alpha2.PersesDashboard{}
+			err = k8sClient.Get(ctx, dashboardNamespaceName, dashboardToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Deleting the custom resource")
+			err = k8sClient.Delete(ctx, dashboardToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Reconciling should return an error because the backend delete failed")
+			_, err = dashboardReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: dashboardNamespaceName,
+			})
+			Expect(err).To(HaveOccurred())
+			mockDashboard.AssertCalled(GinkgoT(), "Delete", DashboardName)
+		})
 	})
 
 	Context("Dashboard controller instance selector test", func() {
