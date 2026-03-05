@@ -456,6 +456,7 @@ func (r *PersesReconciler) findPersesForSecret(ctx context.Context, obj client.O
 	// List all Perses objects in the same namespace as the secret
 	persesList := &v1alpha2.PersesList{}
 	if err := r.List(ctx, persesList, client.InNamespace(secret.Namespace)); err != nil {
+		log.WithError(err).Errorf("failed to list Perses instances for secret %s/%s", secret.Namespace, secret.Name)
 		return nil
 	}
 
