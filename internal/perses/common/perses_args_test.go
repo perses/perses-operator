@@ -94,5 +94,14 @@ var _ = Describe("GetPersesArgs", func() {
 			},
 			[]string{configArg, "--log.level=info", "--pprof"},
 		),
+		Entry("Args with custom containerPort sets web.listen-address",
+			&v1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{Name: "test-perses"},
+				Spec: v1alpha2.PersesSpec{
+					ContainerPort: ptr.To[int32](9000),
+				},
+			},
+			[]string{configArg, "--web.listen-address=:9000"},
+		),
 	)
 })
