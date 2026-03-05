@@ -209,8 +209,14 @@ func (r *PersesDashboardReconciler) deleteDashboard(ctx context.Context, perses 
 
 	err = persesClient.Dashboard(dashboardNamespace).Delete(dashboardName)
 
-	if err != nil && errors.Is(err, perseshttp.RequestNotFoundError) {
-		dlog.Infof("Dashboard not found: %s", dashboardName)
+	// NotFound is treated as success (idempotent delete); any other error is requeued.
+	if err != nil {
+		if errors.Is(err, perseshttp.RequestNotFoundError) {
+			dlog.Infof("Dashboard not found: %s", dashboardName)
+			return subreconciler.ContinueReconciling()
+		}
+		dlog.WithError(err).Errorf("Failed to delete dashboard: %s", dashboardName)
+		return subreconciler.RequeueWithError(err)
 	}
 
 	dlog.Infof("Dashboard deleted: %s", dashboardName)

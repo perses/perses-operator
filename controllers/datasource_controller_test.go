@@ -380,6 +380,55 @@ var _ = Describe("Datasource controller", Ordered, func() {
 				return nil
 			}, time.Minute, time.Second).Should(Succeed())
 		})
+
+		It("should return an error when the Perses API delete call fails", func() {
+			By("Creating the custom resource for the Kind PersesDatasource")
+			datasource := &persesv1alpha2.PersesDatasource{}
+			err := k8sClient.Get(ctx, datasourceNamespaceName, datasource)
+			if err != nil && errors.IsNotFound(err) {
+				datasource = &persesv1alpha2.PersesDatasource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      DatasourceName,
+						Namespace: PersesNamespace,
+					},
+					Spec: persesv1alpha2.DatasourceSpec{
+						Config: persesv1alpha2.Datasource{
+							DatasourceSpec: newDatasource.Spec,
+						},
+					},
+				}
+
+				err = k8sClient.Create(ctx, datasource)
+				Expect(err).To(Not(HaveOccurred()))
+			}
+
+			mockPersesClient := new(internal.MockClient)
+			mockDatasource := new(internal.MockDatasource)
+
+			mockPersesClient.On("Datasource", PersesNamespace).Return(mockDatasource)
+			mockDatasource.On("Delete", DatasourceName).Return(perseshttp.RequestInternalError)
+
+			datasourceReconciler := &datasourcecontroller.PersesDatasourceReconciler{
+				Client:        k8sClient,
+				Scheme:        k8sClient.Scheme(),
+				ClientFactory: common.NewWithClient(mockPersesClient),
+			}
+
+			datasourceToDelete := &persesv1alpha2.PersesDatasource{}
+			err = k8sClient.Get(ctx, datasourceNamespaceName, datasourceToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Deleting the custom resource")
+			err = k8sClient.Delete(ctx, datasourceToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Reconciling should return an error because the backend delete failed")
+			_, err = datasourceReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: datasourceNamespaceName,
+			})
+			Expect(err).To(HaveOccurred())
+			mockDatasource.AssertCalled(GinkgoT(), "Delete", DatasourceName)
+		})
 	})
 
 	Context("Datasource controller test with api_prefix", func() {
