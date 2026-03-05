@@ -180,11 +180,13 @@ var _ = Describe("Perses controller", func() {
 					if found.Spec.Template.Spec.Containers[0].Image != persesImage {
 						return fmt.Errorf("The image used in the StatefulSet is not the one expected")
 					}
-					if len(found.Spec.Template.Spec.Containers[0].Ports) < 1 && found.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort != 8080 {
+					if len(found.Spec.Template.Spec.Containers[0].Ports) < 1 || found.Spec.Template.Spec.Containers[0].Ports[0].ContainerPort != 8080 {
 						return fmt.Errorf("The port used in the StatefulSet is not the one defined in the custom resource")
 					}
-					if len(found.Spec.Template.Spec.Containers[0].Args) < 1 && found.Spec.Template.Spec.Containers[0].Args[0] != "--config=/etc/perses/config/config.yaml" {
-						return fmt.Errorf("The config path used in the StatefulSet is not the one defined in the custom resource")
+					if len(found.Spec.Template.Spec.Containers[0].Args) < 2 ||
+						found.Spec.Template.Spec.Containers[0].Args[0] != "--config=/etc/perses/config/config.yaml" ||
+						found.Spec.Template.Spec.Containers[0].Args[1] != "--web.listen-address=:8080" {
+						return fmt.Errorf("The args used in the StatefulSet are not the ones defined in the custom resource")
 					}
 					if found.Spec.Template.Spec.ServiceAccountName != "perses-service-account" {
 						return fmt.Errorf("The service account used in the StatefulSet is not the one defined in the custom resource")
