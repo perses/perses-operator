@@ -73,7 +73,6 @@ type PersesReconciler struct {
 var log = logger.WithField("module", "perses_controller")
 
 // +kubebuilder:rbac:groups=perses.dev,resources=perses,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=perses.dev,resources=perses,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=perses.dev,resources=perses/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=perses.dev,resources=perses/finalizers,verbs=update
 // +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
