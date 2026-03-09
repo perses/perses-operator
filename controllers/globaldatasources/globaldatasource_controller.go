@@ -378,23 +378,36 @@ func (r *PersesGlobalDatasourceReconciler) deleteGlobalDatasource(ctx context.Co
 		return subreconciler.RequeueWithError(err)
 	}
 
+	// Ignore NotFound — the resource may have already been deleted from Perses directly.
+	// Any other error means the delete failed and should be retried.
+	// Secret delete is attempted regardless of whether the datasource was found or not.
 	err = persesClient.GlobalDatasource().Delete(datasourceName)
 
-	if err != nil && errors.Is(err, perseshttp.RequestNotFoundError) {
-		gdlog.Infof("GlobalDatasource not found: %s", datasourceName)
+	if err != nil {
+		if errors.Is(err, perseshttp.RequestNotFoundError) {
+			gdlog.Infof("GlobalDatasource not found: %s", datasourceName)
+		} else {
+			gdlog.WithError(err).Errorf("Failed to delete global datasource: %s", datasourceName)
+			return subreconciler.RequeueWithError(err)
+		}
+	} else {
+		gdlog.Infof("GlobalDatasource deleted: %s", datasourceName)
 	}
-
-	gdlog.Infof("GlobalDatasource deleted: %s", datasourceName)
 
 	secretName := datasourceName + persescommon.SecretNameSuffix
 
 	err = persesClient.GlobalSecret().Delete(secretName)
 
-	if err != nil && errors.Is(err, perseshttp.RequestNotFoundError) {
-		gdlog.Infof("GlobalSecret not found: %s", secretName)
+	if err != nil {
+		if errors.Is(err, perseshttp.RequestNotFoundError) {
+			gdlog.Infof("GlobalSecret not found: %s", secretName)
+		} else {
+			gdlog.WithError(err).Errorf("Failed to delete global secret: %s", secretName)
+			return subreconciler.RequeueWithError(err)
+		}
+	} else {
+		gdlog.Infof("GlobalSecret deleted: %s", secretName)
 	}
-
-	gdlog.Infof("GlobalSecret deleted: %s", secretName)
 
 	return subreconciler.ContinueReconciling()
 }

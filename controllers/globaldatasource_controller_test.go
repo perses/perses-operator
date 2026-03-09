@@ -374,5 +374,53 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 				return nil
 			}, time.Minute, time.Second).Should(Succeed())
 		})
+
+		It("should return an error when the Perses API delete call fails", func() {
+			By("Creating the custom resource for the Kind PersesGlobalDatasource")
+			globaldatasource := &persesv1alpha2.PersesGlobalDatasource{}
+			err := k8sClient.Get(ctx, globaldatasourceNamespaceName, globaldatasource)
+			if err != nil && errors.IsNotFound(err) {
+				globaldatasource = &persesv1alpha2.PersesGlobalDatasource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: GlobalDatasourceName,
+					},
+					Spec: persesv1alpha2.DatasourceSpec{
+						Config: persesv1alpha2.Datasource{
+							DatasourceSpec: newGlobalDatasource.Spec,
+						},
+					},
+				}
+
+				err = k8sClient.Create(ctx, globaldatasource)
+				Expect(err).To(Not(HaveOccurred()))
+			}
+
+			mockPersesClient := new(internal.MockClient)
+			mockGlobalDatasource := new(internal.MockGlobalDatasource)
+
+			mockPersesClient.On("GlobalDatasource").Return(mockGlobalDatasource)
+			mockGlobalDatasource.On("Delete", GlobalDatasourceName).Return(perseshttp.RequestInternalError)
+
+			globaldatasourceReconciler := &globaldatasourcecontroller.PersesGlobalDatasourceReconciler{
+				Client:        k8sClient,
+				Scheme:        k8sClient.Scheme(),
+				ClientFactory: common.NewWithClient(mockPersesClient),
+			}
+
+			globaldatasourceToDelete := &persesv1alpha2.PersesGlobalDatasource{}
+			err = k8sClient.Get(ctx, globaldatasourceNamespaceName, globaldatasourceToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Deleting the custom resource")
+			err = k8sClient.Delete(ctx, globaldatasourceToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Reconciling should return an error because the backend delete failed")
+			_, err = globaldatasourceReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: globaldatasourceNamespaceName,
+			})
+			Expect(err).To(HaveOccurred())
+			mockGlobalDatasource.AssertCalled(GinkgoT(), "Delete", GlobalDatasourceName)
+		})
 	})
 })
