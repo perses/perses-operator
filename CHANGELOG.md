@@ -1,3 +1,12 @@
+## 0.3.2 / 2026-03-10
+
+- [BUGFIX] fix delete errors being silently swallowed in dashboard, datasource and globaldatasource controllers (#351)
+- [BUGFIX] add missing pods RBAC permission to role.yaml (#352)
+- [BUGFIX] fix silently swallowed errors in secret watch and OAuth file configuration (#353)
+- [BUGFIX] Fix probe ports ignoring spec.containerPort (#347)
+- [BUGFIX] Fix spec.containerPort being ignored by Service and Perses server (#345)
+- [BUGFIX] Fix kube-rbac-proxy upstream port mismatch (#343)
+
 ## 0.3.1 / 2026-03-04
 
 - [BUGFIX] Bump kube-rbac-proxy from v0.13.1 to v0.21.0 and migrate to quay.io registry (#336)

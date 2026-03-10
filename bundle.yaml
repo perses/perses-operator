@@ -10772,7 +10772,7 @@ spec:
         - --health-probe-bind-address=:8081
         - --metrics-bind-address=127.0.0.1:8082
         - --leader-elect
-        image: docker.io/persesdev/perses-operator:v0.3.1
+        image: docker.io/persesdev/perses-operator:v0.3.2
         imagePullPolicy: Always
         livenessProbe:
           httpGet:
