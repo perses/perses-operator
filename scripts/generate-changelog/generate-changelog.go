@@ -14,7 +14,6 @@
 package main
 
 import (
-	"bufio"
 	"bytes"
 	"flag"
 	"fmt"
@@ -48,27 +47,13 @@ func generateChangelog(clog *changelog.Changelog, version string) string {
 }
 
 func Write(clog *changelog.Changelog, version string) {
-	f, err := os.Open("CHANGELOG.md")
+	existingContent, err := os.ReadFile("CHANGELOG.md")
 	if err != nil {
-		logrus.WithError(err).Fatal("unable to open the file CHANGELOG.md")
+		logrus.WithError(err).Fatal("unable to read the file CHANGELOG.md")
 	}
-	fileScanner := bufio.NewScanner(f)
-	fileScanner.Split(bufio.ScanLines)
 	var buffer bytes.Buffer
-	i := 0
-	for fileScanner.Scan() {
-		buffer.WriteString(fileScanner.Text())
-		buffer.WriteString("\n")
-		i++
-		if i == 1 {
-			// inject the new changelog entries after the title
-			buffer.WriteString("\n")
-			buffer.WriteString(generateChangelog(clog, version))
-		}
-	}
-	if closeErr := f.Close(); closeErr != nil {
-		logrus.WithError(closeErr).Fatal("unable to close the file CHANGELOG.md")
-	}
+	buffer.WriteString(generateChangelog(clog, version))
+	buffer.Write(existingContent)
 	if writeErr := os.WriteFile("CHANGELOG.md", buffer.Bytes(), 0600); writeErr != nil {
 		logrus.WithError(writeErr).Fatal("unable to inject the new changelog entries in CHANGELOG.md")
 	}
