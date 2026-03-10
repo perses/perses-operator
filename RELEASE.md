@@ -47,8 +47,9 @@
 
   ```bash
   git checkout release/v<major>.<minor>
+  export GIT_REMOTE_UPSTREAM=origin # change if your upstream remote differs
   make tag
-  git push origin v<major>.<minor>
+  git push $GIT_REMOTE_UPSTREAM v<major>.<minor>.<patch>
   ```
 
 Once a tag is created, an automated release process for this tag is triggered via Github Actions. This automated process includes:
