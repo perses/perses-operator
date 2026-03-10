@@ -253,15 +253,16 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 		case persesv1alpha2.SecretSourceTypeFile:
 			// the clientID is a Hidden field in perses API,
 			// but doesn't expose it as a file field for it, so we need to read it and use the value
-			clientIDPath := ""
-			if oauth.ClientIDPath != nil {
-				clientIDPath = *oauth.ClientIDPath
+			if oauth.ClientIDPath == nil {
+				return subreconciler.RequeueWithErrorAndReason(
+					fmt.Errorf("clientIDPath is required when OAuth type is File for datasource %s", datasourceName),
+					persescommon.ReasonInvalidConfiguration,
+				)
 			}
-			clientID, err := os.ReadFile(clientIDPath)
+			clientID, err := os.ReadFile(*oauth.ClientIDPath)
 			if err != nil {
-				err = fmt.Errorf("failed to read the OAuth client ID file: %s", clientIDPath)
+				err = fmt.Errorf("failed to read the OAuth client ID file %s: %w", *oauth.ClientIDPath, err)
 				return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonInvalidConfiguration)
-
 			}
 			oAuthConfig.ClientID = string(clientID)
 			if oauth.ClientSecretPath != nil {
@@ -401,23 +402,36 @@ func (r *PersesDatasourceReconciler) deleteDatasource(ctx context.Context, perse
 		return subreconciler.RequeueWithError(err)
 	}
 
+	// Ignore NotFound — the resource may have already been deleted from Perses directly.
+	// Any other error means the delete failed and should be retried.
+	// Secret delete is attempted regardless of whether the datasource was found or not.
 	err = persesClient.Datasource(datasourceNamespace).Delete(datasourceName)
 
-	if err != nil && errors.Is(err, perseshttp.RequestNotFoundError) {
-		dlog.Infof("Datasource not found: %s", datasourceName)
+	if err != nil {
+		if errors.Is(err, perseshttp.RequestNotFoundError) {
+			dlog.Infof("Datasource not found: %s", datasourceName)
+		} else {
+			dlog.WithError(err).Errorf("Failed to delete datasource: %s", datasourceName)
+			return subreconciler.RequeueWithError(err)
+		}
+	} else {
+		dlog.Infof("Datasource deleted: %s", datasourceName)
 	}
-
-	dlog.Infof("Datasource deleted: %s", datasourceName)
 
 	secretName := datasourceName + persescommon.SecretNameSuffix
 
 	err = persesClient.Secret(datasourceNamespace).Delete(secretName)
 
-	if err != nil && errors.Is(err, perseshttp.RequestNotFoundError) {
-		dlog.Infof("Secret not found: %s", secretName)
+	if err != nil {
+		if errors.Is(err, perseshttp.RequestNotFoundError) {
+			dlog.Infof("Secret not found: %s", secretName)
+		} else {
+			dlog.WithError(err).Errorf("Failed to delete secret: %s", secretName)
+			return subreconciler.RequeueWithError(err)
+		}
+	} else {
+		dlog.Infof("Secret deleted: %s", secretName)
 	}
-
-	dlog.Infof("Secret deleted: %s", secretName)
 
 	return subreconciler.ContinueReconciling()
 }

@@ -25,6 +25,11 @@ import (
 func GetPersesArgs(perses *v1alpha2.Perses) []string {
 	args := []string{fmt.Sprintf("--config=%s", defaultConfigPath)}
 
+	// Append custom listen address if containerPort is set
+	if perses.Spec.ContainerPort != nil {
+		args = append(args, fmt.Sprintf("--web.listen-address=:%d", *perses.Spec.ContainerPort))
+	}
+
 	// Append TLS cert args if TLS is enabled and user certificates are provided
 	if hasTLSConfiguration(perses) {
 		args = append(args, fmt.Sprintf("--web.tls-cert-file=%s/%s",

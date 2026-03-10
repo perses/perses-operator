@@ -53,7 +53,7 @@ func (f *PersesClientFactoryWithConfig) CreateClient(ctx context.Context, client
 	if serverURLFlag != nil && serverURLFlag.Value.String() != "" {
 		urlStr = serverURLFlag.Value.String()
 	} else {
-		containerPort := int32(8080)
+		containerPort := DefaultContainerPort
 		if perses.Spec.ContainerPort != nil {
 			containerPort = *perses.Spec.ContainerPort
 		}

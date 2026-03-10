@@ -147,6 +147,11 @@ func (r *PersesReconciler) createPersesService(
 		maps.Copy(annotations, perses.Spec.Service.Annotations)
 	}
 
+	port := common.DefaultContainerPort
+	if perses.Spec.ContainerPort != nil {
+		port = *perses.Spec.ContainerPort
+	}
+
 	ser := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        serviceName,
@@ -158,9 +163,9 @@ func (r *PersesReconciler) createPersesService(
 			Type: corev1.ServiceTypeClusterIP,
 			Ports: []corev1.ServicePort{{
 				Name:       "http",
-				Port:       8080,
+				Port:       port,
 				Protocol:   corev1.ProtocolTCP,
-				TargetPort: intstr.FromInt32(8080),
+				TargetPort: intstr.FromInt32(port),
 			}},
 			Selector: ls,
 		},

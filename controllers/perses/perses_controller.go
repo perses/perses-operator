@@ -73,7 +73,6 @@ type PersesReconciler struct {
 var log = logger.WithField("module", "perses_controller")
 
 // +kubebuilder:rbac:groups=perses.dev,resources=perses,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=perses.dev,resources=perses,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=perses.dev,resources=perses/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=perses.dev,resources=perses/finalizers,verbs=update
 // +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
@@ -456,6 +455,7 @@ func (r *PersesReconciler) findPersesForSecret(ctx context.Context, obj client.O
 	// List all Perses objects in the same namespace as the secret
 	persesList := &v1alpha2.PersesList{}
 	if err := r.List(ctx, persesList, client.InNamespace(secret.Namespace)); err != nil {
+		log.WithError(err).Errorf("failed to list Perses instances for secret %s/%s", secret.Namespace, secret.Name)
 		return nil
 	}
 

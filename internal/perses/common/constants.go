@@ -50,6 +50,9 @@ const (
 	defaultConfigPath = configMountPath + "/config.yaml"
 
 	defaultFileMode = 420
+
+	// DefaultContainerPort is the default port on which the Perses server listens
+	DefaultContainerPort = int32(8080)
 )
 
 type ConditionStatusReason string

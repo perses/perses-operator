@@ -95,6 +95,8 @@ jobs:
         run: make bundle-check
       - name: check installer manifest is up-to-date
         run: make installer-check
+      - name: check generated manifests are up-to-date
+        run: git diff --exit-code config/
       - name: golangci-lint
         run: make lint
   checklicense:
