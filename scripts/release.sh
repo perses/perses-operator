@@ -18,6 +18,7 @@ function tag() {
   version="${1}"
   tag="v${version}"
   branch=$(git branch --show-current)
+  remote="${GIT_REMOTE_UPSTREAM:-origin}"
   checkVersion "${tag}"
   expectedBranch="release/$(echo "${tag}" | sed -E  's/(v[0-9]+\.[0-9]+).*/\1/')"
 
@@ -26,7 +27,7 @@ function tag() {
     exit 1
   fi
 
-  git pull origin "${expectedBranch}"
+  git pull "${remote}" "${expectedBranch}"
   git tag -s "${tag}" -m "${tag}"
 }
 
