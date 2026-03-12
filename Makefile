@@ -121,14 +121,18 @@ help: ## Display this help.
 
 
 .PHONY: format
-format:
+format: shfmt
 	@echo ">> formatting go code"
 	gofmt -w $$(find . -name '*.go' -print)
+	@echo ">> formatting shell scripts"
+	$(SHFMT) -l -w scripts/*.sh
 
 .PHONY: checkformat
-checkformat:
+checkformat: shfmt
 	@echo ">> checking go code format"
 	! gofmt -d $$(find . -name '*.go' -print) | grep '^'
+	@echo ">> checking shell script format"
+	$(SHFMT) -d scripts/*.sh
 
 .PHONY: update-go-deps
 update-go-deps: ## Update all Go dependencies to latest versions
@@ -274,8 +278,12 @@ lint-jsonnet: $(JSONNETLINT_BINARY)
 lint-golang: golangci-lint ## Run Go linting.
 	$(GOLANGCI_LINT) run --timeout 5m
 
+.PHONY: lint-shell
+lint-shell: shellcheck ## Run shellcheck against shell scripts.
+	$(SHELLCHECK) -x scripts/*.sh
+
 .PHONY: lint
-lint: lint-jsonnet lint-golang ## Run all linters.
+lint: lint-jsonnet lint-golang lint-shell ## Run all linters.
 
 .PHONY: lint-api
 lint-api: golangci-lint-kube-api-linter ## Lint API types using kube-api-linter.
