@@ -64,6 +64,11 @@ IMAGE_TAG_BASE ?= docker.io/persesdev/perses-operator
 # You can use it as an arg. (E.g make bundle-build BUNDLE_IMG=<some-registry>/<project-name-bundle>:<tag>)
 BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 
+# REPLACES_VERSION defines the previous operator version for OLM upgrade path (replaces-mode).
+# Set this when generating the bundle for OperatorHub submission.
+# (e.g make bundle REPLACES_VERSION=0.1.1)
+REPLACES_VERSION ?=
+
 # BUNDLE_GEN_FLAGS are the flags passed to the operator-sdk generate bundle command
 BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 
@@ -446,10 +451,13 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 ##@ Build Dependencies
 
 .PHONY: bundle
-bundle: manifests kustomize operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
+bundle: manifests kustomize operator-sdk yq ## Generate bundle manifests and metadata, then validate generated files.
 	$(OPERATOR_SDK) generate kustomize manifests -q
 	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
+ifneq ($(REPLACES_VERSION),)
+	$(YQ) -i '.spec.replaces = "perses-operator.v$(REPLACES_VERSION)"' bundle/manifests/perses-operator.clusterserviceversion.yaml
+endif
 	$(OPERATOR_SDK) bundle validate ./bundle
 
 .PHONY: bundle-check
