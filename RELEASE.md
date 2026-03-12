@@ -67,3 +67,49 @@ Once the release branch is no longer needed, you should open a new PR based on `
 ## 4. Update the Helm chart
 
 After the release is published, update the [Perses Operator Helm chart](https://github.com/perses/helm-charts/tree/main/charts/perses-operator) in the [perses/helm-charts](https://github.com/perses/helm-charts) repository. Follow the [Bumping perses-operator Version](https://github.com/perses/helm-charts/blob/main/DEVELOPER_GUIDE.md#bumping-perses-operator-version) guide.
+
+## 5. Publish to OperatorHub
+
+After the release is published, submit the updated operator bundle to [OperatorHub](https://operatorhub.io) via the [k8s-operatorhub/community-operators](https://github.com/k8s-operatorhub/community-operators) repository.
+
+- Ensure you are on the release branch:
+
+  ```bash
+  git checkout release/v<major>.<minor>
+  ```
+
+- Regenerate the bundle with the `replaces` field pointing to the previous OperatorHub version:
+
+  ```bash
+  make bundle REPLACES_VERSION=<previous-operatorhub-version>
+  ```
+
+  For example, if the last version published to OperatorHub was `0.1.1`:
+
+  ```bash
+  make bundle REPLACES_VERSION=0.1.1
+  ```
+
+- Verify the `replaces` field was injected into `bundle/manifests/perses-operator.clusterserviceversion.yaml` (this file is gitignored, so changes won't appear in `git status`):
+
+  ```bash
+  grep replaces bundle/manifests/perses-operator.clusterserviceversion.yaml
+  ```
+
+- Use the publish script to prepare the community-operators PR (run `./scripts/publish-to-operatorhub/publish-to-operatorhub.sh -h` for all options):
+
+  ```bash
+  ./scripts/publish-to-operatorhub/publish-to-operatorhub.sh --fork <your-github-user>/community-operators
+  ```
+
+  If you already have a local clone of community-operators:
+
+  ```bash
+  ./scripts/publish-to-operatorhub/publish-to-operatorhub.sh --fork <your-github-user>/community-operators --workdir /path/to/community-operators
+  ```
+
+  The script copies the bundle and commits it on a new branch. Follow the printed instructions to review, push, and create the PR.
+
+  > You need a fork of [k8s-operatorhub/community-operators](https://github.com/k8s-operatorhub/community-operators).
+
+> **Note:** The community-operators `ci.yaml` currently uses `replaces-mode`, which requires the `replaces` field in the CSV. Switching to `semver-mode` would eliminate this requirement (OLM resolves upgrade order by semver), but this change is irreversible.
