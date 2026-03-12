@@ -70,6 +70,12 @@ GOLANGCI_LINT_VERSION = v2.10.1
 
 GOLANGCI_LINT_KAL = $(LOCALBIN)/golangci-lint-kube-api-linter
 
+SHFMT = $(LOCALBIN)/shfmt
+SHFMT_VERSION = v3.13.0
+
+SHELLCHECK = $(LOCALBIN)/shellcheck
+SHELLCHECK_VERSION = v0.11.0
+
 ## Kustomize - uses custom install script
 KUSTOMIZE_INSTALL_SCRIPT = https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh
 .PHONY: kustomize
@@ -220,6 +226,25 @@ $(GOLANGCI_LINT_KAL) golangci-lint-kube-api-linter: $(GOLANGCI_LINT) $(LOCALBIN)
 		$(GOLANGCI_LINT) custom ;\
 	}
 
+.PHONY: shfmt
+$(SHFMT) shfmt: $(LOCALBIN) ## Install shfmt locally if necessary.
+	@{ \
+		set -ex ;\
+		[[ -f $(SHFMT) ]] && exit 0 ;\
+		GOBIN=$(LOCALBIN) go install mvdan.cc/sh/v3/cmd/shfmt@$(SHFMT_VERSION) ;\
+	}
+
+.PHONY: shellcheck
+$(SHELLCHECK) shellcheck: $(LOCALBIN) ## Install shellcheck locally if necessary.
+	@{ \
+		set -ex ;\
+		[[ -f $(SHELLCHECK) ]] && exit 0 ;\
+		OS=$$(go env GOOS) && ARCH=$$(go env GOARCH) && \
+		case "$${ARCH}" in amd64) ARCH="x86_64" ;; arm64) ARCH="aarch64" ;; esac && \
+		curl -sSL https://github.com/koalaman/shellcheck/releases/download/$(SHELLCHECK_VERSION)/shellcheck-$(SHELLCHECK_VERSION).$${OS}.$${ARCH}.tar.xz \
+			| tar xJ -C $(LOCALBIN) --strip-components=1 shellcheck-$(SHELLCHECK_VERSION)/shellcheck ;\
+	}
+
 .PHONY: build-tools
 build-tools: ## Install all tools.
 build-tools: $(KUSTOMIZE) \
@@ -236,7 +261,9 @@ build-tools: $(KUSTOMIZE) \
 		$(OPERATOR_SDK) \
 		$(OPM) \
 		$(KUTTL) \
-		$(MDOX)
+		$(MDOX) \
+		$(SHFMT) \
+		$(SHELLCHECK)
 
 
 .PHONY: clean-tools
@@ -261,4 +288,6 @@ validate-tools: build-tools ## Validate that all tools are installed and working
 	@echo -n "  opm: " && $(OPM) version 2>&1 | head -n 1
 	@echo -n "  kuttl: " && $(KUTTL) version 2>&1 | head -n 1
 	@echo -n "  mdox: " && $(MDOX) --version 2>&1 | head -n 1
+	@echo -n "  shfmt: " && $(SHFMT) --version 2>&1 | head -n 1
+	@echo -n "  shellcheck: " && $(SHELLCHECK) --version 2>&1 | grep '^version:' || echo "installed"
 	@echo "✅ All tools validated successfully!"

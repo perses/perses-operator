@@ -98,7 +98,11 @@ jobs:
       - name: check generated manifests are up-to-date
         run: git diff --exit-code config/
       - name: golangci-lint
-        run: make lint
+        run: make lint-golang
+      - name: lint jsonnet
+        run: make lint-jsonnet
+      - name: lint shell
+        run: make lint-shell
   checklicense:
     name: "check license headers"
     runs-on: ubuntu-latest
