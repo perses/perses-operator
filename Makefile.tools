@@ -76,17 +76,15 @@ SHFMT_VERSION = v3.13.0
 SHELLCHECK = $(LOCALBIN)/shellcheck
 SHELLCHECK_VERSION = v0.11.0
 
-## Kustomize - uses custom install script
-KUSTOMIZE_INSTALL_SCRIPT = https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh
+## Go-based tools - use go install
 .PHONY: kustomize
 $(KUSTOMIZE) kustomize: $(LOCALBIN) ## Install kustomize locally if necessary.
 	@{ \
 		set -ex ;\
 		[[ -f $(KUSTOMIZE) ]] && exit 0 ;\
-		curl -Ss $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s -- $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN) ;\
+		GOBIN=$(LOCALBIN) go install sigs.k8s.io/kustomize/kustomize/v5@$(KUSTOMIZE_VERSION) ;\
 	}
 
-## Go-based tools - use go install
 .PHONY: controller-gen
 $(CONTROLLER_GEN) controller-gen: $(LOCALBIN) ## Install controller-gen locally if necessary.
 	@{ \
