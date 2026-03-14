@@ -32,6 +32,8 @@ jobs:
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
+      - name: Install all tools
+        uses: ./.github/tools-cache
       - name: Create kind cluster
         uses: helm/kind-action@v1.14.0
         with:
