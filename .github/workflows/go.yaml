@@ -29,6 +29,8 @@ jobs:
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
+      - name: Install all tools
+        uses: ./.github/tools-cache
       - name: check format
         run: make checkformat || (echo "Please run 'make format' locally and commit the changes." && exit 1)
       - name: verify go modules
@@ -45,6 +47,8 @@ jobs:
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
+      - name: Install all tools
+        uses: ./.github/tools-cache
       - name: unit tests
         run: make test-unit
   test-integration:
@@ -59,6 +63,8 @@ jobs:
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
+      - name: Install all tools
+        uses: ./.github/tools-cache
       - name: integration tests
         run: make test-integration
   lint-api:
@@ -73,6 +79,8 @@ jobs:
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
+      - name: Install all tools
+        uses: ./.github/tools-cache
       - name: lint API types
         run: make lint-api
   lint:
@@ -89,6 +97,8 @@ jobs:
           enable_go: true
           enable_go_cache: false
           enable_npm: false
+      - name: Install all tools
+        uses: ./.github/tools-cache
       - name: generate files
         run: make generate
       - name: check bundle changes
@@ -113,5 +123,7 @@ jobs:
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
+      - name: Install all tools
+        uses: ./.github/tools-cache
       - name: check license headers
         run: make checklicense

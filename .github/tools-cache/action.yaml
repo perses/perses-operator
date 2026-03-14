@@ -1,0 +1,22 @@
+name: tools-cache
+description: Caches development tools
+runs:
+  using: composite
+  steps:
+    - name: Cache tools
+      uses: actions/cache@v4
+      id: tools-cache
+      with:
+        path: ./bin
+        key: ${{ runner.os }}-tools-${{ hashFiles('Makefile.tools') }}
+
+    - name: Install tools
+      if: steps.tools-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: make build-tools
+
+    - name: Show tools
+      shell: bash
+      run: |
+        ls -l ./bin
+        make validate-tools
