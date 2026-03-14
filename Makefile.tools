@@ -63,7 +63,8 @@ KUTTL = $(LOCALBIN)/kubectl-kuttl
 KUTTL_VERSION = 0.24.0
 
 MDOX = $(LOCALBIN)/mdox
-MDOX_VERSION = v0.9.0
+# NOTE:  Using main branch as mdox has no tagged releases yet and main includes SQLite cache for URL validation.
+MDOX_VERSION = main
 
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
 GOLANGCI_LINT_VERSION = v2.10.1
