@@ -25,6 +25,8 @@ jobs:
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
+      - name: Install all tools
+        uses: ./.github/tools-cache
       - name: check API docs are up-to-date
         run: make check-api-docs
       - name: check metrics docs are up-to-date
@@ -41,6 +43,8 @@ jobs:
           enable_go: true
       - name: Cache links for mdox
         uses: ./.github/actions/mdox-cache
+      - name: Install all tools
+        uses: ./.github/tools-cache
       - name: format docs
         run: make fmt-docs
       - name: check docs are up-to-date
