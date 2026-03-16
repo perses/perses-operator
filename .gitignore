@@ -42,5 +42,8 @@ docs/config/api-docs-config-resolved.yaml
 config/local/patches/
 config/local/certificate.yaml
 
+# mdox link validation cache
+.mdoxcache
+
 # e2e tests
 kubeconfig

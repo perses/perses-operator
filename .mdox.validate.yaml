@@ -1,13 +1,5 @@
 version: 1
 timeout: '1m'
-
-validators:
-  # timeout
-  - regex: 'github\.com'
-    type: 'ignore'
-  # code 500
-  - regex: 'slack\.com'
-    type: 'ignore'
-  # timeout
-  - regex: 'slack\.cncf\.io'
-    type: 'ignore'
+cache:
+  type: 'sqlite'
+  jitter: '1h'
