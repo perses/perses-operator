@@ -463,11 +463,6 @@ _Appears in:_
 _Appears in:_
 - [Provisioning](#provisioning)
 
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `name` _string_ | Name of the referent.<br />This field is effectively required, but due to backwards compatibility is<br />allowed to be empty. Instances of this type with an empty value here are<br />almost certainly wrong.<br />More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names |  | Optional: \{\} <br /> |
-| `key` _string_ | The key of the secret to select from.  Must be a valid secret key. |  |  |
-| `optional` _boolean_ | Specify whether the Secret or its key must be defined |  | Optional: \{\} <br /> |
 
 
 #### SecretSource

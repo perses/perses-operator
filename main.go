@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
@@ -70,6 +71,7 @@ func init() {
 
 func main() {
 	var metricsAddr string
+	var secureMetrics bool
 	var enableLeaderElection bool
 	var probeAddr string
 	var persesImage string
@@ -84,7 +86,8 @@ func main() {
 	var tlsClusterProfile bool
 	var tlsConfigureOperands bool
 
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8082", "The address the metric endpoint binds to.")
+	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8443", "The address the metrics endpoint binds to. Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
+	flag.BoolVar(&secureMetrics, "metrics-secure", true, "If the metrics endpoint should be served securely via HTTPS. Use --metrics-secure=false to use HTTP instead.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.IntVar(&webhookPort, "webhook-port", 9443, "The port the webhook server binds to.")
 	flag.StringVar(&certDir, "webhook-cert-dir", "/tmp/k8s-webhook-server/serving-certs", "The directory where webhook TLS certificates are stored.")
@@ -190,11 +193,8 @@ func main() {
 	defer cancel()
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme: scheme,
-		Metrics: server.Options{
-			BindAddress: metricsAddr,
-			TLSOpts:     []func(*tls.Config){tlsConfigFunc},
-		},
+		Scheme:  scheme,
+		Metrics: buildMetricsServerOptions(metricsAddr, secureMetrics, []func(*tls.Config){tlsConfigFunc}),
 		WebhookServer: webhook.NewServer(webhook.Options{
 			Port:    webhookPort,
 			CertDir: certDir,
@@ -328,4 +328,18 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+func buildMetricsServerOptions(bindAddress string, secureMetrics bool, tlsOpts []func(*tls.Config)) server.Options {
+	metricsServerOptions := server.Options{
+		BindAddress:   bindAddress,
+		SecureServing: secureMetrics,
+		TLSOpts:       tlsOpts,
+	}
+
+	if secureMetrics {
+		metricsServerOptions.FilterProvider = filters.WithAuthenticationAndAuthorization
+	}
+
+	return metricsServerOptions
 }
