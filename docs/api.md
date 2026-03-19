@@ -135,7 +135,7 @@ _Appears in:_
 | --- | --- | --- | --- |
 | `config` _[Datasource](#datasource)_ | config specifies the Perses datasource configuration |  | Required: \{\} <br /> |
 | `client` _[Client](#client)_ | client specifies authentication and TLS configuration for the datasource |  | Optional: \{\} <br /> |
-| `instanceSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#labelselector-v1-meta)_ | instanceSelector selects Perses instances where this datasource will be created |  | Optional: \{\} <br /> |
+| `instanceSelector` _invalid type_ | instanceSelector selects Perses instances where this datasource will be created |  | Optional: \{\} <br /> |
 
 
 #### KubernetesAuth
@@ -209,7 +209,7 @@ Perses is the Schema for the perses API
 | --- | --- | --- | --- |
 | `apiVersion` _string_ | `perses.dev/v1alpha2` | | |
 | `kind` _string_ | `Perses` | | |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  | Optional: \{\} <br /> |
+| `metadata` _invalid type_ | Refer to Kubernetes API documentation for fields of `metadata`. |  | Optional: \{\} <br /> |
 | `spec` _[PersesSpec](#persesspec)_ | spec is the desired state of the Perses resource |  | Optional: \{\} <br /> |
 | `status` _[PersesStatus](#persesstatus)_ | status is the observed state of the Perses resource |  | Optional: \{\} <br /> |
 
@@ -256,7 +256,7 @@ PersesDashboard is the Schema for the persesdashboards API
 | --- | --- | --- | --- |
 | `apiVersion` _string_ | `perses.dev/v1alpha2` | | |
 | `kind` _string_ | `PersesDashboard` | | |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  | Optional: \{\} <br /> |
+| `metadata` _invalid type_ | Refer to Kubernetes API documentation for fields of `metadata`. |  | Optional: \{\} <br /> |
 | `spec` _[PersesDashboardSpec](#persesdashboardspec)_ | spec is the desired state of the PersesDashboard resource |  | Required: \{\} <br /> |
 | `status` _[PersesDashboardStatus](#persesdashboardstatus)_ | status is the observed state of the PersesDashboard resource |  | Optional: \{\} <br /> |
 
@@ -275,7 +275,7 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `config` _[Dashboard](#dashboard)_ | config specifies the Perses dashboard configuration |  | Required: \{\} <br /> |
-| `instanceSelector` _[LabelSelector](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#labelselector-v1-meta)_ | instanceSelector selects Perses instances where this dashboard will be created |  | Optional: \{\} <br /> |
+| `instanceSelector` _invalid type_ | instanceSelector selects Perses instances where this dashboard will be created |  | Optional: \{\} <br /> |
 
 
 #### PersesDashboardStatus
@@ -291,7 +291,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#condition-v1-meta) array_ | conditions represent the latest observations of the PersesDashboard resource state |  | Optional: \{\} <br /> |
+| `conditions` _invalid type array_ | conditions represent the latest observations of the PersesDashboard resource state |  | Optional: \{\} <br /> |
 
 
 #### PersesDatasource
@@ -308,7 +308,7 @@ PersesDatasource is the Schema for the PersesDatasources API
 | --- | --- | --- | --- |
 | `apiVersion` _string_ | `perses.dev/v1alpha2` | | |
 | `kind` _string_ | `PersesDatasource` | | |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  | Optional: \{\} <br /> |
+| `metadata` _invalid type_ | Refer to Kubernetes API documentation for fields of `metadata`. |  | Optional: \{\} <br /> |
 | `spec` _[DatasourceSpec](#datasourcespec)_ | spec is the desired state of the PersesDatasource resource |  | Required: \{\} <br /> |
 | `status` _[PersesDatasourceStatus](#persesdatasourcestatus)_ | status is the observed state of the PersesDatasource resource |  | Optional: \{\} <br /> |
 
@@ -326,7 +326,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#condition-v1-meta) array_ | conditions represent the latest observations of the PersesDatasource resource state |  | Optional: \{\} <br /> |
+| `conditions` _invalid type array_ | conditions represent the latest observations of the PersesDatasource resource state |  | Optional: \{\} <br /> |
 
 
 #### PersesGlobalDatasource
@@ -343,7 +343,7 @@ PersesGlobalDatasource is the Schema for the PersesGlobalDatasources API
 | --- | --- | --- | --- |
 | `apiVersion` _string_ | `perses.dev/v1alpha2` | | |
 | `kind` _string_ | `PersesGlobalDatasource` | | |
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |  | Optional: \{\} <br /> |
+| `metadata` _invalid type_ | Refer to Kubernetes API documentation for fields of `metadata`. |  | Optional: \{\} <br /> |
 | `spec` _[DatasourceSpec](#datasourcespec)_ | spec is the desired state of the PersesGlobalDatasource resource |  | Required: \{\} <br /> |
 | `status` _[PersesGlobalDatasourceStatus](#persesglobaldatasourcestatus)_ | status is the observed state of the PersesGlobalDatasource resource |  | Optional: \{\} <br /> |
 
@@ -361,7 +361,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#condition-v1-meta) array_ | conditions represent the latest observations of the PersesGlobalDatasource resource state |  | Optional: \{\} <br /> |
+| `conditions` _invalid type array_ | conditions represent the latest observations of the PersesGlobalDatasource resource state |  | Optional: \{\} <br /> |
 
 
 #### PersesService
@@ -400,23 +400,23 @@ _Appears in:_
 | `args` _string array_ | args are extra command-line arguments to pass to the Perses server |  | Optional: \{\} <br /> |
 | `containerPort` _integer_ | containerPort is the port on which the Perses server listens for HTTP requests |  | Maximum: 65535 <br />Minimum: 1 <br />Optional: \{\} <br /> |
 | `replicas` _integer_ | replicas is the number of desired pod replicas for the Perses deployment |  | Optional: \{\} <br /> |
-| `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#resourcerequirements-v1-core)_ | resources defines the compute resources configured for the container |  | Optional: \{\} <br /> |
+| `resources` _invalid type_ | resources defines the compute resources configured for the container |  | Optional: \{\} <br /> |
 | `nodeSelector` _object (keys:string, values:string)_ | nodeSelector constrains pods to nodes with matching labels |  | Optional: \{\} <br /> |
-| `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#toleration-v1-core) array_ | tolerations allow pods to schedule onto nodes with matching taints |  | Optional: \{\} <br /> |
-| `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#affinity-v1-core)_ | affinity specifies the pod's scheduling constraints |  | Optional: \{\} <br /> |
+| `tolerations` _invalid type array_ | tolerations allow pods to schedule onto nodes with matching taints |  | Optional: \{\} <br /> |
+| `affinity` _invalid type_ | affinity specifies the pod's scheduling constraints |  | Optional: \{\} <br /> |
 | `image` _string_ | image specifies the container image that should be used for the Perses deployment |  | Optional: \{\} <br /> |
 | `service` _[PersesService](#persesservice)_ | service specifies the service configuration for the Perses instance |  | Optional: \{\} <br /> |
-| `livenessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#probe-v1-core)_ | livenessProbe specifies the liveness probe configuration for the Perses container |  | Optional: \{\} <br /> |
-| `readinessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#probe-v1-core)_ | readinessProbe specifies the readiness probe configuration for the Perses container |  | Optional: \{\} <br /> |
+| `livenessProbe` _invalid type_ | livenessProbe specifies the liveness probe configuration for the Perses container |  | Optional: \{\} <br /> |
+| `readinessProbe` _invalid type_ | readinessProbe specifies the readiness probe configuration for the Perses container |  | Optional: \{\} <br /> |
 | `tls` _[TLS](#tls)_ | tls specifies the TLS configuration for the Perses instance |  | Optional: \{\} <br /> |
 | `storage` _[StorageConfiguration](#storageconfiguration)_ | storage configuration used by the StatefulSet |  | Optional: \{\} <br /> |
 | `serviceAccountName` _string_ | serviceAccountName is the name of the ServiceAccount to use for the Perses deployment or statefulset |  | Optional: \{\} <br /> |
-| `podSecurityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#podsecuritycontext-v1-core)_ | podSecurityContext holds pod-level security attributes and common container settings<br />If not specified, defaults to fsGroup: 65534 to ensure proper volume permissions for the nobody user |  | Optional: \{\} <br /> |
+| `podSecurityContext` _invalid type_ | podSecurityContext holds pod-level security attributes and common container settings<br />If not specified, defaults to fsGroup: 65534 to ensure proper volume permissions for the nobody user |  | Optional: \{\} <br /> |
 | `logLevel` _string_ | logLevel defines the log level for Perses |  | Enum: [panic fatal error warning info debug trace] <br />Optional: \{\} <br /> |
 | `logMethodTrace` _boolean_ | logMethodTrace when true, includes the calling method as a field in the log<br />It can be useful to see immediately where the log comes from |  | Optional: \{\} <br /> |
 | `provisioning` _[Provisioning](#provisioning)_ | provisioning configuration for provisioning secrets |  | Optional: \{\} <br /> |
-| `volumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#volume-v1-core) array_ | volumes allows configuration of additional volumes on the Deployment or StatefulSet definitions.<br />Volumes specified here will be appended to other operator-managed volumes. |  | MaxItems: 20 <br />Optional: \{\} <br /> |
-| `volumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#volumemount-v1-core) array_ | volumeMounts allows configuration of additional VolumeMounts on the Deployment or StatefulSet definitions.<br />VolumeMounts specified here will be appended to other operator-managed volume mounts. |  | MaxItems: 20 <br />Optional: \{\} <br /> |
+| `volumes` _invalid type array_ | volumes allows configuration of additional volumes on the Deployment or StatefulSet definitions.<br />Volumes specified here will be appended to other operator-managed volumes. |  | MaxItems: 20 <br />Optional: \{\} <br /> |
+| `volumeMounts` _invalid type array_ | volumeMounts allows configuration of additional VolumeMounts on the Deployment or StatefulSet definitions.<br />VolumeMounts specified here will be appended to other operator-managed volume mounts. |  | MaxItems: 20 <br />Optional: \{\} <br /> |
 
 
 #### PersesStatus
@@ -432,7 +432,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#condition-v1-meta) array_ | conditions represent the latest observations of the Perses resource state |  | Optional: \{\} <br /> |
+| `conditions` _invalid type array_ | conditions represent the latest observations of the Perses resource state |  | Optional: \{\} <br /> |
 | `provisioning` _[SecretVersion](#secretversion) array_ | provisioning contains the versions of provisioning secrets currently in use |  | Optional: \{\} <br /> |
 
 
@@ -463,11 +463,6 @@ _Appears in:_
 _Appears in:_
 - [Provisioning](#provisioning)
 
-| Field | Description | Default | Validation |
-| --- | --- | --- | --- |
-| `name` _string_ | Name of the referent.<br />This field is effectively required, but due to backwards compatibility is<br />allowed to be empty. Instances of this type with an empty value here are<br />almost certainly wrong.<br />More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names |  | Optional: \{\} <br /> |
-| `key` _string_ | The key of the secret to select from.  Must be a valid secret key. |  |  |
-| `optional` _boolean_ | Specify whether the Secret or its key must be defined |  | Optional: \{\} <br /> |
 
 
 #### SecretSource
@@ -541,8 +536,8 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `emptyDir` _[EmptyDirVolumeSource](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#emptydirvolumesource-v1-core)_ | emptyDir to use for ephemeral storage.<br />When set, data will be lost when the pod is deleted or restarted.<br />Mutually exclusive with PersistentVolumeClaimTemplate. |  | Optional: \{\} <br /> |
-| `pvcTemplate` _[PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.35/#persistentvolumeclaimspec-v1-core)_ | pvcTemplate is the template for PVCs that will be created.<br />Mutually exclusive with EmptyDir. |  | Optional: \{\} <br /> |
+| `emptyDir` _invalid type_ | emptyDir to use for ephemeral storage.<br />When set, data will be lost when the pod is deleted or restarted.<br />Mutually exclusive with PersistentVolumeClaimTemplate. |  | Optional: \{\} <br /> |
+| `pvcTemplate` _invalid type_ | pvcTemplate is the template for PVCs that will be created.<br />Mutually exclusive with EmptyDir. |  | Optional: \{\} <br /> |
 
 
 #### TLS
