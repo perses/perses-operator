@@ -55,6 +55,7 @@ func dashboardFromContext(ctx context.Context) (*persesv1alpha2.PersesDashboard,
 // PersesDashboardReconciler reconciles a PersesDashboard object
 type PersesDashboardReconciler struct {
 	client.Client
+	APIReader             client.Reader // uncached reader for Secret data (cached client strips Data via Transform)
 	Scheme                *runtime.Scheme
 	Recorder              record.EventRecorder
 	ClientFactory         common.PersesClientFactory

@@ -1,0 +1,52 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+commands:
+  # Verify provisioning-version annotation is set on StatefulSet pod template
+  - script: |
+      ANNOTATION=$(kubectl get statefulset perses-provisioning-test -n $NAMESPACE -o jsonpath='{.spec.template.metadata.annotations.perses\.dev/provisioning-version}')
+      if [ -z "$ANNOTATION" ]; then
+        echo "FAIL: provisioning-version annotation not found on StatefulSet pod template"
+        exit 1
+      fi
+      echo "Verified: provisioning-version annotation is set: $ANNOTATION"
+  # Verify provisioning secret is mounted as a volume
+  - script: |
+      VOLUMES=$(kubectl get statefulset perses-provisioning-test -n $NAMESPACE -o jsonpath='{.spec.template.spec.volumes[*].name}')
+      echo "$VOLUMES" | grep -q "provisioning-" || {
+        echo "FAIL: provisioning secret volume not found in StatefulSet volumes: $VOLUMES"
+        exit 1
+      }
+      echo "Verified: provisioning secret volume is present"
+  # Verify the volume mount path exists
+  - script: |
+      MOUNTS=$(kubectl get statefulset perses-provisioning-test -n $NAMESPACE -o jsonpath='{.spec.template.spec.containers[0].volumeMounts[*].mountPath}')
+      echo "$MOUNTS" | grep -q "/etc/perses/provisioning/secrets" || {
+        echo "FAIL: provisioning secret mount path not found: $MOUNTS"
+        exit 1
+      }
+      echo "Verified: provisioning secret volume mount is present"
+  # Verify status.provisioning has the secret entry
+  - script: |
+      SECRET_NAME=$(kubectl get perses perses-provisioning-test -n $NAMESPACE -o jsonpath='{.status.provisioning[0].name}')
+      if [ "$SECRET_NAME" != "provisioning-secret" ]; then
+        echo "FAIL: expected status.provisioning[0].name='provisioning-secret', got '$SECRET_NAME'"
+        exit 1
+      fi
+      VERSION=$(kubectl get perses perses-provisioning-test -n $NAMESPACE -o jsonpath='{.status.provisioning[0].version}')
+      if [ -z "$VERSION" ]; then
+        echo "FAIL: status.provisioning[0].version is empty"
+        exit 1
+      fi
+      echo "Verified: status.provisioning[0] = {name: $SECRET_NAME, version: $VERSION}"
+  # Save the initial provisioning-version annotation for later comparison
+  - script: |
+      kubectl get statefulset perses-provisioning-test -n $NAMESPACE -o jsonpath='{.spec.template.metadata.annotations.perses\.dev/provisioning-version}' > /tmp/initial-provisioning-version
+      echo "Saved initial provisioning-version: $(cat /tmp/initial-provisioning-version)"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: perses-provisioning-test
+status:
+  readyReplicas: 1

@@ -16,7 +16,6 @@ package perses
 import (
 	"context"
 	"fmt"
-	"slices"
 	"sort"
 	"time"
 
@@ -63,6 +62,7 @@ type Config struct {
 // PersesReconciler reconciles a Perses object
 type PersesReconciler struct {
 	client.Client
+	APIReader             client.Reader // uncached reader for Secret data (cached client strips Data via Transform)
 	Scheme                *runtime.Scheme
 	Recorder              record.EventRecorder
 	Config                Config
@@ -410,26 +410,34 @@ func (r *PersesReconciler) reconcileProvisioning(ctx context.Context, req ctrl.R
 		})
 	}
 
-	var newSecretVersions []v1alpha2.SecretVersion
+	// Use a map to deduplicate secrets and avoid redundant API calls
+	// (provisioning secrets may be referenced more than once for different keys)
+	secretVersionMap := make(map[string]string) // name -> resourceVersion
 	for _, secretRef := range perses.Spec.Provisioning.SecretRefs {
+		if _, seen := secretVersionMap[secretRef.Name]; seen {
+			continue
+		}
+
 		secretName := types.NamespacedName{
 			Namespace: perses.Namespace,
 			Name:      secretRef.Name,
 		}
 
 		actualSecret := &corev1.Secret{}
-		err := r.Get(ctx, secretName, actualSecret)
+		err := r.APIReader.Get(ctx, secretName, actualSecret)
 		if err != nil {
 			log.WithError(err).Errorf("Failed to get provisioning secret %s", secretName.String())
 			return subreconciler.RequeueWithError(err)
 		}
-		// provisioning secrets may be used more than once for different keys, so only add the secret once
-		if !slices.ContainsFunc(newSecretVersions, func(version v1alpha2.SecretVersion) bool { return version.Name == secretName.Name }) {
-			newSecretVersions = append(newSecretVersions, v1alpha2.SecretVersion{
-				Name:    secretRef.Name,
-				Version: actualSecret.ResourceVersion,
-			})
-		}
+		secretVersionMap[secretRef.Name] = actualSecret.ResourceVersion
+	}
+
+	newSecretVersions := make([]v1alpha2.SecretVersion, 0, len(secretVersionMap))
+	for name, version := range secretVersionMap {
+		newSecretVersions = append(newSecretVersions, v1alpha2.SecretVersion{
+			Name:    name,
+			Version: version,
+		})
 	}
 
 	sort.Slice(newSecretVersions, func(i, j int) bool {
@@ -446,40 +454,32 @@ func (r *PersesReconciler) reconcileProvisioning(ctx context.Context, req ctrl.R
 }
 
 func (r *PersesReconciler) findPersesForSecret(ctx context.Context, obj client.Object) []reconcile.Request {
-	// only check for secrets
-	secret, ok := obj.(*corev1.Secret)
-	if !ok {
-		return nil
-	}
-
 	// List all Perses objects in the same namespace as the secret
 	persesList := &v1alpha2.PersesList{}
-	if err := r.List(ctx, persesList, client.InNamespace(secret.Namespace)); err != nil {
-		log.WithError(err).Errorf("failed to list Perses instances for secret %s/%s", secret.Namespace, secret.Name)
+	if err := r.List(ctx, persesList, client.InNamespace(obj.GetNamespace())); err != nil {
+		log.WithError(err).Errorf("failed to list Perses instances for secret %s/%s", obj.GetNamespace(), obj.GetName())
 		return nil
 	}
 
+	var requests []reconcile.Request
 	for _, perses := range persesList.Items {
 		if perses.Spec.Provisioning == nil || len(perses.Spec.Provisioning.SecretRefs) == 0 {
 			continue
 		}
-		// Check if this Perses instance references the changed secret
 		for _, ref := range perses.Spec.Provisioning.SecretRefs {
-			if ref.Name == secret.Name {
-				// only need to reconcile on the first secret that matches the Perses instance
-				return []reconcile.Request{
-					{
-						NamespacedName: types.NamespacedName{
-							Name:      perses.Name,
-							Namespace: perses.Namespace,
-						},
+			if ref.Name == obj.GetName() {
+				requests = append(requests, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name:      perses.Name,
+						Namespace: perses.Namespace,
 					},
-				}
+				})
+				break // found a match for this Perses instance, move to next
 			}
 		}
 	}
 
-	return []reconcile.Request{}
+	return requests
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -490,7 +490,9 @@ func (r *PersesReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.StatefulSet{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&corev1.Service{}).
-		Watches(
+		// WatchesMetadata only caches metadata (not Data) to reduce memory.
+		// Actual secret data is read via APIReader in reconcileProvisioning.
+		WatchesMetadata(
 			&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(r.findPersesForSecret),
 		).

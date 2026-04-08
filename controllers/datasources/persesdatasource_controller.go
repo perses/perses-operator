@@ -54,6 +54,7 @@ func datasourceFromContext(ctx context.Context) (*persesv1alpha2.PersesDatasourc
 // PersesDatasourceReconciler reconciles a PersesDatasource object
 type PersesDatasourceReconciler struct {
 	client.Client
+	APIReader             client.Reader // uncached reader for Secret data (cached client strips Data via Transform)
 	Scheme                *runtime.Scheme
 	Recorder              record.EventRecorder
 	ClientFactory         common.PersesClientFactory

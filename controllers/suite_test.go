@@ -96,8 +96,9 @@ var _ = BeforeSuite(func() {
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&persesController.PersesReconciler{
-		Client: k8sManager.GetClient(),
-		Scheme: k8sManager.GetScheme(),
+		Client:    k8sManager.GetClient(),
+		APIReader: k8sManager.GetAPIReader(),
+		Scheme:    k8sManager.GetScheme(),
 		Config: persesController.Config{
 			PersesImage: operator.DefaultPersesImage,
 		},

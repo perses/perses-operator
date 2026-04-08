@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: provisioning-secret
+stringData:
+  encryption-key: "initial-secret-value"
+---
+apiVersion: perses.dev/v1alpha2
+kind: Perses
+metadata:
+  name: perses-provisioning-test
+  labels:
+    app.kubernetes.io/instance: perses-provisioning-test
+spec:
+  metadata:
+    labels:
+      instance: perses-provisioning-test
+  config:
+    database:
+      file:
+        folder: "/perses"
+        extension: "yaml"
+    security:
+      encryptionKeyFile: "/etc/perses/provisioning/secrets/provisioning-secret-encryption-key"
+      cookie:
+        secure: false
+      enable_auth: false
+      readonly: false
+  containerPort: 8080
+  resources:
+    requests:
+      memory: 128Mi
+  provisioning:
+    secretRefs:
+      - name: provisioning-secret
+        key: encryption-key

@@ -86,7 +86,7 @@ func (r *PersesDashboardReconciler) reconcileDashboardInAllInstances(ctx context
 }
 
 func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, perses persesv1alpha2.Perses, dashboard *persesv1alpha2.PersesDashboard) (*ctrl.Result, common.ConditionStatusReason, error) {
-	persesClient, err := r.ClientFactory.CreateClient(ctx, r.Client, perses)
+	persesClient, err := r.ClientFactory.CreateClient(ctx, r.APIReader, perses)
 
 	if err != nil {
 		dlog.WithError(err).Error("Failed to create perses rest client")
@@ -190,7 +190,7 @@ func (r *PersesDashboardReconciler) deleteDashboardInAllInstances(ctx context.Co
 }
 
 func (r *PersesDashboardReconciler) deleteDashboard(ctx context.Context, perses persesv1alpha2.Perses, dashboardNamespace string, dashboardName string) (*ctrl.Result, error) {
-	persesClient, err := r.ClientFactory.CreateClient(ctx, r.Client, perses)
+	persesClient, err := r.ClientFactory.CreateClient(ctx, r.APIReader, perses)
 
 	if err != nil {
 		dlog.WithError(err).Error("Failed to create perses rest client")
