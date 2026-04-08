@@ -70,8 +70,7 @@ func (r *PersesGlobalDatasourceReconciler) reconcileGlobalDatasourcesInAllInstan
 
 	if len(persesInstances.Items) == 0 {
 		gdlog.Info("No Perses instances found, requeue in 1 minute")
-		res, err := subreconciler.RequeueWithDelay(time.Minute)
-		return r.setStatusToDegraded(ctx, req, res, persescommon.ReasonMissingPerses, err)
+		return r.setStatusToDegraded(ctx, req, &ctrl.Result{RequeueAfter: time.Minute}, persescommon.ReasonMissingPerses, fmt.Errorf("no Perses instances found matching the label selector"))
 	}
 
 	for _, persesInstance := range persesInstances.Items {
