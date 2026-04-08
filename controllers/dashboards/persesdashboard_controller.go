@@ -196,13 +196,18 @@ func (r *PersesDashboardReconciler) setStatusToDegraded(
 	degradedReason common.ConditionStatusReason,
 	degradedError error,
 ) (*ctrl.Result, error) {
+	msg := "unknown error"
+	if degradedError != nil {
+		msg = degradedError.Error()
+	}
+
 	result, err := r.updateDashboardStatus(ctx, req, func(dashboard *persesv1alpha2.PersesDashboard) {
 		meta.SetStatusCondition(&dashboard.Status.Conditions, metav1.Condition{
 			Type: common.TypeAvailablePerses, Status: metav1.ConditionFalse,
-			Reason: string(degradedReason), Message: degradedError.Error()})
+			Reason: string(degradedReason), Message: msg})
 		meta.SetStatusCondition(&dashboard.Status.Conditions, metav1.Condition{
 			Type: common.TypeDegradedPerses, Status: metav1.ConditionTrue,
-			Reason: string(degradedReason), Message: degradedError.Error()})
+			Reason: string(degradedReason), Message: msg})
 	})
 
 	if err != nil {
