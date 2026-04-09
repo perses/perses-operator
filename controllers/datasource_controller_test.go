@@ -863,6 +863,9 @@ var _ = Describe("Datasource controller", Ordered, func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      K8sSecretName,
 					Namespace: PersesNamespace,
+					Labels: map[string]string{
+						common.PersesWatchLabel: common.PersesWatchLabelValue,
+					},
 				},
 				StringData: map[string]string{
 					"password": "s3cret-password",

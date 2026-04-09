@@ -4,6 +4,8 @@ kind: Secret
 metadata:
   name: perses-basic-auth
   namespace: perses-dev
+  labels:
+    perses.dev/watch: "true"
 data:
   password: cGFzc3dvcmQxMjM=
 ---

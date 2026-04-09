@@ -25,11 +25,17 @@ const (
 	PersesNamespaceDomain     = "perses.dev"
 	PersesFinalizer           = PersesNamespaceDomain + "/finalizer"
 	PersesProvisioningVersion = PersesNamespaceDomain + "/provisioning-version"
+	PersesWatchLabel          = PersesNamespaceDomain + "/watch"
+	PersesWatchLabelValue     = "true"
+	PersesManagedByLabel      = "app.kubernetes.io/managed-by"
+	PersesManagedByValue      = "perses-operator"
 	TypeAvailablePerses       = "Available"
 	TypeDegradedPerses        = "Degraded"
 
 	// Flags
-	PersesServerURLFlag = "perses-server-url"
+	PersesServerURLFlag   = "perses-server-url"
+	WatchSecretLabelsFlag = "watch-secret-labels"
+	WatchAllSecretsFlag   = "watch-all-secrets"
 
 	// Volume names
 	configVolumeName  = "config"

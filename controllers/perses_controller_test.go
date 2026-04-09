@@ -443,6 +443,9 @@ var _ = Describe("Perses controller", func() {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      secretName,
 					Namespace: persesNamespace,
+					Labels: map[string]string{
+						common.PersesWatchLabel: common.PersesWatchLabelValue,
+					},
 				},
 				StringData: map[string]string{
 					secretKey: "verysecret",
