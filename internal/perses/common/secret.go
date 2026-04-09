@@ -31,7 +31,7 @@ func HasSecretConfig(c *v1alpha2.Client) bool {
 }
 
 // GetBasicAuthData get basic auth from a BasicAuth resource
-func GetBasicAuthData(ctx context.Context, client client.Client, namespace string, name string, basicAuth *v1alpha2.BasicAuth) (string, error) {
+func GetBasicAuthData(ctx context.Context, client client.Reader, namespace string, name string, basicAuth *v1alpha2.BasicAuth) (string, error) {
 	var passwordData string
 
 	if basicAuth.Type == v1alpha2.SecretSourceTypeSecret || basicAuth.Type == v1alpha2.SecretSourceTypeConfigMap {
@@ -76,7 +76,7 @@ func GetBasicAuthData(ctx context.Context, client client.Client, namespace strin
 }
 
 // GetOAuthData get basic auth from a OAuth resource
-func GetOAuthData(ctx context.Context, client client.Client, namespace string, name string, oauth *v1alpha2.OAuth) (string, string, error) {
+func GetOAuthData(ctx context.Context, client client.Reader, namespace string, name string, oauth *v1alpha2.OAuth) (string, string, error) {
 	var clientIDData string
 	var clientSecretData string
 
@@ -148,7 +148,7 @@ func GetOAuthData(ctx context.Context, client client.Client, namespace string, n
 }
 
 // GetTLSCertData get tls certs from a Certificate resource
-func GetTLSCertData(ctx context.Context, client client.Client, namespace string, name string, cert *v1alpha2.Certificate) (string, string, error) {
+func GetTLSCertData(ctx context.Context, client client.Reader, namespace string, name string, cert *v1alpha2.Certificate) (string, string, error) {
 	var certData string
 	var keyData string
 

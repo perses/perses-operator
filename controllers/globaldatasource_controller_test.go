@@ -174,6 +174,7 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 			By("Reconciling the custom resource created")
 			globaldatasourceReconciler := &globaldatasourcecontroller.PersesGlobalDatasourceReconciler{
 				Client:        k8sClient,
+				APIReader:     k8sClient,
 				Scheme:        k8sClient.Scheme(),
 				ClientFactory: common.NewWithClient(mockPersesClient),
 			}
@@ -297,6 +298,7 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 			By("Reconciling the custom resource created")
 			globaldatasourceReconciler := &globaldatasourcecontroller.PersesGlobalDatasourceReconciler{
 				Client:        k8sClient,
+				APIReader:     k8sClient,
 				Scheme:        k8sClient.Scheme(),
 				ClientFactory: common.NewWithClient(mockPersesClient),
 			}
@@ -403,6 +405,7 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 
 			globaldatasourceReconciler := &globaldatasourcecontroller.PersesGlobalDatasourceReconciler{
 				Client:        k8sClient,
+				APIReader:     k8sClient,
 				Scheme:        k8sClient.Scheme(),
 				ClientFactory: common.NewWithClient(mockPersesClient),
 			}

@@ -111,8 +111,9 @@ var _ = Describe("Perses controller", func() {
 
 			By("Reconciling the custom resource created")
 			persesReconciler := &persescontroller.PersesReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+				Client:    k8sClient,
+				APIReader: k8sClient,
+				Scheme:    k8sClient.Scheme(),
 			}
 
 			// Errors might arise during reconciliation, but we are checking the final state of the resources
@@ -339,8 +340,9 @@ var _ = Describe("Perses controller", func() {
 
 			By("Reconciling the custom resource created")
 			persesReconciler := &persescontroller.PersesReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+				Client:    k8sClient,
+				APIReader: k8sClient,
+				Scheme:    k8sClient.Scheme(),
 			}
 
 			// Errors might arise during reconciliation, but we are checking the final state of the resources
@@ -491,8 +493,9 @@ var _ = Describe("Perses controller", func() {
 			}, time.Minute, time.Second).Should(Succeed())
 
 			persesReconciler := &persescontroller.PersesReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+				Client:    k8sClient,
+				APIReader: k8sClient,
+				Scheme:    k8sClient.Scheme(),
 			}
 
 			By("Reconciling the custom resource created")
@@ -601,8 +604,9 @@ var _ = Describe("Perses controller", func() {
 			}, time.Minute, time.Second).Should(Succeed())
 
 			persesReconciler := &persescontroller.PersesReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+				Client:    k8sClient,
+				APIReader: k8sClient,
+				Scheme:    k8sClient.Scheme(),
 			}
 
 			By("Reconciling to add the finalizer")
@@ -690,8 +694,9 @@ var _ = Describe("Perses controller", func() {
 			Expect(k8sClient.Create(ctx, perses)).To(Succeed())
 
 			persesReconciler := &persescontroller.PersesReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+				Client:    k8sClient,
+				APIReader: k8sClient,
+				Scheme:    k8sClient.Scheme(),
 			}
 
 			By("Reconciling the custom resource")
@@ -954,8 +959,9 @@ var _ = Describe("Perses controller", func() {
 			Expect(k8sClient.Create(ctx, perses)).To(Succeed())
 
 			persesReconciler := &persescontroller.PersesReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+				Client:    k8sClient,
+				APIReader: k8sClient,
+				Scheme:    k8sClient.Scheme(),
 			}
 
 			By("Reconciling until validateVolumes catches the orphan volumeMount")
@@ -1010,8 +1016,9 @@ var _ = Describe("Perses controller", func() {
 			Expect(k8sClient.Create(ctx, perses)).To(Succeed())
 
 			persesReconciler := &persescontroller.PersesReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
+				Client:    k8sClient,
+				APIReader: k8sClient,
+				Scheme:    k8sClient.Scheme(),
 			}
 
 			By("Reconciling until validateVolumes catches the missing volumes")

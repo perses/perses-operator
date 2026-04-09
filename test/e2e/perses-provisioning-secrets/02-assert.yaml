@@ -1,0 +1,25 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+commands:
+  # Verify the provisioning-version annotation changed after secret update
+  - script: |
+      INITIAL=$(cat /tmp/initial-provisioning-version)
+      CURRENT=$(kubectl get statefulset perses-provisioning-test -n $NAMESPACE -o jsonpath='{.spec.template.metadata.annotations.perses\.dev/provisioning-version}')
+      if [ -z "$CURRENT" ]; then
+        echo "FAIL: provisioning-version annotation not found after secret update"
+        exit 1
+      fi
+      if [ "$INITIAL" = "$CURRENT" ]; then
+        echo "FAIL: provisioning-version annotation did not change after secret update (still: $CURRENT)"
+        exit 1
+      fi
+      echo "Verified: provisioning-version changed from '$INITIAL' to '$CURRENT'"
+  # Verify status.provisioning version was updated
+  - script: |
+      VERSION=$(kubectl get perses perses-provisioning-test -n $NAMESPACE -o jsonpath='{.status.provisioning[0].version}')
+      if [ -z "$VERSION" ]; then
+        echo "FAIL: status.provisioning[0].version is empty after secret update"
+        exit 1
+      fi
+      echo "Verified: status.provisioning[0].version = $VERSION (updated)"

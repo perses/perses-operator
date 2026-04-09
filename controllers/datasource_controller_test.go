@@ -24,12 +24,14 @@ import (
 	persesconfig "github.com/perses/perses/pkg/model/api/config"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	persescommon "github.com/perses/perses/pkg/model/api/v1/common"
+	"github.com/stretchr/testify/mock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
@@ -37,6 +39,24 @@ import (
 	internal "github.com/perses/perses-operator/internal/perses"
 	"github.com/perses/perses-operator/internal/perses/common"
 )
+
+// secretStrippingClient wraps a client.Client and strips Data/StringData from
+// Secret objects on Get, simulating the cache Transform.
+// This lets tests verify that secret data is read through APIReader, not Client.
+type secretStrippingClient struct {
+	client.Client
+}
+
+func (c *secretStrippingClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+	if err := c.Client.Get(ctx, key, obj, opts...); err != nil {
+		return err
+	}
+	if s, ok := obj.(*corev1.Secret); ok {
+		s.Data = nil
+		s.StringData = nil
+	}
+	return nil
+}
 
 var _ = Describe("Datasource controller", Ordered, func() {
 	Context("Datasource controller test", func() {
@@ -180,6 +200,7 @@ var _ = Describe("Datasource controller", Ordered, func() {
 			By("Reconciling the custom resource created")
 			datasourceReconciler := &datasourcecontroller.PersesDatasourceReconciler{
 				Client:        k8sClient,
+				APIReader:     k8sClient,
 				Scheme:        k8sClient.Scheme(),
 				ClientFactory: common.NewWithClient(mockPersesClient),
 			}
@@ -303,6 +324,7 @@ var _ = Describe("Datasource controller", Ordered, func() {
 			By("Reconciling the custom resource created")
 			datasourceReconciler := &datasourcecontroller.PersesDatasourceReconciler{
 				Client:        k8sClient,
+				APIReader:     k8sClient,
 				Scheme:        k8sClient.Scheme(),
 				ClientFactory: common.NewWithClient(mockPersesClient),
 			}
@@ -410,6 +432,7 @@ var _ = Describe("Datasource controller", Ordered, func() {
 
 			datasourceReconciler := &datasourcecontroller.PersesDatasourceReconciler{
 				Client:        k8sClient,
+				APIReader:     k8sClient,
 				Scheme:        k8sClient.Scheme(),
 				ClientFactory: common.NewWithClient(mockPersesClient),
 			}
@@ -578,6 +601,7 @@ var _ = Describe("Datasource controller", Ordered, func() {
 			By("Reconciling the custom resource created")
 			datasourceReconciler := &datasourcecontroller.PersesDatasourceReconciler{
 				Client:        k8sClient,
+				APIReader:     k8sClient,
 				Scheme:        k8sClient.Scheme(),
 				ClientFactory: common.NewWithClient(mockPersesClient),
 			}
@@ -701,6 +725,7 @@ var _ = Describe("Datasource controller", Ordered, func() {
 			By("Reconciling the custom resource created")
 			datasourceReconciler := &datasourcecontroller.PersesDatasourceReconciler{
 				Client:        k8sClient,
+				APIReader:     k8sClient,
 				Scheme:        k8sClient.Scheme(),
 				ClientFactory: common.NewWithClient(mockPersesClient),
 			}
@@ -777,6 +802,192 @@ var _ = Describe("Datasource controller", Ordered, func() {
 				}
 				return nil
 			}, time.Minute, time.Second).Should(Succeed())
+		})
+	})
+
+	Context("Datasource controller test with BasicAuth secret", func() {
+		const PersesName = "perses-for-ds-basicauth"
+		const DatasourceName = "ds-with-basicauth"
+		const PersesSecretName = DatasourceName + "-secret"
+		const K8sSecretName = "basicauth-creds"
+
+		ctx := context.Background()
+
+		var namespace *corev1.Namespace
+		var PersesNamespace string
+		var persesNamespaceName types.NamespacedName
+		var datasourceNamespaceName types.NamespacedName
+
+		BeforeAll(func() {
+			By("Creating the Namespace")
+			namespace = &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					GenerateName: "perses-ds-basicauth-test-",
+				},
+			}
+			err := k8sClient.Create(ctx, namespace)
+			Expect(err).To(Not(HaveOccurred()))
+			PersesNamespace = namespace.Name
+			persesNamespaceName = types.NamespacedName{Name: PersesName, Namespace: PersesNamespace}
+			datasourceNamespaceName = types.NamespacedName{Name: DatasourceName, Namespace: PersesNamespace}
+
+			By("Creating the Perses instance")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      PersesName,
+					Namespace: PersesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					ContainerPort: ptr.To(int32(8080)),
+				},
+			}
+			err = k8sClient.Create(ctx, perses)
+			Expect(err).To(Not(HaveOccurred()))
+
+			Eventually(func() error {
+				if err := k8sClient.Get(ctx, persesNamespaceName, perses); err != nil {
+					return err
+				}
+				perses.Status.Conditions = []metav1.Condition{{
+					Type:               common.TypeAvailablePerses,
+					Status:             metav1.ConditionTrue,
+					Reason:             "Testing",
+					Message:            "Available for testing",
+					LastTransitionTime: metav1.Now(),
+				}}
+				return k8sClient.Status().Update(ctx, perses)
+			}, time.Second*10, time.Millisecond*250).Should(Succeed())
+
+			By("Creating the K8s Secret with BasicAuth credentials")
+			k8sSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      K8sSecretName,
+					Namespace: PersesNamespace,
+				},
+				StringData: map[string]string{
+					"password": "s3cret-password",
+				},
+			}
+			err = k8sClient.Create(ctx, k8sSecret)
+			Expect(err).To(Not(HaveOccurred()))
+		})
+
+		AfterAll(func() {
+			_ = k8sClient.Delete(ctx, namespace)
+		})
+
+		It("should read secret data via APIReader and pass it to the Perses Secret API", func() {
+			By("Creating a PersesDatasource with BasicAuth referencing the K8s secret")
+			datasource := &persesv1alpha2.PersesDatasource{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      DatasourceName,
+					Namespace: PersesNamespace,
+				},
+				Spec: persesv1alpha2.DatasourceSpec{
+					Config: persesv1alpha2.Datasource{
+						DatasourceSpec: persesv1.DatasourceSpec{
+							Display: &persescommon.Display{
+								Name: DatasourceName,
+							},
+							Default: true,
+							Plugin: persescommon.Plugin{
+								Kind: "Prometheus",
+								Spec: map[string]any{},
+							},
+						},
+					},
+					Client: &persesv1alpha2.Client{
+						BasicAuth: &persesv1alpha2.BasicAuth{
+							SecretSource: persesv1alpha2.SecretSource{
+								Type:      persesv1alpha2.SecretSourceTypeSecret,
+								Name:      ptr.To(K8sSecretName),
+								Namespace: ptr.To(PersesNamespace),
+							},
+							Username:     "admin",
+							PasswordPath: "password",
+						},
+					},
+				},
+			}
+			err := k8sClient.Create(ctx, datasource)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Setting up mock Perses API expectations")
+			mockPersesClient := new(internal.MockClient)
+			mockDatasource := new(internal.MockDatasource)
+			mockSecret := new(internal.MockSecret)
+
+			mockPersesClient.On("Datasource", PersesNamespace).Return(mockDatasource)
+			mockPersesClient.On("Secret", PersesNamespace).Return(mockSecret)
+
+			// The datasource does not exist yet in Perses
+			mockDatasource.On("Get", DatasourceName).Return(&persesv1.Datasource{}, perseshttp.RequestNotFoundError)
+			mockDatasource.On("Create", mock.AnythingOfType("*v1.Datasource")).Return(&persesv1.Datasource{}, nil)
+
+			// The Perses secret does not exist yet
+			mockSecret.On("Get", PersesSecretName).Return(&persesv1.Secret{}, perseshttp.RequestNotFoundError)
+			// Use MatchedBy to verify the secret contains the correct BasicAuth password
+			mockSecret.On("Create", mock.MatchedBy(func(s *persesv1.Secret) bool {
+				return s.Spec.BasicAuth != nil &&
+					s.Spec.BasicAuth.Username == "admin" &&
+					s.Spec.BasicAuth.Password == "s3cret-password"
+			})).Return(&persesv1.Secret{}, nil)
+
+			// Use a secretStrippingClient as Client to simulate the cache Transform
+			// that strips Data/StringData. This proves the reconciler reads secrets
+			// through APIReader (k8sClient) and not through Client.
+			strippingClient := &secretStrippingClient{Client: k8sClient}
+
+			By("Reconciling the datasource")
+			datasourceReconciler := &datasourcecontroller.PersesDatasourceReconciler{
+				Client:        strippingClient,
+				APIReader:     k8sClient,
+				Scheme:        k8sClient.Scheme(),
+				ClientFactory: common.NewWithClient(mockPersesClient),
+			}
+
+			_, err = datasourceReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: datasourceNamespaceName,
+			})
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Verifying the Perses Secret was created with correct BasicAuth data")
+			mockSecret.AssertCalled(GinkgoT(), "Create", mock.MatchedBy(func(s *persesv1.Secret) bool {
+				return s.Spec.BasicAuth != nil &&
+					s.Spec.BasicAuth.Username == "admin" &&
+					s.Spec.BasicAuth.Password == "s3cret-password"
+			}))
+
+			By("Verifying the datasource status is Available")
+			Eventually(func() error {
+				dsWithStatus := &persesv1alpha2.PersesDatasource{}
+				if err := k8sClient.Get(ctx, datasourceNamespaceName, dsWithStatus); err != nil {
+					return err
+				}
+				if len(dsWithStatus.Status.Conditions) == 0 {
+					return fmt.Errorf("no status conditions found")
+				}
+				availableCond := apimeta.FindStatusCondition(dsWithStatus.Status.Conditions, common.TypeAvailablePerses)
+				if availableCond == nil || availableCond.Status != metav1.ConditionTrue {
+					return fmt.Errorf("datasource is not Available: %v", availableCond)
+				}
+				return nil
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Cleaning up")
+			mockDatasource.On("Delete", DatasourceName).Return(nil)
+			mockSecret.On("Delete", PersesSecretName).Return(nil)
+
+			dsToDelete := &persesv1alpha2.PersesDatasource{}
+			err = k8sClient.Get(ctx, datasourceNamespaceName, dsToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+			err = k8sClient.Delete(ctx, dsToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+
+			_, err = datasourceReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: datasourceNamespaceName,
+			})
+			Expect(err).To(Not(HaveOccurred()))
 		})
 	})
 })

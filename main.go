@@ -22,10 +22,13 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
@@ -119,6 +122,22 @@ func main() {
 		// after the manager stops then its usage might be unsafe.
 		// LeaderElectionReleaseOnCancel: true,
 		PprofBindAddress: "127.0.0.1:8083",
+		Cache: cache.Options{
+			ByObject: map[client.Object]cache.ByObject{
+				&corev1.Secret{}: {
+					// Strip secret data from the cache to reduce memory usage.
+					// All controllers watch or read secrets but only need metadata for change detection.
+					// Controllers that need actual secret data use the APIReader instead.
+					Transform: func(obj interface{}) (interface{}, error) {
+						if secret, ok := obj.(*corev1.Secret); ok {
+							secret.Data = nil
+							secret.StringData = nil
+						}
+						return obj, nil
+					},
+				},
+			},
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -132,6 +151,7 @@ func main() {
 
 	if err = (&persescontroller.PersesReconciler{
 		Client:                mgr.GetClient(),
+		APIReader:             mgr.GetAPIReader(),
 		Scheme:                mgr.GetScheme(),
 		Metrics:               opMetrics,
 		ReconciliationTracker: reconciliationTracker,
@@ -145,6 +165,7 @@ func main() {
 
 	if err = (&dashboardcontroller.PersesDashboardReconciler{
 		Client:                mgr.GetClient(),
+		APIReader:             mgr.GetAPIReader(),
 		Scheme:                mgr.GetScheme(),
 		Metrics:               opMetrics,
 		ReconciliationTracker: reconciliationTracker,
@@ -156,6 +177,7 @@ func main() {
 
 	if err = (&datasourcecontroller.PersesDatasourceReconciler{
 		Client:                mgr.GetClient(),
+		APIReader:             mgr.GetAPIReader(),
 		Scheme:                mgr.GetScheme(),
 		Metrics:               opMetrics,
 		ReconciliationTracker: reconciliationTracker,
@@ -167,6 +189,7 @@ func main() {
 
 	if err = (&globaldatasourcecontroller.PersesGlobalDatasourceReconciler{
 		Client:                mgr.GetClient(),
+		APIReader:             mgr.GetAPIReader(),
 		Scheme:                mgr.GetScheme(),
 		Metrics:               opMetrics,
 		ReconciliationTracker: reconciliationTracker,

@@ -32,7 +32,7 @@ import (
 const tokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 
 type PersesClientFactory interface {
-	CreateClient(ctx context.Context, client client.Client, perses persesv1alpha2.Perses) (v1.ClientInterface, error)
+	CreateClient(ctx context.Context, client client.Reader, perses persesv1alpha2.Perses) (v1.ClientInterface, error)
 }
 
 type PersesClientFactoryWithConfig struct{}
@@ -41,7 +41,7 @@ func NewWithConfig() PersesClientFactory {
 	return &PersesClientFactoryWithConfig{}
 }
 
-func (f *PersesClientFactoryWithConfig) CreateClient(ctx context.Context, client client.Client, perses persesv1alpha2.Perses) (v1.ClientInterface, error) {
+func (f *PersesClientFactoryWithConfig) CreateClient(ctx context.Context, client client.Reader, perses persesv1alpha2.Perses) (v1.ClientInterface, error) {
 	var urlStr string
 
 	var httpProtocol = "http"
@@ -148,6 +148,6 @@ func NewWithClient(client v1.ClientInterface) PersesClientFactory {
 	return &PersesClientFactoryWithClient{client: client}
 }
 
-func (f *PersesClientFactoryWithClient) CreateClient(_ context.Context, _ client.Client, _ persesv1alpha2.Perses) (v1.ClientInterface, error) {
+func (f *PersesClientFactoryWithClient) CreateClient(_ context.Context, _ client.Reader, _ persesv1alpha2.Perses) (v1.ClientInterface, error) {
 	return f.client, nil
 }

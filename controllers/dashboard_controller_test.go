@@ -176,6 +176,7 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 			By("Reconciling the custom resource created")
 			dashboardReconciler := &dashboardcontroller.PersesDashboardReconciler{
 				Client:        k8sClient,
+				APIReader:     k8sClient,
 				Scheme:        k8sClient.Scheme(),
 				ClientFactory: common.NewWithClient(mockPersesClient),
 			}
@@ -295,6 +296,7 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 			By("Reconciling the custom resource created")
 			dashboardReconciler := &dashboardcontroller.PersesDashboardReconciler{
 				Client:        k8sClient,
+				APIReader:     k8sClient,
 				Scheme:        k8sClient.Scheme(),
 				ClientFactory: common.NewWithClient(mockPersesClient),
 			}
@@ -401,6 +403,7 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 
 			dashboardReconciler := &dashboardcontroller.PersesDashboardReconciler{
 				Client:        k8sClient,
+				APIReader:     k8sClient,
 				Scheme:        k8sClient.Scheme(),
 				ClientFactory: common.NewWithClient(mockPersesClient),
 			}
@@ -585,6 +588,7 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 			By("Reconciling the custom resource created")
 			dashboardReconciler := &dashboardcontroller.PersesDashboardReconciler{
 				Client:        k8sClient,
+				APIReader:     k8sClient,
 				Scheme:        k8sClient.Scheme(),
 				ClientFactory: common.NewWithClient(mockPersesClient),
 			}
@@ -661,6 +665,7 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 			By("Reconciling the custom resource created")
 			dashboardReconciler := &dashboardcontroller.PersesDashboardReconciler{
 				Client:        k8sClient,
+				APIReader:     k8sClient,
 				Scheme:        k8sClient.Scheme(),
 				ClientFactory: common.NewWithClient(mockPersesClient),
 			}
@@ -815,6 +820,7 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 			By("Reconciling the custom resource created")
 			dashboardReconciler := &dashboardcontroller.PersesDashboardReconciler{
 				Client:        k8sClient,
+				APIReader:     k8sClient,
 				Scheme:        k8sClient.Scheme(),
 				ClientFactory: common.NewWithClient(mockPersesClient),
 			}
