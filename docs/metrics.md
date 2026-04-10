@@ -4,15 +4,16 @@ The Perses Operator exposes Prometheus metrics for monitoring operator health an
 
 ## Accessing Metrics
 
-Metrics are exposed on port `8082` at the `/metrics` endpoint:
+Metrics are exposed on port `8443` over HTTPS at the `/metrics` endpoint with authentication and authorization enabled:
 
 ```bash
 # Port forward to the operator pod
 kubectl port-forward -n perses-operator-system \
-  deployment/perses-operator-controller-manager 8082:8082
+  deployment/perses-operator-controller-manager 8443:8443
 
-# View metrics
-curl http://localhost:8082/metrics
+# View metrics (requires a valid bearer token)
+curl -sk https://localhost:8443/metrics \
+  -H "Authorization: Bearer $(kubectl create token -n perses-operator-system perses-operator-controller-manager)"
 ```
 
 ## Available Metrics

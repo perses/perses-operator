@@ -1,0 +1,85 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 30
+commands:
+  # Verify operator deployment has no kube-rbac-proxy sidecar container
+  - script: |
+      containers=$(kubectl get deployment perses-operator-controller-manager \
+        -n perses-operator-system \
+        -o jsonpath='{.spec.template.spec.containers[*].name}')
+      if echo "$containers" | grep -q "kube-rbac-proxy"; then
+        echo "FAIL: kube-rbac-proxy sidecar should not exist, found containers: $containers"
+        exit 1
+      fi
+      echo "PASS: no kube-rbac-proxy sidecar found"
+
+  # Verify manager container exposes the metrics port (8443)
+  - script: |
+      port=$(kubectl get deployment perses-operator-controller-manager \
+        -n perses-operator-system \
+        -o jsonpath='{.spec.template.spec.containers[?(@.name=="manager")].ports[?(@.name=="https")].containerPort}')
+      if [ "$port" != "8443" ]; then
+        echo "FAIL: expected metrics containerPort 8443, got '$port'"
+        exit 1
+      fi
+      echo "PASS: manager container exposes port 8443"
+
+  # Verify manager has --metrics-secure=true and --metrics-bind-address=:8443 args
+  - script: |
+      args=$(kubectl get deployment perses-operator-controller-manager \
+        -n perses-operator-system \
+        -o jsonpath='{.spec.template.spec.containers[?(@.name=="manager")].args}')
+      if ! echo "$args" | grep -q "metrics-secure=true"; then
+        echo "FAIL: expected --metrics-secure=true in args, got: $args"
+        exit 1
+      fi
+      if ! echo "$args" | grep -q "metrics-bind-address=:8443"; then
+        echo "FAIL: expected --metrics-bind-address=:8443 in args, got: $args"
+        exit 1
+      fi
+      echo "PASS: metrics args are correct"
+
+  # Verify metrics Service exists and exposes port 8443
+  - script: |
+      port=$(kubectl get service perses-operator-controller-manager-metrics-service \
+        -n perses-operator-system \
+        -o jsonpath='{.spec.ports[?(@.name=="https")].port}')
+      if [ "$port" != "8443" ]; then
+        echo "FAIL: expected service port 8443, got '$port'"
+        exit 1
+      fi
+      echo "PASS: metrics service exposes port 8443"
+
+  # Verify proxy-role ClusterRole exists with correct RBAC rules
+  - script: |
+      rules=$(kubectl get clusterrole perses-operator-proxy-role \
+        -o jsonpath='{.rules}')
+      if ! echo "$rules" | grep -q "tokenreviews"; then
+        echo "FAIL: proxy-role missing tokenreviews permission"
+        exit 1
+      fi
+      if ! echo "$rules" | grep -q "subjectaccessreviews"; then
+        echo "FAIL: proxy-role missing subjectaccessreviews permission"
+        exit 1
+      fi
+      echo "PASS: proxy-role has correct RBAC rules"
+
+  # Verify proxy-rolebinding references the correct role
+  - script: |
+      role=$(kubectl get clusterrolebinding perses-operator-proxy-rolebinding \
+        -o jsonpath='{.roleRef.name}')
+      if [ "$role" != "perses-operator-proxy-role" ]; then
+        echo "FAIL: expected roleRef perses-operator-proxy-role, got '$role'"
+        exit 1
+      fi
+      echo "PASS: proxy-rolebinding references correct role"
+
+  # Verify metrics-reader ClusterRole exists with /metrics access
+  - script: |
+      urls=$(kubectl get clusterrole perses-operator-metrics-reader \
+        -o jsonpath='{.rules[0].nonResourceURLs}')
+      if ! echo "$urls" | grep -q "/metrics"; then
+        echo "FAIL: metrics-reader missing /metrics URL"
+        exit 1
+      fi
+      echo "PASS: metrics-reader grants /metrics access"
