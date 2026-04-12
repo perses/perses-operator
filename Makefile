@@ -67,6 +67,10 @@ BUNDLE_IMG ?= $(IMAGE_TAG_BASE)-bundle:v$(VERSION)
 # BUNDLE_GEN_FLAGS are the flags passed to the operator-sdk generate bundle command
 BUNDLE_GEN_FLAGS ?= -q --overwrite --version $(VERSION) $(BUNDLE_METADATA_OPTS)
 
+# VERSION_REPLACED defines the previous operator version for OLM replaces-mode upgrade chain.
+# Set this when generating bundles (e.g. make bundle VERSION_REPLACED=0.3.1)
+VERSION_REPLACED ?=
+
 # USE_IMAGE_DIGESTS defines if images are resolved via tags or digests
 # You can enable this value if you would like to use SHA Based Digests
 # To enable set flag to true
@@ -454,15 +458,20 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 ##@ Build Dependencies
 
 .PHONY: bundle
-bundle: manifests kustomize operator-sdk ## Generate bundle manifests and metadata, then validate generated files.
-	$(OPERATOR_SDK) generate kustomize manifests -q
-	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
-	$(KUSTOMIZE) build config/manifests | $(OPERATOR_SDK) generate bundle $(BUNDLE_GEN_FLAGS)
-	$(OPERATOR_SDK) bundle validate ./bundle
+bundle: manifests kustomize operator-sdk yq ## Generate bundle manifests and metadata, then validate generated files.
+	VERSION=$(VERSION) \
+	VERSION_REPLACED=$(VERSION_REPLACED) \
+	BUNDLE_GEN_FLAGS='$(BUNDLE_GEN_FLAGS)' \
+	IMG=$(IMG) \
+		scripts/bundle.sh
 
 .PHONY: bundle-check
 bundle-check: bundle
-	git diff --exit-code bundle config jsonnet/generated jsonnet/examples
+	git diff --exit-code bundle config
+
+.PHONY: jsonnet-check
+jsonnet-check: manifests
+	git diff --exit-code jsonnet/generated jsonnet/examples
 
 .PHONY: bundle-build
 bundle-build: generate bundle ## Build the bundle image.

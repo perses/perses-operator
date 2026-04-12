@@ -33,7 +33,6 @@ Dockerfile.cross
 /.github/perses-ci/
 
 bundle_tmp*
-/bundle/manifests/
 
 # Auto-generated API docs config with resolved k8s version
 docs/config/api-docs-config-resolved.yaml
