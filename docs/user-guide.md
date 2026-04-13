@@ -11,6 +11,7 @@ This documentation provides information on how to use the Perses Operator custom
 - [Examples](#examples)
 - [Project Management](#project-management)
 - [Tags](#tags)
+- [Cache and Watch Filtering](#cache-and-watch-filtering)
 - [Troubleshooting](#troubleshooting)
 
 ## Custom Resources
@@ -471,6 +472,71 @@ spec:
                 label: 5m
         defaultValue: 1m
   duration: 1h
+```
+
+## Cache and Watch Filtering
+
+The operator uses label-based cache filtering to reduce memory usage in clusters with many resources. Only resources relevant to the operator are cached and watched.
+
+### Operator-managed resources
+
+Resources created by the operator (Deployments, StatefulSets, ConfigMaps, Services) are automatically filtered by the label `app.kubernetes.io/managed-by=perses-operator`, which is applied to all operator-created resources. No configuration is needed.
+
+### Secrets
+
+By default, the operator only watches secrets labeled with `perses.dev/watch=true`. You must add this label to any Kubernetes Secret that should trigger reconciliation when changed (e.g., provisioning secrets, TLS certificates, authentication credentials):
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-perses-secret
+  labels:
+    perses.dev/watch: "true"
+```
+
+> [!NOTE]
+> The label controls which secret changes trigger reconciliation. The operator can still read any secret by name via the Kubernetes API when referenced in a CR spec.
+
+#### `--watch-secret-labels`
+
+Override the default secret label selector with a custom expression using standard [Kubernetes label selector syntax](https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#label-selectors):
+
+```sh
+# Watch secrets with a custom label
+--watch-secret-labels="my-operator.io/managed=true"
+
+# Multiple requirements (AND logic)
+--watch-secret-labels="team=platform,env=production"
+
+# Set-based selectors
+--watch-secret-labels="tier in (frontend,backend)"
+```
+
+#### `--watch-all-secrets`
+
+Disable label filtering for secrets entirely, restoring the behavior of watching all secrets in the cluster. When set, `--watch-secret-labels` is ignored.
+
+```sh
+--watch-all-secrets=true
+```
+
+### Migrating from previous versions
+
+Previous versions of the operator watched all secrets in the cluster. The operator now requires secrets to be labeled for watch-based change detection.
+
+After upgrading, add the `perses.dev/watch: "true"` label to all secrets referenced by your Perses custom resources:
+
+```sh
+kubectl label secret <secret-name> perses.dev/watch=true
+```
+
+Until the label is added, changes to those secrets will not trigger reconciliation. Existing resources will continue to function because the operator reads secret data directly from the API when needed.
+
+If you need time to label all secrets, you can temporarily restore the previous behavior:
+
+```sh
+--watch-all-secrets=true
 ```
 
 ## Troubleshooting

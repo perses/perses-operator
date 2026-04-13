@@ -26,6 +26,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -34,6 +35,7 @@ import (
 
 	"github.com/perses/perses-operator/api/v1alpha2"
 	persesController "github.com/perses/perses-operator/controllers/perses"
+	internalcache "github.com/perses/perses-operator/internal/cache"
 	"github.com/perses/perses-operator/internal/operator"
 	//+kubebuilder:scaffold:imports
 )
@@ -91,6 +93,9 @@ var _ = BeforeSuite(func() {
 		Scheme: scheme.Scheme,
 		Metrics: metricsserver.Options{
 			BindAddress: "0",
+		},
+		Cache: cache.Options{
+			ByObject: internalcache.BuildCacheByObject(nil, false),
 		},
 	})
 	Expect(err).ToNot(HaveOccurred())

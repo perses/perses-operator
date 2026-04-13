@@ -4,6 +4,8 @@ kind: Secret
 metadata:
   name: encrypted-data-key
   namespace: perses-dev
+  labels:
+    perses.dev/watch: "true"
 data:
   data-key: 3v8/m+zwjw45TKd5NGt8JrSA48ZI27rKiEFn5Kpaegw=
 ---
