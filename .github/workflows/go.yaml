@@ -103,6 +103,8 @@ jobs:
         run: make generate
       - name: check bundle changes
         run: make bundle-check
+      - name: check jsonnet changes
+        run: make jsonnet-check
       - name: check installer manifest is up-to-date
         run: make installer-check
       - name: check generated manifests are up-to-date

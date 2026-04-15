@@ -1276,4 +1276,5 @@ spec:
   provider:
     name: Perses
     url: perses.dev
+  replaces: <OLD_BUNDLE_VERSION>
   version: 0.1.0
