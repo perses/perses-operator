@@ -14,6 +14,7 @@
 package cache
 
 import (
+	configv1 "github.com/openshift/api/config/v1"
 	"github.com/perses/perses-operator/internal/perses/common"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -42,7 +43,7 @@ func ParseSecretLabelSelector(raw string) (labels.Selector, error) {
 // filter is applied to secrets (preserving pre-change behavior).
 //
 // Secret data is always stripped from the cache via Transform regardless of label filtering.
-func BuildCacheByObject(secretSelector labels.Selector, watchAllSecrets bool) map[client.Object]cache.ByObject {
+func BuildCacheByObject(secretSelector labels.Selector, watchAllSecrets bool, tlsClusterProfile bool) map[client.Object]cache.ByObject {
 	managedBySelector := labels.SelectorFromSet(labels.Set{
 		common.PersesManagedByLabel: common.PersesManagedByValue,
 	})
@@ -85,6 +86,12 @@ func BuildCacheByObject(secretSelector labels.Selector, watchAllSecrets bool) ma
 	}
 
 	byObject[&corev1.Secret{}] = secretEntry
+
+	if tlsClusterProfile {
+		byObject[&configv1.APIServer{}] = cache.ByObject{
+			Label: labels.Everything(),
+		}
+	}
 
 	return byObject
 }

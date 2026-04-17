@@ -33,9 +33,13 @@ const (
 	TypeDegradedPerses        = "Degraded"
 
 	// Flags
-	PersesServerURLFlag   = "perses-server-url"
-	WatchSecretLabelsFlag = "watch-secret-labels"
-	WatchAllSecretsFlag   = "watch-all-secrets"
+	PersesServerURLFlag      = "perses-server-url"
+	WatchSecretLabelsFlag    = "watch-secret-labels"
+	WatchAllSecretsFlag      = "watch-all-secrets"
+	TLSMinVersionFlag        = "tls-min-version"
+	TLSCipherSuitesFlag      = "tls-cipher-suites"
+	TLSClusterProfileFlag    = "tls-cluster-profile"
+	TLSConfigureOperandsFlag = "tls-configure-operands"
 
 	// Volume names
 	configVolumeName  = "config"

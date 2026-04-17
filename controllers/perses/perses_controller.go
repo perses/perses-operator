@@ -56,7 +56,10 @@ func persesFromContext(ctx context.Context) (*v1alpha2.Perses, bool) {
 }
 
 type Config struct {
-	PersesImage string
+	PersesImage          string
+	TLSMinVersion        string
+	TLSCipherSuites      string
+	TLSConfigureOperands bool
 }
 
 // PersesReconciler reconciles a Perses object
@@ -78,6 +81,7 @@ var log = logger.WithField("module", "perses_controller")
 // +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
 // +kubebuilder:rbac:groups=apps,resources=deployments;statefulsets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
+// +kubebuilder:rbac:groups=config.openshift.io,resources=apiservers,verbs=get;list;watch
 func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	start := time.Now()
 	objKey := req.String()

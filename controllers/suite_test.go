@@ -95,7 +95,7 @@ var _ = BeforeSuite(func() {
 			BindAddress: "0",
 		},
 		Cache: cache.Options{
-			ByObject: internalcache.BuildCacheByObject(nil, false),
+			ByObject: internalcache.BuildCacheByObject(nil, false, false),
 		},
 	})
 	Expect(err).ToNot(HaveOccurred())

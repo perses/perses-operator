@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"testing"
 
+	configv1 "github.com/openshift/api/config/v1"
 	"github.com/perses/perses-operator/internal/perses/common"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -131,7 +132,7 @@ func findByObjectEntry(byObject map[client.Object]ctrlcache.ByObject, target cli
 }
 
 func TestBuildCacheByObject_DefaultLabels(t *testing.T) {
-	byObject := BuildCacheByObject(nil, false)
+	byObject := BuildCacheByObject(nil, false, false)
 
 	managedBySelector := labels.SelectorFromSet(labels.Set{
 		common.PersesManagedByLabel: common.PersesManagedByValue,
@@ -179,7 +180,7 @@ func TestBuildCacheByObject_CustomSecretSelector(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to parse selector: %v", err)
 	}
-	byObject := BuildCacheByObject(customSelector, false)
+	byObject := BuildCacheByObject(customSelector, false, false)
 
 	secretEntry := findByObjectEntry(byObject, &corev1.Secret{})
 	if secretEntry == nil {
@@ -196,7 +197,7 @@ func TestBuildCacheByObject_CustomSecretSelector(t *testing.T) {
 }
 
 func TestBuildCacheByObject_WatchAllSecrets(t *testing.T) {
-	byObject := BuildCacheByObject(nil, true)
+	byObject := BuildCacheByObject(nil, true, false)
 
 	secretEntry := findByObjectEntry(byObject, &corev1.Secret{})
 	if secretEntry == nil {
@@ -217,7 +218,7 @@ func TestBuildCacheByObject_WatchAllSecretsOverridesSelector(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to parse selector: %v", err)
 	}
-	byObject := BuildCacheByObject(customSelector, true)
+	byObject := BuildCacheByObject(customSelector, true, false)
 
 	secretEntry := findByObjectEntry(byObject, &corev1.Secret{})
 	if secretEntry == nil {
@@ -231,7 +232,7 @@ func TestBuildCacheByObject_WatchAllSecretsOverridesSelector(t *testing.T) {
 
 func getSecretTransform(t *testing.T) func(obj any) (any, error) {
 	t.Helper()
-	byObject := BuildCacheByObject(nil, false)
+	byObject := BuildCacheByObject(nil, false, false)
 	secretEntry := findByObjectEntry(byObject, &corev1.Secret{})
 	if secretEntry == nil {
 		t.Fatal("expected ByObject entry for Secret")
@@ -328,5 +329,27 @@ func TestBuildCacheByObject_SecretTransformEmptySecret(t *testing.T) {
 	}
 	if transformed.StringData != nil {
 		t.Error("expected StringData to remain nil")
+	}
+}
+
+func TestBuildCacheByObject_TLSClusterProfile(t *testing.T) {
+	byObject := BuildCacheByObject(nil, false, true)
+
+	apiServerEntry := findByObjectEntry(byObject, &configv1.APIServer{})
+	if apiServerEntry == nil {
+		t.Fatal("expected ByObject entry for APIServer when tlsClusterProfile is true")
+	}
+
+	if apiServerEntry.Label.String() != labels.Everything().String() {
+		t.Errorf("expected Everything selector for APIServer, got %q", apiServerEntry.Label)
+	}
+}
+
+func TestBuildCacheByObject_NoTLSClusterProfile(t *testing.T) {
+	byObject := BuildCacheByObject(nil, false, false)
+
+	apiServerEntry := findByObjectEntry(byObject, &configv1.APIServer{})
+	if apiServerEntry != nil {
+		t.Error("expected no ByObject entry for APIServer when tlsClusterProfile is false")
 	}
 }

@@ -183,7 +183,7 @@ func (r *PersesReconciler) createPersesDeployment(
 							Name: "perses",
 						}},
 						VolumeMounts:   common.GetVolumeMounts(perses),
-						Args:           common.GetPersesArgs(perses),
+						Args:           common.GetPersesArgs(perses, r.Config.TLSMinVersion, r.Config.TLSCipherSuites, r.Config.TLSConfigureOperands),
 						LivenessProbe:  livenessProbe,
 						ReadinessProbe: readinessProbe,
 					}},

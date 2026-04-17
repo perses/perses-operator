@@ -22,7 +22,7 @@ import (
 // GetPersesArgs returns the command line arguments for the Perses server.
 // It includes the configuration file path, TLS settings if enabled,
 // log settings, and any additional user-specified arguments.
-func GetPersesArgs(perses *v1alpha2.Perses) []string {
+func GetPersesArgs(perses *v1alpha2.Perses, tlsMinVersion, tlsCipherSuites string, tlsConfigureOperands bool) []string {
 	args := []string{fmt.Sprintf("--config=%s", defaultConfigPath)}
 
 	// Append custom listen address if containerPort is set
@@ -40,6 +40,16 @@ func GetPersesArgs(perses *v1alpha2.Perses) []string {
 		}
 		args = append(args, fmt.Sprintf("--web.tls-key-file=%s/%s",
 			tlsCertMountPath, privateKeyPath))
+	}
+
+	// Append cluster-wide TLS settings if operand configuration is enabled
+	if tlsConfigureOperands {
+		if tlsMinVersion != "" {
+			args = append(args, fmt.Sprintf("--web.tls-min-version=%s", tlsMinVersion))
+		}
+		if tlsCipherSuites != "" {
+			args = append(args, fmt.Sprintf("--web.tls-cipher-suites=%s", tlsCipherSuites))
+		}
 	}
 
 	// Append log level if specified

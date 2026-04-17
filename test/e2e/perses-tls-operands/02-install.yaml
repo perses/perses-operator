@@ -1,0 +1,10 @@
+apiVersion: perses.dev/v1alpha2
+kind: Perses
+metadata:
+  name: perses-tls-test
+spec:
+  config:
+    database:
+      file:
+        folder: "/perses"
+  containerPort: 8080
