@@ -1,0 +1,91 @@
+name: Create OperatorHub pull request
+
+on:
+  workflow_call:
+    inputs:
+      org:
+        type: string
+        required: true
+      repo:
+        type: string
+        required: true
+    secrets:
+      BOT_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+env:
+  BOT_USER: persesbot
+  OPERATOR_NAME: perses-operator
+
+jobs:
+  create-operator-pull-request:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set version from tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          TAG=${TAG:1}
+          echo "VERSION=${TAG}" >> $GITHUB_ENV
+
+      - name: Sync fork
+        env:
+          GH_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: |
+          gh repo sync ${{ env.BOT_USER }}/${{ inputs.repo }} \
+              --source ${{ inputs.org }}/${{ inputs.repo }} \
+              --force
+
+      - name: Checkout community-operators fork
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ env.BOT_USER }}/${{ inputs.repo }}
+          token: ${{ secrets.BOT_TOKEN }}
+
+      - name: Checkout perses-operator at release tag
+        uses: actions/checkout@v6
+        with:
+          repository: ${{ github.repository }}
+          ref: ${{ github.ref_name }}
+          path: tmp/
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tmp/go.mod
+
+      - name: Generate bundle manifests
+        working-directory: tmp/
+        run: make bundle
+
+      - name: Copy bundle to versioned directory
+        run: |
+          mkdir -p operators/${OPERATOR_NAME}/${VERSION}
+          cp -R tmp/bundle/manifests operators/${OPERATOR_NAME}/${VERSION}/
+          cp -R tmp/bundle/metadata operators/${OPERATOR_NAME}/${VERSION}/
+          cp -R tmp/bundle/tests operators/${OPERATOR_NAME}/${VERSION}/
+          rm -rf tmp/
+
+      - name: Create pull request
+        env:
+          GH_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: |
+          git config user.name ${{ env.BOT_USER }}
+          git config user.email ${{ env.BOT_USER }}@users.noreply.github.com
+
+          message="operator ${OPERATOR_NAME} (${VERSION})"
+          branch="update-${OPERATOR_NAME}-to-${VERSION}"
+
+          git checkout -b $branch
+          git add -A
+          git commit -s -m "$message"
+          git push -f --set-upstream origin $branch
+          gh pr create --title "$message" \
+                       --body "Release ${OPERATOR_NAME} \`${VERSION}\`." \
+                       --repo ${{ inputs.org }}/${{ inputs.repo }} \
+                       --base main

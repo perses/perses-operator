@@ -1,0 +1,22 @@
+name: Publish operator to OperatorHub
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  operatorhub-community:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/operator-hub-release.yaml
+    with:
+      org: k8s-operatorhub
+      repo: community-operators
+    secrets:
+      # NOTE: BOT_TOKEN is a PAT (repo scope) for the persesbot account
+      # Required to sync and push to persesbot's fork of community-operators
+      # and to create pull requests against the upstream repository.
+      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}

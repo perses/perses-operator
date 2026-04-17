@@ -64,6 +64,20 @@ It can be helpful to leave the release branch up for a little while in case we n
 
 Once the release branch is no longer needed, you should open a new PR based on `main` to merge those changes. When this PR is approved, merge it into `main` :warning: **using the "merge pull request" option, not "squash and merge"** (the latter would delete the commit needed for the release tag, which can lead to problems).
 
-## 4. Update the Helm chart
+## 4. Publish to OperatorHub (automated)
+
+When the GitHub release is published, a workflow automatically creates a pull request to submit the new operator version to [k8s-operatorhub/community-operators](https://github.com/k8s-operatorhub/community-operators/pulls) (OperatorHub.io).
+
+A maintainer should monitor the PR and address any CI feedback from the community-operators repository.
+
+### One-time setup prerequisites
+
+Before the automation can run, the following must be configured once:
+
+1. **Bot account**: The `persesbot` GitHub account must have a fork of [k8s-operatorhub/community-operators](https://github.com/k8s-operatorhub/community-operators).
+2. **GitHub secret**: A Personal Access Token with `repo` scope for the bot account must be added as `PERSESBOT_GITHUB_TOKEN` in the repository settings.
+3. **CLA/DCO**: The bot account should sign the CNCF CLA or Linux Foundation DCO if required.
+
+## 5. Update the Helm chart
 
 After the release is published, update the [Perses Operator Helm chart](https://github.com/perses/helm-charts/tree/main/charts/perses-operator) in the [perses/helm-charts](https://github.com/perses/helm-charts) repository. Follow the [Bumping perses-operator Version](https://github.com/perses/helm-charts/blob/main/DEVELOPER_GUIDE.md#bumping-perses-operator-version) guide.
