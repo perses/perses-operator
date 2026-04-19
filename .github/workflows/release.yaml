@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "New version to release, e.g. 0.4.0 (no 'v' prefix)"
+        required: true
+        type: string
+      version-replace:
+        description: "Previously shipped version for the OLM replaces chain, e.g. 0.3.2"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  prepare-release:
+    name: Prepare release PR
+    runs-on: ubuntu-latest
+    concurrency:
+      group: release-preparation
+      cancel-in-progress: true
+    steps:
+      - name: Validate inputs
+        env:
+          TAG: ${{ inputs.tag }}
+          VERSION_REPLACE: ${{ inputs.version-replace }}
+        run: |
+          SEMVER_REGEX='^[0-9]+\.[0-9]+\.[0-9]+$'
+          [[ "$TAG" =~ $SEMVER_REGEX ]] || {
+            echo "::error title=Invalid input::tag='$TAG' must be MAJOR.MINOR.PATCH (e.g. 0.4.0, no 'v' prefix)"
+            exit 1
+          }
+          [[ "$VERSION_REPLACE" =~ $SEMVER_REGEX ]] || {
+            echo "::error title=Invalid input::version-replace='$VERSION_REPLACE' must be MAJOR.MINOR.PATCH (e.g. 0.3.2)"
+            exit 1
+          }
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          # NOTE: we need to fetch the whole history to be able to generate the changelog
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install tools
+        uses: ./.github/tools-cache
+
+      - name: Update VERSION
+        run: echo "${{ inputs.tag }}" > VERSION
+
+      - name: Generate changelog
+        run: make generate-changelog
+
+      - name: Generate bundle
+        env:
+          VERSION_REPLACED: ${{ inputs.version-replace }}
+        run: make bundle
+
+      - name: Generate installer manifest
+        run: make build-installer
+
+      - name: Create pull request
+        # NOTE: BOT_TOKEN (PAT for persesbot) is required: a PR opened with the default
+        # GITHUB_TOKEN would not trigger downstream pull_request workflows.
+        uses: peter-evans/create-pull-request@v8
+        with:
+          token: ${{ secrets.BOT_TOKEN }}
+          branch: chore-version-${{ inputs.tag }}
+          delete-branch: true
+          signoff: true
+          commit-message: "chore: update VERSION to ${{ inputs.tag }}"
+          title: "chore: update VERSION to ${{ inputs.tag }}"
+          body: |
+            Automated release PR for `v${{ inputs.tag }}`
+            - `VERSION` bumped to `${{ inputs.tag }}`
+            - Changelog generated (`CHANGELOG.md`) and ready for `UNKNOWN` cleanup in PR review
+            - Bundle generated with `VERSION_REPLACED=${{ inputs.version-replace }}` (OLM `replaces: perses-operator.v${{ inputs.version-replace }}`)
+            - Installer manifest `bundle.yaml` generated
