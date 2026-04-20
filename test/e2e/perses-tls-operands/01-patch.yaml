@@ -1,0 +1,10 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |
+      kubectl patch deployment perses-operator-controller-manager \
+        -n perses-operator-system \
+        --type=strategic \
+        -p='{"spec":{"template":{"spec":{"containers":[{"name":"manager","args":["--health-probe-bind-address=:8081","--metrics-bind-address=127.0.0.1:8082","--leader-elect","--tls-min-version=VersionTLS12","--tls-cipher-suites=TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384","--tls-configure-operands"]}]}}}}'
+      kubectl rollout status deployment perses-operator-controller-manager \
+        -n perses-operator-system --timeout=120s

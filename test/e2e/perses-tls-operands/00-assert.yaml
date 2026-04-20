@@ -1,0 +1,9 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+commands:
+  - script: |
+      kubectl wait --for=condition=Available --timeout=120s \
+        -n perses-operator-system \
+        deployment/perses-operator-controller-manager
+      echo "Verified: controller deployment is available"

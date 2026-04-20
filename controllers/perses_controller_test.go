@@ -997,6 +997,275 @@ var _ = Describe("Perses controller", func() {
 			Expect(k8sClient.Delete(ctx, persesToDelete)).To(Succeed())
 		})
 
+		It("should propagate TLS args to StatefulSet when TLSConfigureOperands is true", func() {
+			const PersesTLSName = "perses-tls-statefulset"
+			typeNamespaceName := types.NamespacedName{Name: PersesTLSName, Namespace: persesNamespace}
+
+			By("Creating a Perses CR with file database (triggers StatefulSet)")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      PersesTLSName,
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					Image: ptr.To(persesImage),
+					Config: persesv1alpha2.PersesConfig{
+						Config: persesconfig.Config{
+							Database: persesconfig.Database{
+								File: &persesconfig.File{
+									Folder: "/etc/perses/storage",
+								},
+							},
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, perses)).To(Succeed())
+
+			persesReconciler := &persescontroller.PersesReconciler{
+				Client:    k8sClient,
+				APIReader: k8sClient,
+				Scheme:    k8sClient.Scheme(),
+				Config: persescontroller.Config{
+					PersesImage:          persesImage,
+					TLSMinVersion:        "VersionTLS12",
+					TLSCipherSuites:      "TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384",
+					TLSConfigureOperands: true,
+				},
+			}
+
+			By("Reconciling and checking that the StatefulSet has TLS args")
+			// The manager's background reconciler (no TLS config) races with this
+			// ad-hoc reconciler. We reconcile and assert in the same Eventually
+			// iteration so the args are always fresh from the TLS reconciler.
+			Eventually(func() error {
+				if _, err := persesReconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespaceName,
+				}); err != nil {
+					return err
+				}
+				found := &appsv1.StatefulSet{}
+				if err := k8sClient.Get(ctx, typeNamespaceName, found); err != nil {
+					return err
+				}
+				args := found.Spec.Template.Spec.Containers[0].Args
+				if !slices.Contains(args, "--web.tls-min-version=VersionTLS12") {
+					return fmt.Errorf("missing --web.tls-min-version arg in %v", args)
+				}
+				if !slices.Contains(args, "--web.tls-cipher-suites=TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384") {
+					return fmt.Errorf("missing --web.tls-cipher-suites arg in %v", args)
+				}
+				if !slices.Contains(args, "--config=/etc/perses/config/config.yaml") {
+					return fmt.Errorf("missing baseline --config arg in %v", args)
+				}
+				return nil
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Deleting the custom resource")
+			persesToDelete := &persesv1alpha2.Perses{}
+			Expect(k8sClient.Get(ctx, typeNamespaceName, persesToDelete)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, persesToDelete)).To(Succeed())
+		})
+
+		It("should propagate TLS args to Deployment when TLSConfigureOperands is true", func() {
+			const PersesTLSDeployName = "perses-tls-deployment"
+			typeNamespaceName := types.NamespacedName{Name: PersesTLSDeployName, Namespace: persesNamespace}
+
+			By("Creating a Perses CR with emptyDir storage (triggers Deployment)")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      PersesTLSDeployName,
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					Image: ptr.To(persesImage),
+					Config: persesv1alpha2.PersesConfig{
+						Config: persesconfig.Config{
+							Database: persesconfig.Database{
+								File: &persesconfig.File{
+									Folder: "/etc/perses/storage",
+								},
+							},
+						},
+					},
+					Storage: &persesv1alpha2.StorageConfiguration{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, perses)).To(Succeed())
+
+			persesReconciler := &persescontroller.PersesReconciler{
+				Client:    k8sClient,
+				APIReader: k8sClient,
+				Scheme:    k8sClient.Scheme(),
+				Config: persescontroller.Config{
+					PersesImage:          persesImage,
+					TLSMinVersion:        "VersionTLS12",
+					TLSCipherSuites:      "TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384",
+					TLSConfigureOperands: true,
+				},
+			}
+
+			By("Reconciling and checking that the Deployment has TLS args")
+			Eventually(func() error {
+				if _, err := persesReconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespaceName,
+				}); err != nil {
+					return err
+				}
+				found := &appsv1.Deployment{}
+				if err := k8sClient.Get(ctx, typeNamespaceName, found); err != nil {
+					return err
+				}
+				args := found.Spec.Template.Spec.Containers[0].Args
+				if !slices.Contains(args, "--web.tls-min-version=VersionTLS12") {
+					return fmt.Errorf("missing --web.tls-min-version arg in %v", args)
+				}
+				if !slices.Contains(args, "--web.tls-cipher-suites=TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384") {
+					return fmt.Errorf("missing --web.tls-cipher-suites arg in %v", args)
+				}
+				return nil
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Deleting the custom resource")
+			persesToDelete := &persesv1alpha2.Perses{}
+			Expect(k8sClient.Get(ctx, typeNamespaceName, persesToDelete)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, persesToDelete)).To(Succeed())
+		})
+
+		It("should not add TLS args when TLSConfigureOperands is false", func() {
+			const PersesNoTLSName = "perses-no-tls"
+			typeNamespaceName := types.NamespacedName{Name: PersesNoTLSName, Namespace: persesNamespace}
+
+			By("Creating a Perses CR with file database")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      PersesNoTLSName,
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					Image: ptr.To(persesImage),
+					Config: persesv1alpha2.PersesConfig{
+						Config: persesconfig.Config{
+							Database: persesconfig.Database{
+								File: &persesconfig.File{
+									Folder: "/etc/perses/storage",
+								},
+							},
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, perses)).To(Succeed())
+
+			persesReconciler := &persescontroller.PersesReconciler{
+				Client:    k8sClient,
+				APIReader: k8sClient,
+				Scheme:    k8sClient.Scheme(),
+				Config: persescontroller.Config{
+					PersesImage:          persesImage,
+					TLSMinVersion:        "VersionTLS12",
+					TLSCipherSuites:      "TLS_AES_128_GCM_SHA256",
+					TLSConfigureOperands: false,
+				},
+			}
+
+			By("Reconciling the custom resource")
+			Eventually(func() error {
+				_, err := persesReconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespaceName,
+				})
+				return err
+			}, time.Second*10, time.Millisecond*250).Should(Succeed())
+
+			By("Checking that the StatefulSet does NOT have TLS args")
+			Eventually(func() error {
+				found := &appsv1.StatefulSet{}
+				if err := k8sClient.Get(ctx, typeNamespaceName, found); err != nil {
+					return err
+				}
+				args := found.Spec.Template.Spec.Containers[0].Args
+				for _, arg := range args {
+					if strings.Contains(arg, "web.tls-min-version") || strings.Contains(arg, "web.tls-cipher-suites") {
+						return fmt.Errorf("unexpected TLS arg found: %s", arg)
+					}
+				}
+				return nil
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Deleting the custom resource")
+			persesToDelete := &persesv1alpha2.Perses{}
+			Expect(k8sClient.Get(ctx, typeNamespaceName, persesToDelete)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, persesToDelete)).To(Succeed())
+		})
+
+		It("should add only TLS min version arg when cipher suites are empty", func() {
+			const PersesPartialTLSName = "perses-partial-tls"
+			typeNamespaceName := types.NamespacedName{Name: PersesPartialTLSName, Namespace: persesNamespace}
+
+			By("Creating a Perses CR with file database")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      PersesPartialTLSName,
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					Image: ptr.To(persesImage),
+					Config: persesv1alpha2.PersesConfig{
+						Config: persesconfig.Config{
+							Database: persesconfig.Database{
+								File: &persesconfig.File{
+									Folder: "/etc/perses/storage",
+								},
+							},
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, perses)).To(Succeed())
+
+			persesReconciler := &persescontroller.PersesReconciler{
+				Client:    k8sClient,
+				APIReader: k8sClient,
+				Scheme:    k8sClient.Scheme(),
+				Config: persescontroller.Config{
+					PersesImage:          persesImage,
+					TLSMinVersion:        "VersionTLS13",
+					TLSCipherSuites:      "",
+					TLSConfigureOperands: true,
+				},
+			}
+
+			By("Reconciling and checking that the StatefulSet has only the min version arg")
+			Eventually(func() error {
+				if _, err := persesReconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespaceName,
+				}); err != nil {
+					return err
+				}
+				found := &appsv1.StatefulSet{}
+				if err := k8sClient.Get(ctx, typeNamespaceName, found); err != nil {
+					return err
+				}
+				args := found.Spec.Template.Spec.Containers[0].Args
+				if !slices.Contains(args, "--web.tls-min-version=VersionTLS13") {
+					return fmt.Errorf("missing --web.tls-min-version arg in %v", args)
+				}
+				for _, arg := range args {
+					if strings.Contains(arg, "web.tls-cipher-suites") {
+						return fmt.Errorf("unexpected --web.tls-cipher-suites arg found: %s", arg)
+					}
+				}
+				return nil
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Deleting the custom resource")
+			persesToDelete := &persesv1alpha2.Perses{}
+			Expect(k8sClient.Get(ctx, typeNamespaceName, persesToDelete)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, persesToDelete)).To(Succeed())
+		})
+
 		It("should set Degraded status when volumeMounts exist but no volumes defined", func() {
 			const noVolName = "test-perses-mount-no-vol"
 			typeNamespaceName := types.NamespacedName{Name: noVolName, Namespace: persesNamespace}

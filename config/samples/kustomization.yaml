@@ -9,4 +9,8 @@ resources:
   - v1alpha2/persesdashboard.yaml
   - v1alpha2/persesdatasource.yaml
   - v1alpha2/persesglobaldatasource.yaml
+  # Deprecated v1alpha1 samples (needed for alm-examples coverage)
+  - v1alpha1/perses.yaml
+  - v1alpha1/persesdashboard.yaml
+  - v1alpha1/persesdatasource.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples

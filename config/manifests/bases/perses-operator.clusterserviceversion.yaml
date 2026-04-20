@@ -8,36 +8,16 @@ metadata:
           "apiVersion": "perses.dev/v1alpha1",
           "kind": "Perses",
           "metadata": {
-            "labels": {
-              "app.kubernetes.io/name": "perses",
-              "app.kubernetes.io/instance": "perses-sample",
-              "app.kubernetes.io/part-of": "perses-operator"
-            },
             "name": "perses-sample",
             "namespace": "perses-dev"
           },
           "spec": {
-            "metadata": {
-              "labels": {
-                "instance": "perses-sample"
-              }
-            },
             "config": {
               "database": {
                 "file": {
                   "folder": "/etc/perses/storage",
                   "extension": "yaml"
                 }
-              },
-              "schemas": {
-                "panels_path": "/etc/perses/cue/schemas/panels",
-                "queries_path": "/etc/perses/cue/schemas/queries",
-                "datasources_path": "/etc/perses/cue/schemas/datasources",
-                "variables_path": "/etc/perses/cue/schemas/variables"
-              },
-              "ephemeral_dashboard": {
-                "enable": false,
-                "cleanup_interval": "1s"
               }
             },
             "containerPort": 8080
@@ -47,98 +27,20 @@ metadata:
           "apiVersion": "perses.dev/v1alpha1",
           "kind": "PersesDashboard",
           "metadata": {
-            "labels": {
-              "app.kubernetes.io/name": "perses-dashboard",
-              "app.kubernetes.io/instance": "perses-dashboard-sample",
-              "app.kubernetes.io/part-of": "perses-operator"
-            },
             "name": "perses-dashboard-sample",
             "namespace": "perses-dev"
           },
           "spec": {
             "display": {
-              "name": "Perses Dashboard Sample",
-              "description": "This is a sample dashboard"
+              "name": "Sample Dashboard"
             },
             "duration": "5m",
-            "datasources": {
-              "PrometheusLocal": {
-                "default": false,
-                "plugin": {
-                  "kind": "PrometheusDatasource",
-                  "spec": {
-                    "proxy": {
-                      "kind": "HTTPProxy",
-                      "spec": {
-                        "url": "http://localhost:9090"
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "variables": [
-              {
-                "kind": "ListVariable",
-                "spec": {
-                  "name": "job",
-                  "allowMultiple": false,
-                  "allowAllValue": false,
-                  "plugin": {
-                    "kind": "PrometheusLabelValuesVariable",
-                    "spec": {
-                      "labelName": "job"
-                    }
-                  }
-                }
-              },
-              {
-                "kind": "ListVariable",
-                "spec": {
-                  "name": "instance",
-                  "allowMultiple": false,
-                  "allowAllValue": false,
-                  "plugin": {
-                    "kind": "PrometheusLabelValuesVariable",
-                    "spec": {
-                      "labelName": "instance",
-                      "matchers": [
-                        "up{job=~\"$job\"}"
-                      ]
-                    }
-                  }
-                }
-              },
-              {
-                "kind": "ListVariable",
-                "spec": {
-                  "name": "interval",
-                  "plugin": {
-                    "kind": "StaticListVariable",
-                    "spec": {
-                      "values": [
-                        "1m",
-                        "5m"
-                      ]
-                    }
-                  }
-                }
-              },
-              {
-                "kind": "TextVariable",
-                "spec": {
-                  "name": "text",
-                  "value": "test",
-                  "constant": true
-                }
-              }
-            ],
             "panels": {
-              "defaultTimeSeriesChart": {
+              "sample": {
                 "kind": "Panel",
                 "spec": {
                   "display": {
-                    "name": "Default Time Series Panel"
+                    "name": "Up"
                   },
                   "plugin": {
                     "kind": "TimeSeriesChart",
@@ -158,652 +60,6 @@ metadata:
                     }
                   ]
                 }
-              },
-              "seriesTest": {
-                "kind": "Panel",
-                "spec": {
-                  "display": {
-                    "name": "~130 Series",
-                    "description": "This is a line chart"
-                  },
-                  "plugin": {
-                    "kind": "TimeSeriesChart",
-                    "spec": {
-                      "yAxis": {
-                        "format": {
-                          "unit": "bytes",
-                          "shortValues": true
-                        }
-                      }
-                    }
-                  },
-                  "queries": [
-                    {
-                      "kind": "TimeSeriesQuery",
-                      "spec": {
-                        "plugin": {
-                          "kind": "PrometheusTimeSeriesQuery",
-                          "spec": {
-                            "query": "rate(caddy_http_response_duration_seconds_sum[$interval])"
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              "basicEx": {
-                "kind": "Panel",
-                "spec": {
-                  "display": {
-                    "name": "Single Query"
-                  },
-                  "plugin": {
-                    "kind": "TimeSeriesChart",
-                    "spec": {
-                      "yAxis": {
-                        "format": {
-                          "unit": "decimal"
-                        }
-                      },
-                      "legend": {
-                        "position": "right"
-                      }
-                    }
-                  },
-                  "queries": [
-                    {
-                      "kind": "TimeSeriesQuery",
-                      "spec": {
-                        "plugin": {
-                          "kind": "PrometheusTimeSeriesQuery",
-                          "spec": {
-                            "seriesNameFormat": "Node memory - {{device}} {{instance}}",
-                            "query": "1 - node_filesystem_free_bytes{job='$job',instance=~'$instance',fstype!=\"rootfs\",mountpoint!~\"/(run|var).*\",mountpoint!=\"\"} / node_filesystem_size_bytes{job='$job',instance=~'$instance'}"
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              "legendEx": {
-                "kind": "Panel",
-                "spec": {
-                  "display": {
-                    "name": "Legend Example"
-                  },
-                  "plugin": {
-                    "kind": "TimeSeriesChart",
-                    "spec": {
-                      "legend": {
-                        "position": "bottom"
-                      },
-                      "yAxis": {
-                        "show": true,
-                        "format": {
-                          "unit": "bytes",
-                          "shortValues": true
-                        }
-                      }
-                    }
-                  },
-                  "queries": [
-                    {
-                      "kind": "TimeSeriesQuery",
-                      "spec": {
-                        "plugin": {
-                          "kind": "PrometheusTimeSeriesQuery",
-                          "spec": {
-                            "seriesNameFormat": "Node memory total",
-                            "query": "node_memory_MemTotal_bytes{job='$job',instance=~'$instance'} - node_memory_MemFree_bytes{job='$job',instance=~'$instance'} - node_memory_Buffers_bytes{job='$job',instance=~'$instance'} - node_memory_Cached_bytes{job='$job',instance=~'$instance'}"
-                          }
-                        }
-                      }
-                    },
-                    {
-                      "kind": "TimeSeriesQuery",
-                      "spec": {
-                        "plugin": {
-                          "kind": "PrometheusTimeSeriesQuery",
-                          "spec": {
-                            "seriesNameFormat": "Memory (buffers) - {{instance}}",
-                            "query": "node_memory_Buffers_bytes{job='$job',instance=~'$instance'}"
-                          }
-                        }
-                      }
-                    },
-                    {
-                      "kind": "TimeSeriesQuery",
-                      "spec": {
-                        "plugin": {
-                          "kind": "PrometheusTimeSeriesQuery",
-                          "spec": {
-                            "seriesNameFormat": "Cached Bytes",
-                            "query": "node_memory_Cached_bytes{job='$job',instance=~'$instance'}"
-                          }
-                        }
-                      }
-                    },
-                    {
-                      "kind": "TimeSeriesQuery",
-                      "spec": {
-                        "plugin": {
-                          "kind": "PrometheusTimeSeriesQuery",
-                          "spec": {
-                            "seriesNameFormat": "MemFree Bytes",
-                            "query": "node_memory_MemFree_bytes{job='$job',instance=~'$instance'}"
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              "testNodeQuery": {
-                "kind": "Panel",
-                "spec": {
-                  "display": {
-                    "name": "Test Query",
-                    "description": "Description text"
-                  },
-                  "plugin": {
-                    "kind": "TimeSeriesChart",
-                    "spec": {
-                      "yAxis": {
-                        "format": {
-                          "unit": "decimal",
-                          "decimalPlaces": 2
-                        }
-                      },
-                      "legend": {
-                        "position": "right"
-                      }
-                    }
-                  },
-                  "queries": [
-                    {
-                      "kind": "TimeSeriesQuery",
-                      "spec": {
-                        "plugin": {
-                          "kind": "PrometheusTimeSeriesQuery",
-                          "spec": {
-                            "query": "node_load15{instance=~\"(demo.do.prometheus.io:9100)\",job='$job'}",
-                            "seriesNameFormat": "Test {{job}} {{instance}}"
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              "testQueryAlt": {
-                "kind": "Panel",
-                "spec": {
-                  "display": {
-                    "name": "Test Query Alt",
-                    "description": "Description text"
-                  },
-                  "plugin": {
-                    "kind": "TimeSeriesChart",
-                    "spec": {
-                      "legend": {
-                        "position": "right"
-                      },
-                      "yAxis": {
-                        "format": {
-                          "unit": "percent-decimal",
-                          "decimalPlaces": 1
-                        }
-                      },
-                      "thresholds": {
-                        "steps": [
-                          {
-                            "value": 0.4,
-                            "name": "Alert: Warning condition example"
-                          },
-                          {
-                            "value": 0.75,
-                            "name": "Alert: Critical condition example"
-                          }
-                        ]
-                      }
-                    }
-                  },
-                  "queries": [
-                    {
-                      "kind": "TimeSeriesQuery",
-                      "spec": {
-                        "plugin": {
-                          "kind": "PrometheusTimeSeriesQuery",
-                          "spec": {
-                            "query": "node_load1{instance=~\"(demo.do.prometheus.io:9100)\",job='$job'}"
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              "cpuLine": {
-                "kind": "Panel",
-                "spec": {
-                  "display": {
-                    "name": "CPU - Line (Multi Series)",
-                    "description": "This is a line chart test"
-                  },
-                  "plugin": {
-                    "kind": "TimeSeriesChart",
-                    "spec": {
-                      "yAxis": {
-                        "show": false,
-                        "label": "CPU Label",
-                        "format": {
-                          "unit": "percent-decimal",
-                          "decimalPlaces": 0
-                        }
-                      },
-                      "legend": {
-                        "position": "bottom"
-                      },
-                      "thresholds": {
-                        "steps": [
-                          {
-                            "value": 0.2
-                          },
-                          {
-                            "value": 0.35
-                          }
-                        ]
-                      }
-                    }
-                  },
-                  "queries": [
-                    {
-                      "kind": "TimeSeriesQuery",
-                      "spec": {
-                        "plugin": {
-                          "kind": "PrometheusTimeSeriesQuery",
-                          "spec": {
-                            "seriesNameFormat": "{{mode}} mode - {{job}} {{instance}}",
-                            "query": "avg without (cpu)(rate(node_cpu_seconds_total{job='$job',instance=~'$instance',mode!=\"nice\",mode!=\"steal\",mode!=\"irq\"}[$interval]))"
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              "cpuGauge": {
-                "kind": "Panel",
-                "spec": {
-                  "display": {
-                    "name": "CPU - Gauge (Multi Series)",
-                    "description": "This is a gauge chart test"
-                  },
-                  "plugin": {
-                    "kind": "GaugeChart",
-                    "spec": {
-                      "calculation": "last-number",
-                      "format": {
-                        "unit": "percent-decimal"
-                      },
-                      "thresholds": {
-                        "steps": [
-                          {
-                            "value": 0.2
-                          },
-                          {
-                            "value": 0.35
-                          }
-                        ]
-                      }
-                    }
-                  },
-                  "queries": [
-                    {
-                      "kind": "TimeSeriesQuery",
-                      "spec": {
-                        "plugin": {
-                          "kind": "PrometheusTimeSeriesQuery",
-                          "spec": {
-                            "seriesNameFormat": "{{mode}} mode - {{job}} {{instance}}",
-                            "query": "avg without (cpu)(rate(node_cpu_seconds_total{job='$job',instance=~'$instance',mode!=\"nice\",mode!=\"steal\",mode!=\"irq\"}[$interval]))"
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              "statSm": {
-                "kind": "Panel",
-                "spec": {
-                  "display": {
-                    "name": "Stat Sm"
-                  },
-                  "plugin": {
-                    "kind": "StatChart",
-                    "spec": {
-                      "calculation": "mean",
-                      "format": {
-                        "unit": "decimal",
-                        "decimalPlaces": 1,
-                        "shortValues": true
-                      }
-                    }
-                  },
-                  "queries": [
-                    {
-                      "kind": "TimeSeriesQuery",
-                      "spec": {
-                        "plugin": {
-                          "kind": "PrometheusTimeSeriesQuery",
-                          "spec": {
-                            "query": "node_time_seconds{job='$job',instance=~'$instance'} - node_boot_time_seconds{job='$job',instance=~'$instance'}"
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              "gaugeRAM": {
-                "kind": "Panel",
-                "spec": {
-                  "display": {
-                    "name": "RAM Used",
-                    "description": "This is a stat chart"
-                  },
-                  "plugin": {
-                    "kind": "GaugeChart",
-                    "spec": {
-                      "calculation": "last-number",
-                      "format": {
-                        "unit": "percent"
-                      },
-                      "thresholds": {
-                        "steps": [
-                          {
-                            "value": 85
-                          },
-                          {
-                            "value": 95
-                          }
-                        ]
-                      }
-                    }
-                  },
-                  "queries": [
-                    {
-                      "kind": "TimeSeriesQuery",
-                      "spec": {
-                        "plugin": {
-                          "kind": "PrometheusTimeSeriesQuery",
-                          "spec": {
-                            "query": "100 - ((node_memory_MemAvailable_bytes{job='$job',instance=~'$instance'} * 100) / node_memory_MemTotal_bytes{job='$job',instance=~'$instance'})"
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              "statRAM": {
-                "kind": "Panel",
-                "spec": {
-                  "display": {
-                    "name": "RAM Used",
-                    "description": "This is a stat chart"
-                  },
-                  "plugin": {
-                    "kind": "StatChart",
-                    "spec": {
-                      "calculation": "last-number",
-                      "format": {
-                        "unit": "percent"
-                      }
-                    }
-                  },
-                  "queries": [
-                    {
-                      "kind": "TimeSeriesQuery",
-                      "spec": {
-                        "plugin": {
-                          "kind": "PrometheusTimeSeriesQuery",
-                          "spec": {
-                            "query": "100 - ((node_memory_MemAvailable_bytes{job='$job',instance=~'$instance'} * 100) / node_memory_MemTotal_bytes{job='$job',instance=~'$instance'})"
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              "statTotalRAM": {
-                "kind": "Panel",
-                "spec": {
-                  "display": {
-                    "name": "RAM Total",
-                    "description": "This is a stat chart"
-                  },
-                  "plugin": {
-                    "kind": "StatChart",
-                    "spec": {
-                      "calculation": "last-number",
-                      "format": {
-                        "unit": "bytes",
-                        "decimalPlaces": 1
-                      }
-                    }
-                  },
-                  "queries": [
-                    {
-                      "kind": "TimeSeriesQuery",
-                      "spec": {
-                        "plugin": {
-                          "kind": "PrometheusTimeSeriesQuery",
-                          "spec": {
-                            "query": "node_memory_MemTotal_bytes{job='$job',instance=~'$instance'}"
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              "statMd": {
-                "kind": "Panel",
-                "spec": {
-                  "display": {
-                    "name": "Stat Md"
-                  },
-                  "plugin": {
-                    "kind": "StatChart",
-                    "spec": {
-                      "calculation": "sum",
-                      "format": {
-                        "unit": "decimal",
-                        "decimalPlaces": 2,
-                        "shortValues": true
-                      },
-                      "sparkline": {
-                        "color": "#e65013",
-                        "width": 1.5
-                      }
-                    }
-                  },
-                  "queries": [
-                    {
-                      "kind": "TimeSeriesQuery",
-                      "spec": {
-                        "plugin": {
-                          "kind": "PrometheusTimeSeriesQuery",
-                          "spec": {
-                            "query": "avg(node_load15{job='node',instance=~'$instance'}) /  count(count(node_cpu_seconds_total{job='node',instance=~'$instance'}) by (cpu)) * 100"
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              "statLg": {
-                "kind": "Panel",
-                "spec": {
-                  "display": {
-                    "name": "Stat Lg",
-                    "description": "This is a stat chart"
-                  },
-                  "plugin": {
-                    "kind": "StatChart",
-                    "spec": {
-                      "calculation": "mean",
-                      "format": {
-                        "unit": "percent"
-                      }
-                    }
-                  },
-                  "queries": [
-                    {
-                      "kind": "TimeSeriesQuery",
-                      "spec": {
-                        "plugin": {
-                          "kind": "PrometheusTimeSeriesQuery",
-                          "spec": {
-                            "query": "(((count(count(node_cpu_seconds_total{job='$job',instance=~'$instance'}) by (cpu))) - avg(sum by (mode)(rate(node_cpu_seconds_total{mode=\"idle\",job='$job',instance=~'$instance'}[$interval])))) * 100) / count(count(node_cpu_seconds_total{job='$job',instance=~'$instance'}) by (cpu))"
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              "gaugeEx": {
-                "kind": "Panel",
-                "spec": {
-                  "display": {
-                    "name": "Gauge Ex",
-                    "description": "This is a gauge chart"
-                  },
-                  "plugin": {
-                    "kind": "GaugeChart",
-                    "spec": {
-                      "calculation": "last-number",
-                      "format": {
-                        "unit": "percent"
-                      },
-                      "thresholds": {
-                        "steps": [
-                          {
-                            "value": 85
-                          },
-                          {
-                            "value": 95
-                          }
-                        ]
-                      }
-                    }
-                  },
-                  "queries": [
-                    {
-                      "kind": "TimeSeriesQuery",
-                      "spec": {
-                        "plugin": {
-                          "kind": "PrometheusTimeSeriesQuery",
-                          "spec": {
-                            "query": "(((count(count(node_cpu_seconds_total{job='$job',instance=~'$instance'}) by (cpu))) - avg(sum by (mode)(rate(node_cpu_seconds_total{mode=\"idle\",job='$job',instance=~'$instance'}[$interval])))) * 100) / count(count(node_cpu_seconds_total{job='$job',instance=~'$instance'}) by (cpu))"
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              "gaugeAltEx": {
-                "kind": "Panel",
-                "spec": {
-                  "display": {
-                    "name": "Gauge Alt Ex",
-                    "description": "GaugeChart description text"
-                  },
-                  "plugin": {
-                    "kind": "GaugeChart",
-                    "spec": {
-                      "calculation": "last-number",
-                      "format": {
-                        "unit": "percent-decimal",
-                        "decimalPlaces": 1
-                      },
-                      "thresholds": {
-                        "steps": [
-                          {
-                            "value": 0.5,
-                            "name": "Alert: Warning condition example"
-                          },
-                          {
-                            "value": 0.75,
-                            "name": "Alert: Critical condition example"
-                          }
-                        ]
-                      }
-                    }
-                  },
-                  "queries": [
-                    {
-                      "kind": "TimeSeriesQuery",
-                      "spec": {
-                        "plugin": {
-                          "kind": "PrometheusTimeSeriesQuery",
-                          "spec": {
-                            "query": "node_load15{instance=~'$instance',job='$job'}"
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
-              },
-              "gaugeFormatTest": {
-                "kind": "Panel",
-                "spec": {
-                  "display": {
-                    "name": "Gauge Format Test"
-                  },
-                  "plugin": {
-                    "kind": "GaugeChart",
-                    "spec": {
-                      "calculation": "last-number",
-                      "format": {
-                        "unit": "bytes"
-                      },
-                      "max": 95000000,
-                      "thresholds": {
-                        "steps": [
-                          {
-                            "value": 71000000
-                          },
-                          {
-                            "value": 82000000
-                          }
-                        ]
-                      }
-                    }
-                  },
-                  "queries": [
-                    {
-                      "kind": "TimeSeriesQuery",
-                      "spec": {
-                        "plugin": {
-                          "kind": "PrometheusTimeSeriesQuery",
-                          "spec": {
-                            "query": "node_time_seconds{job='$job',instance=~'$instance'} - node_boot_time_seconds{job='$job',instance=~'$instance'}"
-                          }
-                        }
-                      }
-                    }
-                  ]
-                }
               }
             },
             "layouts": [
@@ -811,108 +67,7 @@ metadata:
                 "kind": "Grid",
                 "spec": {
                   "display": {
-                    "title": "Row 1",
-                    "collapse": {
-                      "open": true
-                    }
-                  },
-                  "items": [
-                    {
-                      "x": 0,
-                      "y": 0,
-                      "width": 2,
-                      "height": 3,
-                      "content": {
-                        "$ref": "#/spec/panels/statRAM"
-                      }
-                    },
-                    {
-                      "x": 0,
-                      "y": 4,
-                      "width": 2,
-                      "height": 3,
-                      "content": {
-                        "$ref": "#/spec/panels/statTotalRAM"
-                      }
-                    },
-                    {
-                      "x": 2,
-                      "y": 0,
-                      "width": 4,
-                      "height": 6,
-                      "content": {
-                        "$ref": "#/spec/panels/statMd"
-                      }
-                    },
-                    {
-                      "x": 6,
-                      "y": 0,
-                      "width": 10,
-                      "height": 6,
-                      "content": {
-                        "$ref": "#/spec/panels/statLg"
-                      }
-                    },
-                    {
-                      "x": 16,
-                      "y": 0,
-                      "width": 4,
-                      "height": 6,
-                      "content": {
-                        "$ref": "#/spec/panels/gaugeFormatTest"
-                      }
-                    },
-                    {
-                      "x": 20,
-                      "y": 0,
-                      "width": 4,
-                      "height": 6,
-                      "content": {
-                        "$ref": "#/spec/panels/gaugeRAM"
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "kind": "Grid",
-                "spec": {
-                  "display": {
-                    "title": "Row 2",
-                    "collapse": {
-                      "open": true
-                    }
-                  },
-                  "items": [
-                    {
-                      "x": 0,
-                      "y": 0,
-                      "width": 12,
-                      "height": 6,
-                      "content": {
-                        "$ref": "#/spec/panels/legendEx"
-                      }
-                    },
-                    {
-                      "x": 12,
-                      "y": 0,
-                      "width": 12,
-                      "height": 6,
-                      "content": {
-                        "$ref": "#/spec/panels/basicEx"
-                      }
-                    }
-                  ]
-                }
-              },
-              {
-                "kind": "Grid",
-                "spec": {
-                  "display": {
-                    "title": "Row 3",
-                    "collapse": {
-                      "open": false
-                    }
+                    "title": "Row 1"
                   },
                   "items": [
                     {
@@ -921,25 +76,7 @@ metadata:
                       "width": 24,
                       "height": 6,
                       "content": {
-                        "$ref": "#/spec/panels/cpuGauge"
-                      }
-                    },
-                    {
-                      "x": 0,
-                      "y": 6,
-                      "width": 12,
-                      "height": 8,
-                      "content": {
-                        "$ref": "#/spec/panels/cpuLine"
-                      }
-                    },
-                    {
-                      "x": 12,
-                      "y": 0,
-                      "width": 12,
-                      "height": 8,
-                      "content": {
-                        "$ref": "#/spec/panels/defaultTimeSeriesChart"
+                        "$ref": "#/spec/panels/sample"
                       }
                     }
                   ]
@@ -952,11 +89,6 @@ metadata:
           "apiVersion": "perses.dev/v1alpha1",
           "kind": "PersesDatasource",
           "metadata": {
-            "labels": {
-              "app.kubernetes.io/name": "perses-datasource",
-              "app.kubernetes.io/instance": "perses-prometheus-datasource",
-              "app.kubernetes.io/part-of": "perses-operator"
-            },
             "name": "perses-datasource-sample",
             "namespace": "perses-dev"
           },
@@ -998,6 +130,19 @@ spec:
       - displayName: Conditions
         path: conditions
       version: v1alpha1
+    - description: A Perses Dashboard
+      displayName: Perses Dashboard
+      kind: PersesDashboard
+      name: persesdashboards.perses.dev
+      specDescriptors:
+      - displayName: Config
+        path: config
+      - displayName: Instance Selector
+        path: instanceSelector
+      statusDescriptors:
+      - displayName: Conditions
+        path: conditions
+      version: v1alpha2
     - description: A Perses Datasource
       displayName: Perses Datasource
       kind: PersesDatasource
@@ -1009,6 +154,108 @@ spec:
       - displayName: Conditions
         path: conditions
       version: v1alpha1
+    - description: A Perses Datasource
+      displayName: Perses Datasource
+      kind: PersesDatasource
+      name: persesdatasources.perses.dev
+      specDescriptors:
+      - displayName: Config
+        path: config
+      - displayName: Client
+        path: client
+      - displayName: Instance Selector
+        path: instanceSelector
+      statusDescriptors:
+      - displayName: Conditions
+        path: conditions
+      version: v1alpha2
+    - description: A Perses Global Datasource
+      displayName: Perses Global Datasource
+      kind: PersesGlobalDatasource
+      name: persesglobaldatasources.perses.dev
+      specDescriptors:
+      - displayName: Config
+        path: config
+      - displayName: Client
+        path: client
+      - displayName: Instance Selector
+        path: instanceSelector
+      statusDescriptors:
+      - displayName: Conditions
+        path: conditions
+      version: v1alpha2
+    - description: Perses is the Schema for the perses API
+      displayName: Perses
+      kind: Perses
+      name: perses.perses.dev
+      specDescriptors:
+      - description: metadata specifies additional metadata to add to deployed pods
+        displayName: Metadata
+        path: metadata
+      - description: client specifies the Perses client configuration
+        displayName: Client
+        path: client
+      - description: config specifies the Perses server configuration
+        displayName: Config
+        path: config
+      - description: args are extra command-line arguments to pass to the Perses server
+        displayName: Args
+        path: args
+      - description: containerPort is the port on which the Perses server listens
+          for HTTP requests
+        displayName: Container Port
+        path: containerPort
+      - description: replicas is the number of desired pod replicas for the Perses
+          deployment
+        displayName: Replicas
+        path: replicas
+      - description: resources defines the compute resources configured for the container
+        displayName: Resources
+        path: resources
+      - description: nodeSelector constrains pods to nodes with matching labels
+        displayName: Node Selector
+        path: nodeSelector
+      - description: tolerations allow pods to schedule onto nodes with matching taints
+        displayName: Tolerations
+        path: tolerations
+      - description: affinity specifies the pod's scheduling constraints
+        displayName: Affinity
+        path: affinity
+      - description: image specifies the container image that should be used for the
+          Perses deployment
+        displayName: Image
+        path: image
+      - description: service specifies the service configuration for the Perses instance
+        displayName: Service
+        path: service
+      - displayName: Name
+        path: service.name
+      - displayName: Annotations
+        path: service.annotations
+      - description: livenessProbe specifies the liveness probe configuration for
+          the Perses container
+        displayName: Liveness Probe
+        path: livenessProbe
+      - description: readinessProbe specifies the readiness probe configuration for
+          the Perses container
+        displayName: Readiness Probe
+        path: readinessProbe
+      - description: tls specifies the TLS configuration for the Perses instance
+        displayName: TLS
+        path: tls
+      - description: storage configuration used by the StatefulSet
+        displayName: Storage
+        path: storage
+      - description: serviceAccountName is the name of the ServiceAccount to use for
+          the Perses deployment or statefulset
+        displayName: Service Account Name
+        path: serviceAccountName
+      statusDescriptors:
+      - displayName: Conditions
+        path: conditions
+      - displayName: Provisioning
+        path: provisioning
+      version: v1alpha2
     - description: Perses is the Schema for the perses API
       displayName: Perses
       kind: Perses

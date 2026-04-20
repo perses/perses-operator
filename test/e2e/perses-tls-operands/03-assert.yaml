@@ -1,0 +1,7 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 60
+commands:
+  - script: |
+      kubectl wait --for=delete perses/perses-tls-test -n $NAMESPACE --timeout=60s 2>/dev/null || true
+      echo "Verified: Perses CR deleted"

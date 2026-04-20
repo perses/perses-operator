@@ -1,0 +1,30 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+commands:
+  - script: |
+      ARGS=$(kubectl get statefulset perses-tls-test -n $NAMESPACE \
+        -o jsonpath='{.spec.template.spec.containers[0].args}')
+      echo "StatefulSet args: $ARGS"
+      echo "$ARGS" | grep -q "web.tls-min-version=VersionTLS12" || {
+        echo "FAIL: --web.tls-min-version not found in args: $ARGS"
+        exit 1
+      }
+      echo "$ARGS" | grep -q "web.tls-cipher-suites=TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384" || {
+        echo "FAIL: --web.tls-cipher-suites not found in args: $ARGS"
+        exit 1
+      }
+      echo "Verified: TLS args propagated to StatefulSet"
+---
+apiVersion: perses.dev/v1alpha2
+kind: Perses
+metadata:
+  name: perses-tls-test
+status:
+  conditions:
+    - type: Available
+      status: "True"
+      reason: Reconciled
+    - type: Degraded
+      status: "False"
+      reason: Reconciled
