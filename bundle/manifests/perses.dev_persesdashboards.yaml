@@ -209,6 +209,8 @@ spec:
                                 type: string
                               spec:
                                 properties:
+                                  name:
+                                    type: string
                                   plugin:
                                     properties:
                                       kind:
@@ -528,6 +530,8 @@ spec:
                                     type: string
                                   spec:
                                     properties:
+                                      name:
+                                        type: string
                                       plugin:
                                         properties:
                                           kind:

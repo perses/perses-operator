@@ -261,8 +261,8 @@ github.com/openshift/library-go v0.0.0-20260213153706-03f1709971c5 h1:9Pe6iVOMjt
 github.com/openshift/library-go v0.0.0-20260213153706-03f1709971c5/go.mod h1:K3FoNLgNBFYbFuG+Kr8usAnQxj1w84XogyUp2M8rK8k=
 github.com/perses/common v0.30.2 h1:RAiVxUpX76lTCb4X7pfcXSvYdXQmZwKi4oDKAEO//u0=
 github.com/perses/common v0.30.2/go.mod h1:DFtur1QPah2/ChXbKKhw7djYdwNgz27s5fPKpiK0Xao=
-github.com/perses/perses v0.53.0 h1:gh0m/OE3yTG4jCkseORuT3B1qAL3VlsnBckJSbpFjPs=
-github.com/perses/perses v0.53.0/go.mod h1:HsCfkI+EZta2UEDCFa//HUyLRY0Z0fElJkpAWdARbGs=
+github.com/perses/perses v0.53.1 h1:9VY/6p9QWrZwPSV7qiwTMSOsgcB37Lb1AXKT0ORXc6I=
+github.com/perses/perses v0.53.1/go.mod h1:ro8fsgBkHYOdrL/MV+fdP9mflKzYCy/+gcbxiaReI/A=
 github.com/pjbgf/sha1cd v0.3.2 h1:a9wb0bp1oC2TGwStyn0Umc/IGKQnEgF0vVaZ8QF8eo4=
 github.com/pjbgf/sha1cd v0.3.2/go.mod h1:zQWigSxVmsHEZow5qaLtPYxpcKMMQpa09ixqBxuCS6A=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
@@ -413,8 +413,8 @@ k8s.io/apiextensions-apiserver v0.35.1 h1:p5vvALkknlOcAqARwjS20kJffgzHqwyQRM8vHL
 k8s.io/apiextensions-apiserver v0.35.1/go.mod h1:2CN4fe1GZ3HMe4wBr25qXyJnJyZaquy4nNlNmb3R7AQ=
 k8s.io/apimachinery v0.35.4 h1:xtdom9RG7e+yDp71uoXoJDWEE2eOiHgeO4GdBzwWpds=
 k8s.io/apimachinery v0.35.4/go.mod h1:NNi1taPOpep0jOj+oRha3mBJPqvi0hGdaV8TCqGQ+cc=
-k8s.io/apiserver v0.35.1 h1:potxdhhTL4i6AYAa2QCwtlhtB1eCdWQFvJV6fXgJzxs=
-k8s.io/apiserver v0.35.1/go.mod h1:BiL6Dd3A2I/0lBnteXfWmCFobHM39vt5+hJQd7Lbpi4=
+k8s.io/apiserver v0.35.2 h1:rb52v0CZGEL0FkhjS+I6jHflAp7fZ4MIaKcEHX7wmDk=
+k8s.io/apiserver v0.35.2/go.mod h1:CROJUAu0tfjZLyYgSeBsBan2T7LUJGh0ucWwTCSSk7g=
 k8s.io/client-go v0.35.4 h1:DN6fyaGuzK64UvnKO5fOA6ymSjvfGAnCAHAR0C66kD8=
 k8s.io/client-go v0.35.4/go.mod h1:2Pg9WpsS4NeOpoYTfHHfMxBG8zFMSAUi4O/qoiJC3nY=
 k8s.io/component-base v0.35.4 h1:6n1tNJ87johN0Hif0Fs8K2GMthsaUwMqCebUDLYyv7U=

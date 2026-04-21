@@ -244,6 +244,9 @@
                                   },
                                   "spec": {
                                     "properties": {
+                                      "name": {
+                                        "type": "string"
+                                      },
                                       "plugin": {
                                         "properties": {
                                           "kind": {
@@ -633,6 +636,9 @@
                                       },
                                       "spec": {
                                         "properties": {
+                                          "name": {
+                                            "type": "string"
+                                          },
                                           "plugin": {
                                             "properties": {
                                               "kind": {
