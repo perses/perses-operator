@@ -51,6 +51,11 @@ func TestFetchTLSProfile_Intermediate(t *testing.T) {
 	assert.NotEmpty(t, profileSpec.Ciphers, "profileSpec.Ciphers should be set")
 	assert.NotEmpty(t, cipherSuites, "cipherSuites should be set for Intermediate profile")
 	assert.NotContains(t, cipherSuites, " ", "cipherSuites should not contain spaces")
+	// OpenSSL-format ciphers must be converted to IANA format
+	assert.NotContains(t, cipherSuites, "ECDHE-ECDSA-AES128-GCM-SHA256",
+		"OpenSSL cipher names should be converted to IANA format")
+	assert.Contains(t, cipherSuites, "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256",
+		"cipher suites should contain IANA-format names")
 }
 
 func TestFetchTLSProfile_Old(t *testing.T) {
@@ -70,6 +75,10 @@ func TestFetchTLSProfile_Old(t *testing.T) {
 
 	assert.NotEmpty(t, minVersion)
 	assert.NotEmpty(t, cipherSuites)
+	// All Old profile ciphers should be converted to IANA format
+	assert.NotContains(t, cipherSuites, "ECDHE-ECDSA-AES128-GCM-SHA256")
+	assert.Contains(t, cipherSuites, "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256")
+	assert.Contains(t, cipherSuites, "TLS_RSA_WITH_3DES_EDE_CBC_SHA")
 }
 
 func TestFetchTLSProfile_Custom(t *testing.T) {
@@ -96,6 +105,74 @@ func TestFetchTLSProfile_Custom(t *testing.T) {
 	assert.Equal(t, "TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384", cipherSuites)
 	assert.Equal(t, configv1.VersionTLS13, profileSpec.MinTLSVersion)
 	assert.Equal(t, []string{"TLS_AES_128_GCM_SHA256", "TLS_AES_256_GCM_SHA384"}, profileSpec.Ciphers)
+}
+
+func TestFetchTLSProfile_OpenSSLCipherNames(t *testing.T) {
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type: configv1.TLSProfileCustomType,
+				Custom: &configv1.CustomTLSProfile{
+					TLSProfileSpec: configv1.TLSProfileSpec{
+						MinTLSVersion: configv1.VersionTLS12,
+						Ciphers: []string{
+							"TLS_AES_128_GCM_SHA256",
+							"TLS_AES_256_GCM_SHA384",
+							"ECDHE-ECDSA-AES128-GCM-SHA256",
+							"ECDHE-RSA-AES128-GCM-SHA256",
+							"ECDHE-ECDSA-AES256-GCM-SHA384",
+							"ECDHE-RSA-AES256-GCM-SHA384",
+							"ECDHE-ECDSA-CHACHA20-POLY1305",
+							"ECDHE-RSA-CHACHA20-POLY1305",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	c := fake.NewClientBuilder().WithScheme(newScheme()).WithObjects(apiServer).Build()
+	_, cipherSuites, _, err := FetchTLSProfile(context.Background(), c)
+	require.NoError(t, err)
+
+	expected := "TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384," +
+		"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256," +
+		"TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384," +
+		"TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256"
+	assert.Equal(t, expected, cipherSuites)
+}
+
+func TestFetchTLSProfile_UnsupportedCiphersDropped(t *testing.T) {
+	apiServer := &configv1.APIServer{
+		ObjectMeta: metav1.ObjectMeta{Name: "cluster"},
+		Spec: configv1.APIServerSpec{
+			TLSSecurityProfile: &configv1.TLSSecurityProfile{
+				Type: configv1.TLSProfileCustomType,
+				Custom: &configv1.CustomTLSProfile{
+					TLSProfileSpec: configv1.TLSProfileSpec{
+						MinTLSVersion: configv1.VersionTLS12,
+						Ciphers: []string{
+							"ECDHE-ECDSA-AES128-GCM-SHA256",
+							"DHE-RSA-AES128-GCM-SHA256",
+							"DHE-RSA-AES256-GCM-SHA384",
+							"ECDHE-RSA-AES256-GCM-SHA384",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	c := fake.NewClientBuilder().WithScheme(newScheme()).WithObjects(apiServer).Build()
+	_, cipherSuites, _, err := FetchTLSProfile(context.Background(), c)
+	require.NoError(t, err)
+
+	// DHE-RSA ciphers are not supported by Go's crypto/tls and should be
+	// silently dropped by OpenSSLToIANACipherSuites
+	assert.Equal(t,
+		"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
+		cipherSuites)
 }
 
 func TestFetchTLSProfile_NoCiphers(t *testing.T) {

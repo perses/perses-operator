@@ -8,6 +8,7 @@ require (
 	github.com/onsi/gomega v1.39.1
 	github.com/openshift/api v0.0.0-20260416215613-f9587f6e7c60
 	github.com/openshift/controller-runtime-common v0.0.0-20260318085703-1812aed6dbd2
+	github.com/openshift/library-go v0.0.0-20260213153706-03f1709971c5
 	github.com/perses/common v0.30.2
 	github.com/perses/perses v0.53.1
 	github.com/prometheus/client_golang v1.23.2
@@ -112,7 +113,6 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f // indirect
 	github.com/nexucis/lamenv v0.5.2 // indirect
-	github.com/openshift/library-go v0.0.0-20260213153706-03f1709971c5 // indirect
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
