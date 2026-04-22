@@ -18,7 +18,7 @@ import (
 	"testing"
 
 	configv1 "github.com/openshift/api/config/v1"
-	"github.com/perses/perses-operator/internal/perses/common"
+	"github.com/rhobs/perses-operator/internal/perses/common"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/labels"

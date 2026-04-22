@@ -14,8 +14,8 @@
 package perses
 
 import (
-	v1 "github.com/perses/perses/pkg/client/api/v1"
-	modelv1 "github.com/perses/perses/pkg/model/api/v1"
+	v1 "github.com/rhobs/perses/pkg/client/api/v1"
+	modelv1 "github.com/rhobs/perses/pkg/model/api/v1"
 	"github.com/stretchr/testify/mock"
 )
 

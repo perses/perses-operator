@@ -17,10 +17,10 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/perses/perses/scripts/pkg/goreleaser"
+	"github.com/rhobs/perses/scripts/pkg/goreleaser"
 	"github.com/sirupsen/logrus"
 
-	"github.com/perses/perses-operator/scripts/generate-goreleaser/dockerconfig"
+	"github.com/rhobs/perses-operator/scripts/generate-goreleaser/dockerconfig"
 )
 
 func getCurrentBranch() string {

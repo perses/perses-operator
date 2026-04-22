@@ -16,7 +16,7 @@ package main
 import (
 	"flag"
 
-	"github.com/perses/perses/scripts/pkg/license"
+	"github.com/rhobs/perses/scripts/pkg/license"
 )
 
 func main() {

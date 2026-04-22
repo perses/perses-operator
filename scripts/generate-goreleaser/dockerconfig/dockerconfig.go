@@ -13,7 +13,7 @@
 
 package dockerconfig
 
-import "github.com/perses/perses/scripts/pkg/goreleaser"
+import "github.com/rhobs/perses/scripts/pkg/goreleaser"
 
 type TestConfig struct {
 	Branch string

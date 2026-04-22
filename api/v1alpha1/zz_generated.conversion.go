@@ -19,7 +19,7 @@
 package v1alpha1
 
 import (
-	v1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
+	v1alpha2 "github.com/rhobs/perses-operator/api/v1alpha2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -436,7 +436,7 @@ func Convert_v1alpha2_Client_To_v1alpha1_Client(in *v1alpha2.Client, out *Client
 }
 
 func autoConvert_v1alpha1_Dashboard_To_v1alpha2_Dashboard(in *Dashboard, out *v1alpha2.Dashboard, s conversion.Scope) error {
-	out.DashboardSpec = in.DashboardSpec
+	out.Spec = in.Spec
 	return nil
 }
 
@@ -446,7 +446,7 @@ func Convert_v1alpha1_Dashboard_To_v1alpha2_Dashboard(in *Dashboard, out *v1alph
 }
 
 func autoConvert_v1alpha2_Dashboard_To_v1alpha1_Dashboard(in *v1alpha2.Dashboard, out *Dashboard, s conversion.Scope) error {
-	out.DashboardSpec = in.DashboardSpec
+	out.Spec = in.Spec
 	return nil
 }
 
@@ -456,7 +456,7 @@ func Convert_v1alpha2_Dashboard_To_v1alpha1_Dashboard(in *v1alpha2.Dashboard, ou
 }
 
 func autoConvert_v1alpha1_Datasource_To_v1alpha2_Datasource(in *Datasource, out *v1alpha2.Datasource, s conversion.Scope) error {
-	out.DatasourceSpec = in.DatasourceSpec
+	out.Spec = in.Spec
 	return nil
 }
 
@@ -466,7 +466,7 @@ func Convert_v1alpha1_Datasource_To_v1alpha2_Datasource(in *Datasource, out *v1a
 }
 
 func autoConvert_v1alpha2_Datasource_To_v1alpha1_Datasource(in *v1alpha2.Datasource, out *Datasource, s conversion.Scope) error {
-	out.DatasourceSpec = in.DatasourceSpec
+	out.Spec = in.Spec
 	return nil
 }
 

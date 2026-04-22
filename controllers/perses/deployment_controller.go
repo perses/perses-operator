@@ -29,9 +29,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/perses/perses-operator/api/v1alpha2"
-	"github.com/perses/perses-operator/internal/perses/common"
-	"github.com/perses/perses-operator/internal/subreconciler"
+	"github.com/rhobs/perses-operator/api/v1alpha2"
+	"github.com/rhobs/perses-operator/internal/perses/common"
+	"github.com/rhobs/perses-operator/internal/subreconciler"
 )
 
 var dlog = logger.WithField("module", "deployment_controller")

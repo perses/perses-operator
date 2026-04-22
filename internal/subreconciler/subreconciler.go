@@ -17,7 +17,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/perses/perses-operator/internal/perses/common"
+	"github.com/rhobs/perses-operator/internal/perses/common"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )

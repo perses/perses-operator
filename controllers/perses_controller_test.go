@@ -23,7 +23,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	persesconfig "github.com/perses/perses/pkg/model/api/config"
+	persesconfig "github.com/rhobs/perses/pkg/model/api/config"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -34,10 +34,10 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
-	persescontroller "github.com/perses/perses-operator/controllers/perses"
-	"github.com/perses/perses-operator/internal/operator"
-	"github.com/perses/perses-operator/internal/perses/common"
+	persesv1alpha2 "github.com/rhobs/perses-operator/api/v1alpha2"
+	persescontroller "github.com/rhobs/perses-operator/controllers/perses"
+	"github.com/rhobs/perses-operator/internal/operator"
+	"github.com/rhobs/perses-operator/internal/perses/common"
 )
 
 var _ = Describe("Perses controller", func() {

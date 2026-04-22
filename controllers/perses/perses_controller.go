@@ -36,10 +36,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/perses/perses-operator/api/v1alpha2"
-	operatormetrics "github.com/perses/perses-operator/internal/metrics"
-	"github.com/perses/perses-operator/internal/perses/common"
-	"github.com/perses/perses-operator/internal/subreconciler"
+	"github.com/rhobs/perses-operator/api/v1alpha2"
+	operatormetrics "github.com/rhobs/perses-operator/internal/metrics"
+	"github.com/rhobs/perses-operator/internal/perses/common"
+	"github.com/rhobs/perses-operator/internal/subreconciler"
 )
 
 type persesContextKey string

@@ -9,7 +9,7 @@ plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: perses-operator
-repo: github.com/perses/perses-operator
+repo: github.com/rhobs/perses-operator
 resources:
 - api:
     crdVersion: v1
@@ -18,6 +18,6 @@ resources:
   domain: perses.dev
   group: 
   kind: Perses
-  path: github.com/perses/perses-operator/api/v1alpha1
+  path: github.com/rhobs/perses-operator/api/v1alpha1
   version: v1alpha1
 version: "3"

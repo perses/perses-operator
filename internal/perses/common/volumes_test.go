@@ -14,8 +14,8 @@
 package common
 
 import (
-	"github.com/perses/perses-operator/api/v1alpha2"
-	persesconfig "github.com/perses/perses/pkg/model/api/config"
+	"github.com/rhobs/perses-operator/api/v1alpha2"
+	persesconfig "github.com/rhobs/perses/pkg/model/api/config"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 

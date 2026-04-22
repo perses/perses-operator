@@ -1682,7 +1682,7 @@ spec:
                           type: object
                         type: array
                       information:
-                        description: Information contains markdown content to be display
+                        description: Information contains Markdown content to be display
                           on the home page
                         type: string
                       time_range:
@@ -4614,7 +4614,7 @@ spec:
                           type: object
                         type: array
                       information:
-                        description: Information contains markdown content to be display
+                        description: Information contains Markdown content to be display
                           on the home page
                         type: string
                       time_range:

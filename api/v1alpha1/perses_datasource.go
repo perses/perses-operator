@@ -17,11 +17,11 @@ import (
 	"fmt"
 
 	"github.com/brunoga/deep"
-	persesv1 "github.com/perses/perses/pkg/model/api/v1"
+	dsSpec "github.com/perses/spec/go/datasource"
 )
 
 type Datasource struct {
-	persesv1.DatasourceSpec `json:",inline"`
+	dsSpec.Spec `json:",inline"`
 }
 
 func (in *Datasource) DeepCopyInto(out *Datasource) {

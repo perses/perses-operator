@@ -17,7 +17,7 @@ import (
 	"k8s.io/apimachinery/pkg/conversion"
 	conv "sigs.k8s.io/controller-runtime/pkg/conversion"
 
-	"github.com/perses/perses-operator/api/v1alpha2"
+	"github.com/rhobs/perses-operator/api/v1alpha2"
 )
 
 // ConvertTo converts PersesDatasource (v1alpha1) to the Hub version (v1alpha2)
@@ -43,6 +43,6 @@ func (dst *PersesDatasource) ConvertFrom(srcRaw conv.Hub) error {
 // Manual conversions
 // Convert_v1alpha2_DatasourceSpec_To_v1alpha1_DatasourceSpec converts a v1alpha2 DatasourceSpec to v1alpha1 DatasourceSpec.
 func Convert_v1alpha2_DatasourceSpec_To_v1alpha1_DatasourceSpec(in *v1alpha2.DatasourceSpec, out *DatasourceSpec, s conversion.Scope) error {
-	out.Config.DatasourceSpec = in.Config.DatasourceSpec
+	out.Config.Spec = in.Config.Spec
 	return nil
 }
