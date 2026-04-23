@@ -15,7 +15,7 @@ package operator
 
 const (
 	// DefaultPersesVersion is the default image tag for Perses.
-	DefaultPersesVersion = "v0.53.0"
+	DefaultPersesVersion = "v0.53.1"
 	// DefaultPersesBaseImage is the base container registry address for Perses.
 	DefaultPersesBaseImage = "docker.io/persesdev/perses"
 	// DefaultPersesImage is the default image used for Perses Deployment or StatefulSet operands.
