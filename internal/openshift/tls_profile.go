@@ -20,6 +20,7 @@ import (
 
 	configv1 "github.com/openshift/api/config/v1"
 	openshifttls "github.com/openshift/controller-runtime-common/pkg/tls"
+	libgocrypto "github.com/openshift/library-go/pkg/crypto"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -40,7 +41,12 @@ func FetchTLSProfile(ctx context.Context, c client.Client) (minVersion string, c
 		for i, c := range profileSpec.Ciphers {
 			cipherNames[i] = string(c)
 		}
-		cipherSuites = strings.Join(cipherNames, ",")
+		// The OpenShift API returns cipher names in OpenSSL format (e.g.
+		// "ECDHE-ECDSA-AES128-GCM-SHA256") but Go's crypto/tls and
+		// k8s.io/component-base expect IANA names (e.g.
+		// "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256").
+		ianaCipherNames := libgocrypto.OpenSSLToIANACipherSuites(cipherNames)
+		cipherSuites = strings.Join(ianaCipherNames, ",")
 	}
 
 	return minVersion, cipherSuites, profileSpec, nil
