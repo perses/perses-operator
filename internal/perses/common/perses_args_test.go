@@ -117,7 +117,7 @@ var _ = Describe("GetPersesArgs", func() {
 				Spec:       v1alpha2.PersesSpec{},
 			},
 			"VersionTLS13", "", true,
-			[]string{configArg, "--web.tls-min-version=VersionTLS13"},
+			[]string{configArg, "--web.tls-min-version=1.3"},
 		),
 		Entry("Args with TLS cipher suites when configure operands is true",
 			&v1alpha2.Perses{
@@ -133,7 +133,7 @@ var _ = Describe("GetPersesArgs", func() {
 				Spec:       v1alpha2.PersesSpec{},
 			},
 			"VersionTLS12", "TLS_AES_128_GCM_SHA256", true,
-			[]string{configArg, "--web.tls-min-version=VersionTLS12", "--web.tls-cipher-suites=TLS_AES_128_GCM_SHA256"},
+			[]string{configArg, "--web.tls-min-version=1.2", "--web.tls-cipher-suites=TLS_AES_128_GCM_SHA256"},
 		),
 		Entry("TLS values set but configure operands is false - no TLS args added",
 			&v1alpha2.Perses{

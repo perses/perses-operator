@@ -6,7 +6,7 @@ commands:
       ARGS=$(kubectl get statefulset perses-tls-test -n $NAMESPACE \
         -o jsonpath='{.spec.template.spec.containers[0].args}')
       echo "StatefulSet args: $ARGS"
-      echo "$ARGS" | grep -q "web.tls-min-version=VersionTLS12" || {
+      echo "$ARGS" | grep -q "web.tls-min-version=1.2" || {
         echo "FAIL: --web.tls-min-version not found in args: $ARGS"
         exit 1
       }
