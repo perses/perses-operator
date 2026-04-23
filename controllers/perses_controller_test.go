@@ -1049,7 +1049,7 @@ var _ = Describe("Perses controller", func() {
 					return err
 				}
 				args := found.Spec.Template.Spec.Containers[0].Args
-				if !slices.Contains(args, "--web.tls-min-version=VersionTLS12") {
+				if !slices.Contains(args, "--web.tls-min-version=1.2") {
 					return fmt.Errorf("missing --web.tls-min-version arg in %v", args)
 				}
 				if !slices.Contains(args, "--web.tls-cipher-suites=TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384") {
@@ -1119,7 +1119,7 @@ var _ = Describe("Perses controller", func() {
 					return err
 				}
 				args := found.Spec.Template.Spec.Containers[0].Args
-				if !slices.Contains(args, "--web.tls-min-version=VersionTLS12") {
+				if !slices.Contains(args, "--web.tls-min-version=1.2") {
 					return fmt.Errorf("missing --web.tls-min-version arg in %v", args)
 				}
 				if !slices.Contains(args, "--web.tls-cipher-suites=TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384") {
@@ -1249,7 +1249,7 @@ var _ = Describe("Perses controller", func() {
 					return err
 				}
 				args := found.Spec.Template.Spec.Containers[0].Args
-				if !slices.Contains(args, "--web.tls-min-version=VersionTLS13") {
+				if !slices.Contains(args, "--web.tls-min-version=1.3") {
 					return fmt.Errorf("missing --web.tls-min-version arg in %v", args)
 				}
 				for _, arg := range args {

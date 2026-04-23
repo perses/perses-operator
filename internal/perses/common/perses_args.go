@@ -45,7 +45,7 @@ func GetPersesArgs(perses *v1alpha2.Perses, tlsMinVersion, tlsCipherSuites strin
 	// Append cluster-wide TLS settings if operand configuration is enabled
 	if tlsConfigureOperands {
 		if tlsMinVersion != "" {
-			args = append(args, fmt.Sprintf("--web.tls-min-version=%s", tlsMinVersion))
+			args = append(args, fmt.Sprintf("--web.tls-min-version=%s", k8sToPersesTLSVersion(tlsMinVersion)))
 		}
 		if tlsCipherSuites != "" {
 			args = append(args, fmt.Sprintf("--web.tls-cipher-suites=%s", tlsCipherSuites))
@@ -66,4 +66,18 @@ func GetPersesArgs(perses *v1alpha2.Perses, tlsMinVersion, tlsCipherSuites strin
 	args = append(args, perses.Spec.Args...)
 
 	return args
+}
+
+var k8sToPersesVersion = map[string]string{
+	"VersionTLS10": "1.0",
+	"VersionTLS11": "1.1",
+	"VersionTLS12": "1.2",
+	"VersionTLS13": "1.3",
+}
+
+func k8sToPersesTLSVersion(version string) string {
+	if v, ok := k8sToPersesVersion[version]; ok {
+		return v
+	}
+	return version
 }
