@@ -1,3 +1,17 @@
+## 0.4.0 / 2026-04-29
+
+- [FEATURE] watch TLS profiles and apply it to operands (#381)
+- [FEATURE] add replaces-mode support for OLM bundle generation (#379)
+- [ENHANCEMENT] Improve manager caching when watching secrets (#377)
+- [ENHANCEMENT] Publish container images to quay.io (#340)
+- [BUGFIX] map TLS configuration to the format expected by perses server (#389)
+- [BUGFIX] convert ciphers from OpenSSL to IANA format, expected on operands (#387)
+- [BUGFIX] avoid panic when setting degraded status when perses instances are not found (#376)
+- [BREAKINGCHANGE] enforce label to watch user provided secrets (#378)
+- [DOC] Add bundle-check, installer-check, and helm chart steps to release guide (#361)
+- [DOC] use Github URLs for cert-manager and minikube (#339)
+- [DOC] add support for markdown formatting and validation (#332)
+
 ## 0.3.2 / 2026-03-10
 
 - [BUGFIX] fix delete errors being silently swallowed in dashboard, datasource and globaldatasource controllers (#351)
