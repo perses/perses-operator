@@ -25,7 +25,7 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v6
-      - uses: perses/github-actions@v0.11.0
+      - uses: perses/github-actions@v0.12.0
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
@@ -43,7 +43,7 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v6
-      - uses: perses/github-actions@v0.11.0
+      - uses: perses/github-actions@v0.12.0
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
@@ -59,7 +59,7 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v6
-      - uses: perses/github-actions@v0.11.0
+      - uses: perses/github-actions@v0.12.0
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
@@ -75,7 +75,7 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v6
-      - uses: perses/github-actions@v0.11.0
+      - uses: perses/github-actions@v0.12.0
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
@@ -91,7 +91,7 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v6
-      - uses: perses/github-actions@v0.11.0
+      - uses: perses/github-actions@v0.12.0
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
@@ -121,7 +121,7 @@ jobs:
     steps:
       - name: checkout
         uses: actions/checkout@v6
-      - uses: perses/github-actions@v0.11.0
+      - uses: perses/github-actions@v0.12.0
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
