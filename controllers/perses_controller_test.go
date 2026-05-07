@@ -271,19 +271,6 @@ var _ = Describe("Perses controller", func() {
 				return k8sClient.Get(ctx, configMapNamespaceName, found)
 			}, time.Minute, time.Second).Should(Succeed())
 
-			By("Checking the latest Status Condition added to the Perses instance")
-			Eventually(func() error {
-				if len(perses.Status.Conditions) != 0 {
-					latestStatusCondition := perses.Status.Conditions[len(perses.Status.Conditions)-1]
-					expectedLatestStatusCondition := metav1.Condition{Type: common.TypeAvailablePerses,
-						Status: metav1.ConditionTrue, Reason: "Finalizing",
-						Message: fmt.Sprintf("Finalizer operations for custom resource %s name were successfully accomplished", perses.Name)}
-					if latestStatusCondition != expectedLatestStatusCondition {
-						return fmt.Errorf("The latest status condition added to the perses instance is not as expected")
-					}
-				}
-				return nil
-			}, time.Minute, time.Second).Should(Succeed())
 		})
 
 		It("should successfully reconcile a custom resource for Perses with storage", func() {
@@ -415,19 +402,6 @@ var _ = Describe("Perses controller", func() {
 				return k8sClient.Get(ctx, configMapNamespaceName, found)
 			}, time.Minute, time.Second).Should(Succeed())
 
-			By("Checking the latest Status Condition added to the Perses instance")
-			Eventually(func() error {
-				if len(perses.Status.Conditions) != 0 {
-					latestStatusCondition := perses.Status.Conditions[len(perses.Status.Conditions)-1]
-					expectedLatestStatusCondition := metav1.Condition{Type: common.TypeAvailablePerses,
-						Status: metav1.ConditionTrue, Reason: "Finalizing",
-						Message: fmt.Sprintf("Finalizer operations for custom resource %s name were successfully accomplished", perses.Name)}
-					if latestStatusCondition != expectedLatestStatusCondition {
-						return fmt.Errorf("The latest status condition added to the perses instance is not as expected")
-					}
-				}
-				return nil
-			}, time.Minute, time.Second).Should(Succeed())
 		})
 
 		It("should successfully reconcile a custom resource for Perses with provisioning secrets", func() {
@@ -574,15 +548,16 @@ var _ = Describe("Perses controller", func() {
 			Expect(k8sClient.Delete(ctx, secret)).To(Succeed())
 		})
 
-		It("should successfully delete Perses and remove the finalizer", func() {
-			PersesDeleteName := "perses-delete-test"
-			typeNamespaceName := types.NamespacedName{Name: PersesDeleteName, Namespace: persesNamespace}
+		It("should strip a legacy finalizer from an existing Perses resource during reconciliation", func() {
+			PersesFinalizerName := "perses-finalizer-migration-test"
+			typeNamespaceName := types.NamespacedName{Name: PersesFinalizerName, Namespace: persesNamespace}
 
-			By("Creating the custom resource for the Kind Perses")
+			By("Creating a Perses resource with a pre-existing legacy finalizer")
 			perses := &persesv1alpha2.Perses{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      PersesDeleteName,
-					Namespace: persesNamespace,
+					Name:       PersesFinalizerName,
+					Namespace:  persesNamespace,
+					Finalizers: []string{common.PersesFinalizer},
 				},
 				Spec: persesv1alpha2.PersesSpec{
 					Image: ptr.To(persesImage),
@@ -600,11 +575,14 @@ var _ = Describe("Perses controller", func() {
 			err := k8sClient.Create(ctx, perses)
 			Expect(err).To(Not(HaveOccurred()))
 
-			By("Checking if the custom resource was successfully created")
-			Eventually(func() error {
+			By("Verifying the finalizer is present before reconciliation")
+			Eventually(func() bool {
 				found := &persesv1alpha2.Perses{}
-				return k8sClient.Get(ctx, typeNamespaceName, found)
-			}, time.Minute, time.Second).Should(Succeed())
+				if err := k8sClient.Get(ctx, typeNamespaceName, found); err != nil {
+					return false
+				}
+				return slices.Contains(found.Finalizers, common.PersesFinalizer)
+			}, time.Minute, time.Second).Should(BeTrue())
 
 			persesReconciler := &persescontroller.PersesReconciler{
 				Client:    k8sClient,
@@ -612,7 +590,7 @@ var _ = Describe("Perses controller", func() {
 				Scheme:    k8sClient.Scheme(),
 			}
 
-			By("Reconciling to add the finalizer")
+			By("Reconciling to trigger legacy finalizer removal")
 			Eventually(func() error {
 				_, err := persesReconciler.Reconcile(ctx, reconcile.Request{
 					NamespacedName: typeNamespaceName,
@@ -620,37 +598,23 @@ var _ = Describe("Perses controller", func() {
 				return err
 			}, time.Second*10, time.Millisecond*250).Should(Succeed())
 
-			By("Checking if the finalizer was added")
+			By("Checking the legacy finalizer was removed")
 			Eventually(func() bool {
 				found := &persesv1alpha2.Perses{}
-				err := k8sClient.Get(ctx, typeNamespaceName, found)
-				if err != nil {
+				if err := k8sClient.Get(ctx, typeNamespaceName, found); err != nil {
 					return false
 				}
-				return slices.Contains(found.Finalizers, common.PersesFinalizer)
-			}, time.Minute, time.Second).Should(BeTrue())
+				return !slices.Contains(found.Finalizers, common.PersesFinalizer)
+			}, time.Minute, time.Second).Should(BeTrue(), "Legacy finalizer should be removed after reconciliation")
 
-			By("Deleting the custom resource")
-			persesToDelete := &persesv1alpha2.Perses{}
-			err = k8sClient.Get(ctx, typeNamespaceName, persesToDelete)
-			Expect(err).To(Not(HaveOccurred()))
-			err = k8sClient.Delete(ctx, persesToDelete)
-			Expect(err).To(Not(HaveOccurred()))
+			By("Deleting the custom resource without getting stuck")
+			Expect(k8sClient.Delete(ctx, perses)).To(Succeed())
 
-			By("Reconciling after deletion to trigger finalizer removal")
-			Eventually(func() error {
-				_, err := persesReconciler.Reconcile(ctx, reconcile.Request{
-					NamespacedName: typeNamespaceName,
-				})
-				return err
-			}, time.Second*10, time.Millisecond*250).Should(Succeed())
-
-			By("Checking if the Perses resource was fully deleted (finalizer removed)")
 			Eventually(func() bool {
 				found := &persesv1alpha2.Perses{}
 				err := k8sClient.Get(ctx, typeNamespaceName, found)
 				return errors.IsNotFound(err)
-			}, time.Minute, time.Second).Should(BeTrue(), "Perses resource should be deleted after finalizer removal")
+			}, time.Minute, time.Second).Should(BeTrue(), "Perses resource should be deleted cleanly without a finalizer")
 		})
 
 		It("should include user-defined volumes and volumeMounts in the workload", func() {
