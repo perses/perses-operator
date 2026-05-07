@@ -117,7 +117,7 @@ func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	subreconcilersForPerses := []subreconciler.FnWithRequest{
 		r.handleDelete,
 		r.setStatusToUnknown,
-		r.addFinalizer,
+		r.removeFinalizer,
 		r.validateVolumes,
 		r.reconcileProvisioning,
 		r.reconcileService,
@@ -216,37 +216,34 @@ func (r *PersesReconciler) setStatusToUnknown(ctx context.Context, req ctrl.Requ
 	}
 
 	if needsRequeue {
-		// requeue after adding unknown status to allow adding the finalizer to succeed
-		// see explanation on setting a status on creation here
-		// https://github.com/kubernetes-sigs/controller-runtime/blob/1dce6213f6c078f3170921b3a774304d066d5bd4/pkg/controller/controllerutil/controllerutil.go#L378
+		// requeue after adding unknown status to allow the initial reconciliation to proceed
 		return subreconciler.RequeueWithDelay(time.Second * 5)
 	}
 
 	return subreconciler.ContinueReconciling()
 }
 
-func (r *PersesReconciler) addFinalizer(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
+// removeFinalizer strips the legacy finalizer from existing resources.
+// Owner references handle child resource cleanup via cascading deletion,
+// so the finalizer is unnecessary. This migration step ensures resources
+// upgraded from earlier versions can be deleted cleanly.
+func (r *PersesReconciler) removeFinalizer(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
 	perses, ok := persesFromContext(ctx)
 	if !ok {
 		log.Error("perses not found in context")
 		return subreconciler.RequeueWithError(fmt.Errorf("perses not found in context"))
 	}
 
-	// Let's add a finalizer. Then, we can define some operations which should
-	// occurs before the custom resource to be deleted.
-	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/finalizers
-	if !controllerutil.ContainsFinalizer(perses, common.PersesFinalizer) {
-		log.Info("Adding Finalizer for Perses")
+	if controllerutil.ContainsFinalizer(perses, common.PersesFinalizer) {
+		log.Info("Removing legacy finalizer from Perses resource")
 
 		err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			// Re-fetch the perses Custom Resource before update
-			// so that we have the latest state of the resource on the cluster
 			if err := r.Get(ctx, req.NamespacedName, perses); err != nil {
 				return err
 			}
 
-			if ok := controllerutil.AddFinalizer(perses, common.PersesFinalizer); !ok {
-				return fmt.Errorf("failed to add finalizer into the custom resource")
+			if ok := controllerutil.RemoveFinalizer(perses, common.PersesFinalizer); !ok {
+				return fmt.Errorf("failed to remove finalizer from the custom resource")
 			}
 
 			return r.Update(ctx, perses)
@@ -257,7 +254,7 @@ func (r *PersesReconciler) addFinalizer(ctx context.Context, req ctrl.Request) (
 				log.Info("perses resource not found. Ignoring since object must be deleted")
 				return subreconciler.DoNotRequeue()
 			}
-			log.WithError(err).Error("Failed to update custom resource to add finalizer")
+			log.WithError(err).Error("Failed to remove legacy finalizer from custom resource")
 			return subreconciler.RequeueWithError(err)
 		}
 	}
@@ -272,86 +269,27 @@ func (r *PersesReconciler) handleDelete(ctx context.Context, req ctrl.Request) (
 		return subreconciler.RequeueWithError(fmt.Errorf("perses not found in context"))
 	}
 
-	// Check if the Perses instance is marked to be deleted, which is
-	// indicated by the deletion timestamp being set.
-	isPersesMarkedToBeDeleted := perses.GetDeletionTimestamp() != nil
-	if isPersesMarkedToBeDeleted {
+	if perses.GetDeletionTimestamp() != nil {
+		// Strip the legacy finalizer if still present so the resource is not stuck.
 		if controllerutil.ContainsFinalizer(perses, common.PersesFinalizer) {
-			log.Info("Performing Finalizer Operations for Perses before delete CR")
-
-			// Set status to indicate finalization is in progress
-			_, err := r.updatePersesStatus(ctx, req, func(p *v1alpha2.Perses) {
-				meta.SetStatusCondition(&p.Status.Conditions, metav1.Condition{
-					Type: common.TypeDegradedPerses, Status: metav1.ConditionUnknown,
-					Reason: "Finalizing", Message: fmt.Sprintf("Performing finalizer operations for the custom resource: %s ", p.Name)})
-			})
-			if err != nil {
-				return subreconciler.RequeueWithError(err)
-			}
-
-			// Perform all operations required before remove the finalizer and allow
-			// the Kubernetes API to remove the custom resource.
-			r.doFinalizerOperationsForPerses(perses)
-
-			// TODO(user): If you add operations to the doFinalizerOperationsForPerses method
-			// then you need to ensure that all worked fine before deleting and updating the Downgrade status
-			// otherwise, you should requeue here.
-
-			// Update status to indicate finalization is complete
-			_, err = r.updatePersesStatus(ctx, req, func(p *v1alpha2.Perses) {
-				meta.SetStatusCondition(&p.Status.Conditions, metav1.Condition{
-					Type: common.TypeDegradedPerses, Status: metav1.ConditionTrue,
-					Reason: "Finalizing", Message: fmt.Sprintf("Finalizer operations for custom resource %s name were successfully accomplished", p.Name)})
-			})
-			if err != nil {
-				return subreconciler.RequeueWithError(err)
-			}
-
-			// Remove finalizer in a separate retry block
-			err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 				if err := r.Get(ctx, req.NamespacedName, perses); err != nil {
 					return err
 				}
-
-				log.Info("Removing Finalizer for Perses after successfully perform the operations")
-				if ok := controllerutil.RemoveFinalizer(perses, common.PersesFinalizer); !ok {
-					return fmt.Errorf("failed to remove finalizer for Perses")
-				}
-
+				controllerutil.RemoveFinalizer(perses, common.PersesFinalizer)
 				return r.Update(ctx, perses)
 			})
-
 			if err != nil {
-				log.WithError(err).Error("Failed to remove finalizer for Perses")
+				log.WithError(err).Error("Failed to remove legacy finalizer during deletion")
 				return subreconciler.RequeueWithError(err)
 			}
 		}
 
+		log.Info("Perses resource is being deleted, skipping reconciliation")
 		return subreconciler.DoNotRequeue()
 	}
 
 	return subreconciler.ContinueReconciling()
-}
-
-func (r *PersesReconciler) doFinalizerOperationsForPerses(perses *v1alpha2.Perses) {
-	// TODO(user): Add the cleanup steps that the operator
-	// needs to do before the CR can be deleted. Examples
-	// of finalizers include performing backups and deleting
-	// resources that are not owned by this CR, like a PVC.
-
-	// Note: It is not recommended to use finalizers with the purpose of delete resources which are
-	// created and managed in the reconciliation. These ones, such as the Deployment created on this reconcile,
-	// are defined as depended of the custom resource. See that we use the method ctrl.SetControllerReference.
-	// to set the ownerRef which means that the Deployment will be deleted by the Kubernetes API.
-	// More info: https://kubernetes.io/docs/tasks/administer-cluster/use-cascading-deletion/
-
-	// The following implementation will raise an event
-	if r.Recorder != nil {
-		r.Recorder.Event(perses, "Warning", "Deleting",
-			fmt.Sprintf("Custom Resource %s is being deleted from the namespace %s",
-				perses.Name,
-				perses.Namespace))
-	}
 }
 
 func (r *PersesReconciler) validateVolumes(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
