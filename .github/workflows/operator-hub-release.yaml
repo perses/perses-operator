@@ -9,9 +9,28 @@ on:
       repo:
         type: string
         required: true
+      release_ref:
+        type: string
+        required: true
     secrets:
       BOT_TOKEN:
         required: true
+  workflow_dispatch:
+    inputs:
+      org:
+        description: Organization that owns the target repository
+        required: true
+        type: string
+        default: k8s-operatorhub
+      repo:
+        description: Target repository name
+        required: true
+        type: string
+        default: community-operators
+      release_ref:
+        description: Release tag to publish from (for example v0.4.0)
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -26,12 +45,39 @@ jobs:
       contents: write
     runs-on: ubuntu-latest
     steps:
-      - name: Set version from tag
+      - name: Validate and prepare release values
+        id: prepare_release
         env:
-          TAG: ${{ github.ref_name }}
+          RELEASE_REF_INPUT: ${{ inputs.release_ref }}
         run: |
-          TAG=${TAG:1}
-          echo "VERSION=${TAG}" >> $GITHUB_ENV
+          # Trim leading/trailing whitespace; empty input stays empty (no false non-empty TAG).
+          RELEASE_REF_INPUT="${RELEASE_REF_INPUT#"${RELEASE_REF_INPUT%%[![:space:]]*}"}"
+          RELEASE_REF_INPUT="${RELEASE_REF_INPUT%"${RELEASE_REF_INPUT##*[![:space:]]}"}"
+
+          if [ -z "${RELEASE_REF_INPUT}" ]; then
+            echo "A release tag is required. Pass release_ref (for example v0.4.0)." >&2
+            exit 1
+          fi
+
+          TAG="${RELEASE_REF_INPUT#refs/tags/}"
+          VERSION="${TAG#v}"
+
+          # Trimmed non-empty input can still yield an empty tag (e.g. value is exactly refs/tags/).
+          if [ -z "${TAG}" ]; then
+            echo "release_ref resolved to an empty tag after normalizing refs/tags/ prefix." >&2
+            exit 1
+          fi
+
+          remote_url="https://github.com/${GITHUB_REPOSITORY}.git"
+          if ! ls_remote_err=$(git ls-remote --exit-code --tags "${remote_url}" "refs/tags/${TAG}" 2>&1); then
+            echo "Could not confirm tag refs/tags/${TAG} in ${GITHUB_REPOSITORY}." >&2
+            echo "The tag may be missing, or git could not reach the repository (network, DNS, or transient error)." >&2
+            echo "git ls-remote: ${ls_remote_err}" >&2
+            exit 1
+          fi
+
+          echo "release_ref=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
       - name: Sync fork
         env:
@@ -51,7 +97,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           repository: ${{ github.repository }}
-          ref: ${{ github.ref_name }}
+          ref: ${{ steps.prepare_release.outputs.release_ref }}
           path: tmp/
 
       - name: Set up Go
@@ -64,6 +110,8 @@ jobs:
         run: make bundle
 
       - name: Copy bundle to versioned directory
+        env:
+          VERSION: ${{ steps.prepare_release.outputs.version }}
         run: |
           mkdir -p operators/${OPERATOR_NAME}/${VERSION}
           cp -R tmp/bundle/manifests operators/${OPERATOR_NAME}/${VERSION}/
@@ -74,6 +122,7 @@ jobs:
       - name: Create pull request
         env:
           GH_TOKEN: ${{ secrets.BOT_TOKEN }}
+          VERSION: ${{ steps.prepare_release.outputs.version }}
         run: |
           git config user.name ${{ env.BOT_USER }}
           git config user.email ${{ env.BOT_USER }}@users.noreply.github.com

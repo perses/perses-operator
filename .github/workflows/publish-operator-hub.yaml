@@ -15,6 +15,7 @@ jobs:
     with:
       org: k8s-operatorhub
       repo: community-operators
+      release_ref: ${{ github.event.release.tag_name }}
     secrets:
       # NOTE: BOT_TOKEN is a PAT (repo scope) for the persesbot account
       # Required to sync and push to persesbot's fork of community-operators
