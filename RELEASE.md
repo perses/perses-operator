@@ -1,83 +1,127 @@
 # Perses Operator Release
 
-## 1. Prepare your release
+The release is driven by the **Release** GitHub Actions workflow
+(`.github/workflows/release.yaml`). It opens a PR against `main` that bumps
+`VERSION`, regenerates `CHANGELOG.md`, regenerates the OLM bundle with the
+correct `replaces` chain, and regenerates the installer manifest. Publishing
+runs after the PR is merged and the new `v*` tag is pushed.
 
-- fetch the latest changes from `main`
+## Flow overview
 
-- Create a release branch named `release/v<major>.<minor>` from the `main` branch.
+```
+1. User: Actions ▸ Release ▸ Run workflow (tag, version-replace)
+   │
+   ▼
+2. release.yaml            →  opens PR: chore: update VERSION to <tag>
+   │                           (VERSION + CHANGELOG.md + bundle/ + bundle.yaml)
+   ▼
+3. User: review & merge PR into main
+   │
+   ▼
+4. User: push v<tag> tag on main
+   │
+   ▼
+5. ci.yaml (on v* tag)     →  images (operator/bundle/catalog) + GitHub release
+   │
+   ▼
+6. publish-operator-hub.yaml (on release: published)
+                           →  PR against k8s-operatorhub/community-operators
+```
 
-> ⚠️ Release candidates and patch releases for any given major or minor release happen in the same `release/v<major>.<minor>` branch. Do not create `release/<version>` for patch or release candidate releases.
+## 1. Trigger the release workflow
 
-- Create a branch based on the release branch you just created in the step above in your fork. The branch should use the naming pattern `<yourname>/release-v<major>.<minor>.<patch>`.
-- Update the file `VERSION` with the new version to be created.
-- Generate `CHANGELOG.md` updates based on git history:
+In GitHub: **Actions** → **Release** → **Run workflow**.
 
-  ```bash
-  make generate-changelog
-  ```
+Inputs:
 
-- Regenerate bundle, jsonnet, and installer files, and verify they are up to date:
+| Input             | Example | Meaning                                                            |
+|-------------------|---------|--------------------------------------------------------------------|
+| `tag`             | `0.4.0` | New version to release (no `v` prefix).                            |
+| `version-replace` | `0.3.2` | Previously shipped version. Drives OLM `spec.replaces` in the CSV. |
 
-  ```bash
-  make bundle-check
-  make installer-check
-  ```
+The workflow:
 
-- Review the generated `CHANGELOG.md` for valid output. Things to check include:
-  - Entries in the `CHANGELOG.md` are meant to be in this order:
-    * `[FEATURE]`
-    * `[ENHANCEMENT]`
-    * `[BUGFIX]`
-    * `[BREAKINGCHANGE]`
-    * `[DOC]`
-  - Entries that map to a pull request should include a pull request number.
-  - As we have many libraries we publish, it's better if you also put a clear indication about what library is affected by
-    these changes.
-  - Consumers understand how to handle breaking changes either through the messaging in the changelog or through the linked pull requests.
-- Push the branch to Github and create a pull request with the release branch as the base. This gives others the opportunity to chime in on the release,
-  in general, and on the addition to the changelog, in particular.
-  - It's also helpful to drop a link to the release PR in #perses-dev on the CNCF Slack to get extra visibility.
-- Address any necessary feedback.
-- Once the pull request is approved, merge it into the release branch.
+- Writes `<tag>` to `VERSION`.
+- Runs `make generate-changelog` — regenerates `CHANGELOG.md` for the new
+  release version.
+- Runs `make bundle VERSION_REPLACED=<version-replace>` — regenerates `bundle/manifests/*`
+  (CSV `spec.version`, `spec.replaces: perses-operator.v<version-replace>`) and the
+  jsonnet files under `jsonnet/generated` and `jsonnet/examples`.
+- Runs `make build-installer` — regenerates the root `bundle.yaml` installer.
+- Opens a PR titled `chore: update VERSION to <tag>` against `main` on branch
+  `chore-version-<tag>`
 
-## 2. Create release tag and validate release
+Re-running the workflow with the same `tag` updates the existing PR branch.
 
-- Pull down the latest updates to the release branch on your local machine to ensure you have the updates from the previous step.
-- Tag the new release via the following commands:
+> ⚠️ `version-replace` must equal the version currently shipped on OperatorHub
 
-  ```bash
-  git checkout release/v<major>.<minor>
-  export GIT_REMOTE_UPSTREAM=origin # change if your upstream remote differs
-  make tag
-  git push $GIT_REMOTE_UPSTREAM v<major>.<minor>.<patch>
-  ```
+## 2. Review and merge the PR
 
-Once a tag is created, an automated release process for this tag is triggered via Github Actions. This automated process includes:
+- Review the diff — specifically:
+  - `VERSION`
+  - `CHANGELOG.md` (clean up/categorize any `UNKNOWN` entries)
+  - `bundle/manifests/perses-operator.clusterserviceversion.yaml`
+    (`spec.version`, `spec.replaces`)
+  - CRDs and jsonnet generated files (if CRDs changed)
+  - `bundle.yaml` (root installer manifest)
+- Approve and merge the PR into `main`.
 
-- Building new go binaries and docker images.
-- Publishing the docker images to Docker Hub.
-- Creating a new Github release that uses the changelog as the release notes and provides tarballs with the latest go binaries.
+> Note: the PR is created using the `BOT_TOKEN` PAT (the same token used by
+> `publish-operator-hub.yaml`). This is required so downstream `pull_request`
+> workflows (`go.yaml`, `ci.yaml`) fire on the auto-created PR. `BOT_TOKEN`
+> is a configuration prerequisite (see
+> [One-time setup prerequisites](#one-time-setup-prerequisites)).
 
-## 3. Merge the release into `main`
+## 3. Tag the release
 
-It can be helpful to leave the release branch up for a little while in case we need to create a patch release to address bugs or minor issues with the release you just made.
+Pull the merged `main` and push the tag:
 
-Once the release branch is no longer needed, you should open a new PR based on `main` to merge those changes. When this PR is approved, merge it into `main` :warning: **using the "merge pull request" option, not "squash and merge"** (the latter would delete the commit needed for the release tag, which can lead to problems).
+```bash
+git fetch origin
+git checkout main
+git pull
+git tag -a v<tag> -m "v<tag>"
+git push origin v<tag>
+```
+
+> ⚠️ Do **not** use GitHub's "Create release" UI. `ci.yaml` drives `goreleaser`
+> which publishes the GitHub release itself — creating one manually would race.
+
+Pushing the `v*` tag triggers `ci.yaml`, which:
+
+- Builds and pushes the operator container image to Docker Hub and Quay.
+- Builds and pushes the bundle and catalog images (`v<tag>` tag on both registries).
+- Runs `goreleaser` to publish the GitHub release with the Go binaries.
 
 ## 4. Publish to OperatorHub (automated)
 
-When the GitHub release is published, a workflow automatically creates a pull request to submit the new operator version to [k8s-operatorhub/community-operators](https://github.com/k8s-operatorhub/community-operators/pulls) (OperatorHub.io).
+When the GitHub release is published, `publish-operator-hub.yaml` fires and
+calls the reusable `operator-hub-release.yaml` workflow. It:
 
-A maintainer should monitor the PR and address any CI feedback from the community-operators repository.
+- Checks out the `persesbot` fork of `k8s-operatorhub/community-operators` (synced with upstream).
+- Checks out `perses-operator` at the released tag and runs `make bundle`.
+- Copies `bundle/{manifests,metadata,tests}` into `operators/perses-operator/<tag>/`.
+- Pushes the branch to the `persesbot` fork and opens a PR against
+  [`k8s-operatorhub/community-operators`](https://github.com/k8s-operatorhub/community-operators/pulls).
+
+Monitor that PR and address any feedback from the community-operators CI.
 
 ### One-time setup prerequisites
 
-Before the automation can run, the following must be configured once:
+Before the OperatorHub automation can run, the following must be configured once:
 
-1. **Bot account**: The `persesbot` GitHub account must have a fork of [k8s-operatorhub/community-operators](https://github.com/k8s-operatorhub/community-operators).
-2. **GitHub secret**: A Personal Access Token with `repo` scope for the bot account must be added as `PERSESBOT_GITHUB_TOKEN` in the repository settings.
-3. **CLA/DCO**: The bot account should sign the CNCF CLA or Linux Foundation DCO if required.
+1. **Bot account**: the `persesbot` GitHub account must have a fork of
+   [`k8s-operatorhub/community-operators`](https://github.com/k8s-operatorhub/community-operators).
+2. **GitHub secret**: a Personal Access Token (`repo` scope) for the bot account
+   must be added as `BOT_TOKEN` in the repository settings.
+3. **CLA/DCO**: the bot account should sign the CNCF CLA or Linux Foundation DCO
+   if required.
 
 ## 5. Update the Helm chart
 
-After the release is published, update the [Perses Operator Helm chart](https://github.com/perses/helm-charts/tree/main/charts/perses-operator) in the [perses/helm-charts](https://github.com/perses/helm-charts) repository. Follow the [Bumping perses-operator Version](https://github.com/perses/helm-charts/blob/main/DEVELOPER_GUIDE.md#bumping-perses-operator-version) guide.
+After the release is published, update the
+[Perses Operator Helm chart](https://github.com/perses/helm-charts/tree/main/charts/perses-operator)
+in the [`perses/helm-charts`](https://github.com/perses/helm-charts) repository.
+Follow the
+[Bumping perses-operator Version](https://github.com/perses/helm-charts/blob/main/DEVELOPER_GUIDE.md#bumping-perses-operator-version)
+guide.
