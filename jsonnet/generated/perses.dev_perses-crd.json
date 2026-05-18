@@ -3818,7 +3818,7 @@
                           },
                           {
                             "message": "namespace is required when type is secret or configmap",
-                            "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.namespace)"
+                            "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.__namespace__)"
                           }
                         ]
                       },
@@ -3903,7 +3903,7 @@
                           },
                           {
                             "message": "namespace is required when type is secret or configmap",
-                            "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.namespace)"
+                            "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.__namespace__)"
                           }
                         ]
                       },
@@ -3954,7 +3954,7 @@
                               },
                               {
                                 "message": "namespace is required when type is secret or configmap",
-                                "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.namespace)"
+                                "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.__namespace__)"
                               }
                             ]
                           },
@@ -4010,7 +4010,7 @@
                               },
                               {
                                 "message": "namespace is required when type is secret or configmap",
-                                "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.namespace)"
+                                "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.__namespace__)"
                               }
                             ]
                           }
@@ -6287,7 +6287,7 @@
                           },
                           {
                             "message": "namespace is required when type is secret or configmap",
-                            "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.namespace)"
+                            "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.__namespace__)"
                           }
                         ]
                       },
@@ -6343,7 +6343,7 @@
                           },
                           {
                             "message": "namespace is required when type is secret or configmap",
-                            "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.namespace)"
+                            "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.__namespace__)"
                           }
                         ]
                       }

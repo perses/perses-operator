@@ -245,7 +245,7 @@ const (
 
 // SecretSource configuration for a perses secret source
 // +kubebuilder:validation:XValidation:rule="self.type != 'secret' && self.type != 'configmap' || has(self.name)",message="name is required when type is secret or configmap"
-// +kubebuilder:validation:XValidation:rule="self.type != 'secret' && self.type != 'configmap' || has(self.namespace)",message="namespace is required when type is secret or configmap"
+// +kubebuilder:validation:XValidation:rule="self.type != 'secret' && self.type != 'configmap' || has(self.__namespace__)",message="namespace is required when type is secret or configmap"
 type SecretSource struct {
 	// type specifies the source type for secret data (secret, configmap, or file)
 	// +required
