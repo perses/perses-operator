@@ -14,6 +14,17 @@ IMG=${IMG:-}
 
 declare -r VERSION BUNDLE_GEN_FLAGS IMG
 
+# Update only matching lines
+set_csv_image_fields() {
+	local f="$1"
+	local img="$2"
+	local sed_inplace=(-i)
+	[[ "$(uname -s)" == "Darwin" ]] && sed_inplace=(-i '')
+
+	sed "${sed_inplace[@]}" "s|^\([[:space:]]*\)containerImage:.*|\1containerImage: ${img}|" "$f"
+	sed "${sed_inplace[@]}" "s|^\([[:space:]]*\)image: docker.io/persesdev/perses-operator:.*|\1image: ${img}|" "$f"
+}
+
 main() {
 	cd "$PROJECT_ROOT"
 	export PATH="$LOCAL_BIN:$PATH"
@@ -52,9 +63,13 @@ main() {
 	if [[ -z "$IMG" ]]; then
 		IMG="docker.io/persesdev/perses-operator:v${VERSION}"
 	fi
-	yq -i '.metadata.annotations.containerImage = strenv(IMG)' "$CSV_FILE"
-	yq -i '.metadata.annotations.containerImage = strenv(IMG)' \
+	local -r csv_files=(
+		"$CSV_FILE"
 		config/manifests/bases/perses-operator.clusterserviceversion.yaml
+	)
+	for f in "${csv_files[@]}"; do
+		set_csv_image_fields "$f" "$IMG"
+	done
 
 	# NOTE: operator-sdk may not preserve replaces from piped input, so fix it post-generation
 	[[ "$version_replaced" != "$VERSION" ]] && {
