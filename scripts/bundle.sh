@@ -48,6 +48,14 @@ main() {
 		sed "s|<OLD_BUNDLE_VERSION>|${old_bundle_version}|g" |
 		operator-sdk generate bundle "${gen_opts[@]}"
 
+	# OperatorHub CI requires containerImage to match the manager container image (see make bundle-check).
+	if [[ -z "$IMG" ]]; then
+		IMG="docker.io/persesdev/perses-operator:v${VERSION}"
+	fi
+	yq -i '.metadata.annotations.containerImage = strenv(IMG)' "$CSV_FILE"
+	yq -i '.metadata.annotations.containerImage = strenv(IMG)' \
+		config/manifests/bases/perses-operator.clusterserviceversion.yaml
+
 	# NOTE: operator-sdk may not preserve replaces from piped input, so fix it post-generation
 	[[ "$version_replaced" != "$VERSION" ]] && {
 		sed -e "s|replaces: .*|replaces: $old_bundle_version|g" \
