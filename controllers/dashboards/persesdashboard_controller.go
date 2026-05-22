@@ -68,6 +68,7 @@ var log = logger.WithField("module", "perses_dashboards_controller")
 // +kubebuilder:rbac:groups=perses.dev,resources=persesdashboards,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=perses.dev,resources=persesdashboards/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=perses.dev,resources=persesdashboards/finalizers,verbs=update
+// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
 func (r *PersesDashboardReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	start := time.Now()
 	objKey := req.String()
