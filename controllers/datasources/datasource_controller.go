@@ -111,14 +111,31 @@ func (r *PersesDatasourceReconciler) reconcileDatasourcesInAllInstances(ctx cont
 }
 
 func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, perses persesv1alpha2.Perses, datasource *persesv1alpha2.PersesDatasource) (*ctrl.Result, persescommon.ConditionStatusReason, error) {
-	persesClient, err := r.ClientFactory.CreateClient(ctx, r.APIReader, perses)
-
+	clients, err := r.ClientFactory.CreateClientsForAllPods(ctx, r.APIReader, perses)
 	if err != nil {
-		dlog.WithError(err).Error("Failed to create perses rest client")
+		dlog.WithError(err).Error("Failed to create perses rest clients")
 		return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonConnectionFailed)
 	}
 
-	_, err = persesClient.Project().Get(datasource.Namespace)
+	var errs []error
+	reason := persescommon.ReasonBackendError
+	for _, persesClient := range clients {
+		if rsn, err := r.syncDatasourceToClient(ctx, persesClient, datasource); err != nil {
+			reason = rsn
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		return subreconciler.RequeueWithErrorAndReason(errors.Join(errs...), reason)
+	}
+
+	res, err := subreconciler.ContinueReconciling()
+	return res, "", err
+}
+
+func (r *PersesDatasourceReconciler) syncDatasourceToClient(ctx context.Context, persesClient v1.ClientInterface, datasource *persesv1alpha2.PersesDatasource) (persescommon.ConditionStatusReason, error) {
+	_, err := persesClient.Project().Get(datasource.Namespace)
 
 	if err != nil {
 		if errors.Is(err, perseshttp.RequestNotFoundError) {
@@ -136,13 +153,13 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 
 			if err != nil {
 				dlog.WithError(err).Errorf("Failed to create perses project: %s", datasource.Namespace)
-				return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
+				return persescommon.ReasonBackendError, err
 			}
 
 			dlog.Infof("Project created: %s", datasource.Namespace)
 		} else {
 			dlog.WithError(err).Errorf("project error: %s", datasource.Namespace)
-			return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
+			return persescommon.ReasonBackendError, err
 		}
 	}
 
@@ -161,7 +178,7 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 	notFound := err != nil && errors.Is(err, perseshttp.RequestNotFoundError)
 
 	if err != nil && !notFound {
-		return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
+		return persescommon.ReasonBackendError, err
 	}
 
 	inSync := !notFound && persescommon.DatasourceInSync(existing, datasourceWithName)
@@ -169,16 +186,10 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 		if validateErr := validate.New(persesClient.RESTClient()).Datasource(datasourceWithName); validateErr != nil {
 			if persescommon.IsClientError(validateErr) {
 				dlog.WithError(validateErr).Errorf("Datasource validation failed: %s", datasource.Name)
-				return subreconciler.RequeueWithErrorAndReason(
-					fmt.Errorf("datasource %q failed server-side validation: %w", datasource.Name, validateErr),
-					persescommon.ReasonValidationFailed,
-				)
+				return persescommon.ReasonValidationFailed, fmt.Errorf("datasource %q failed server-side validation: %w", datasource.Name, validateErr)
 			}
 			dlog.WithError(validateErr).Errorf("Datasource validation request failed: %s", datasource.Name)
-			return subreconciler.RequeueWithErrorAndReason(
-				fmt.Errorf("datasource %q validation request failed: %w", datasource.Name, validateErr),
-				persescommon.ReasonBackendError,
-			)
+			return persescommon.ReasonBackendError, fmt.Errorf("datasource %q validation request failed: %w", datasource.Name, validateErr)
 		}
 	}
 	// Sync credentials independently of datasource changes.
@@ -186,32 +197,31 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 		_, reason, err := r.syncPersesSecret(ctx, persesClient, datasource)
 		if err != nil {
 			dlog.WithError(err).Errorf("Failed to create datasource secret: %s", datasource.Name)
-			return subreconciler.RequeueWithErrorAndReason(err, reason)
+			return reason, err
 		}
 	}
 
 	if inSync {
-		res, err := subreconciler.ContinueReconciling()
-		return res, "", err
+		return "", nil
 	}
 	if notFound {
 		_, err = persesClient.Datasource(datasource.Namespace).Create(datasourceWithName)
 		if err != nil {
 			dlog.WithError(err).Errorf("Failed to create datasource: %s", datasource.Name)
-			return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
+			return persescommon.ReasonBackendError, err
 		}
 		dlog.Infof("Datasource created: %s", datasource.Name)
-	} else {
-		_, err = persesClient.Datasource(datasource.Namespace).Update(datasourceWithName)
-		if err != nil {
-			dlog.WithError(err).Errorf("Failed to update datasource: %s", datasource.Name)
-			return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
-		}
-		dlog.Infof("Datasource updated: %s", datasource.Name)
+		return "", nil
 	}
 
-	res, err := subreconciler.ContinueReconciling()
-	return res, "", err
+	_, err = persesClient.Datasource(datasource.Namespace).Update(datasourceWithName)
+	if err != nil {
+		dlog.WithError(err).Errorf("Failed to update datasource: %s", datasource.Name)
+		return persescommon.ReasonBackendError, err
+	}
+
+	dlog.Infof("Datasource updated: %s", datasource.Name)
+	return "", nil
 }
 
 // creates/updates a Perses Secret with configuration,
@@ -423,51 +433,60 @@ func (r *PersesDatasourceReconciler) deleteDatasourceInAllInstances(ctx context.
 }
 
 func (r *PersesDatasourceReconciler) deleteDatasource(ctx context.Context, perses persesv1alpha2.Perses, datasourceNamespace string, datasourceName string) (*ctrl.Result, error) {
-	persesClient, err := r.ClientFactory.CreateClient(ctx, r.APIReader, perses)
-
+	clients, err := r.ClientFactory.CreateClientsForAllPods(ctx, r.APIReader, perses)
 	if err != nil {
-		dlog.WithError(err).Error("Failed to create perses rest client")
+		dlog.WithError(err).Error("Failed to create perses rest clients")
 		return subreconciler.RequeueWithError(err)
 	}
 
-	_, err = persesClient.Project().Get(datasourceNamespace)
+	var errs []error
+	for _, persesClient := range clients {
+		if err := r.deleteDatasourceFromClient(persesClient, datasourceNamespace, datasourceName); err != nil {
+			errs = append(errs, err)
+		}
+	}
 
+	if len(errs) > 0 {
+		return subreconciler.RequeueWithError(errors.Join(errs...))
+	}
+
+	return subreconciler.ContinueReconciling()
+}
+
+func (r *PersesDatasourceReconciler) deleteDatasourceFromClient(persesClient v1.ClientInterface, datasourceNamespace string, datasourceName string) error {
+	_, err := persesClient.Project().Get(datasourceNamespace)
 	if err != nil {
+		if errors.Is(err, perseshttp.RequestNotFoundError) {
+			return nil
+		}
 		dlog.WithError(err).Errorf("project error: %s", datasourceNamespace)
-
-		return subreconciler.RequeueWithError(err)
+		return err
 	}
 
-	// Ignore NotFound — the resource may have already been deleted from Perses directly.
-	// Any other error means the delete failed and should be retried.
-	// Secret delete is attempted regardless of whether the datasource was found or not.
 	err = persesClient.Datasource(datasourceNamespace).Delete(datasourceName)
-
 	if err != nil {
 		if errors.Is(err, perseshttp.RequestNotFoundError) {
 			dlog.Infof("Datasource not found: %s", datasourceName)
 		} else {
 			dlog.WithError(err).Errorf("Failed to delete datasource: %s", datasourceName)
-			return subreconciler.RequeueWithError(err)
+			return err
 		}
 	} else {
 		dlog.Infof("Datasource deleted: %s", datasourceName)
 	}
 
 	secretName := datasourceName + persescommon.SecretNameSuffix
-
 	err = persesClient.Secret(datasourceNamespace).Delete(secretName)
-
 	if err != nil {
 		if errors.Is(err, perseshttp.RequestNotFoundError) {
 			dlog.Infof("Secret not found: %s", secretName)
 		} else {
 			dlog.WithError(err).Errorf("Failed to delete secret: %s", secretName)
-			return subreconciler.RequeueWithError(err)
+			return err
 		}
 	} else {
 		dlog.Infof("Secret deleted: %s", secretName)
 	}
 
-	return subreconciler.ContinueReconciling()
+	return nil
 }
