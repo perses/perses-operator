@@ -180,7 +180,7 @@ jobs:
           cp -R tmp/bundle/tests operators/${OPERATOR_NAME}/${VERSION}/
           rm -rf tmp/
 
-      - name: Create pull request
+      - name: Create or update pull request
         env:
           GH_TOKEN: ${{ secrets.BOT_TOKEN }}
           VERSION: ${{ steps.prepare_release.outputs.version }}
@@ -190,12 +190,37 @@ jobs:
 
           message="operator ${OPERATOR_NAME} (${VERSION})"
           branch="update-${OPERATOR_NAME}-to-${VERSION}"
+          head_branch="${{ env.BOT_USER }}:${branch}"
+          target_repo="${{ inputs.org }}/${{ inputs.repo }}"
 
-          git checkout -b $branch
+          git checkout -B "${branch}"
           git add -A
-          git commit -s -m "$message"
-          git push -f --set-upstream origin $branch
-          gh pr create --title "$message" \
-                       --body "Release ${OPERATOR_NAME} \`${VERSION}\`." \
-                       --repo ${{ inputs.org }}/${{ inputs.repo }} \
-                       --base main
+          if git diff --cached --quiet; then
+            echo "No operator bundle changes to commit."
+          else
+            git commit -s -m "${message}"
+          fi
+          git push -f --set-upstream origin "${branch}"
+
+          existing_pr="$(
+            gh pr list \
+              --repo "${target_repo}" \
+              --head "${head_branch}" \
+              --base main \
+              --state open \
+              --json url \
+              --jq '.[0].url // empty'
+          )"
+
+          if [ -n "${existing_pr}" ]; then
+            echo "Open pull request already exists; updated branch ${head_branch}."
+            echo "${existing_pr}"
+            exit 0
+          fi
+
+          gh pr create \
+            --title "${message}" \
+            --body "Release ${OPERATOR_NAME} \`${VERSION}\`." \
+            --head "${head_branch}" \
+            --repo "${target_repo}" \
+            --base main
