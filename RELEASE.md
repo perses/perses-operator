@@ -76,7 +76,7 @@ You can also run it manually from **Actions → Create OperatorHub pull request 
 - **version_replaced** (optional): previous version already on OperatorHub, for example `0.1.1`. Leave empty to auto-detect the latest version in the catalog.
 - **org** / **repo**: default to `k8s-operatorhub` / `community-operators`
 
-The workflow builds the bundle from the release tag, sets `replaces` from the latest version on OperatorHub (or from `version_replaced`), and aligns `containerImage` with the release image. Release tags created before `make bundle` aligned `containerImage` are still corrected in CI.
+The workflow builds the bundle from the release tag, sets `replaces` from the latest version on OperatorHub (or from `version_replaced`), and aligns both `containerImage` and the manager deployment image with the release image. If auto-detection cannot find a prior catalog version, the workflow fails and you must set `version_replaced` explicitly.
 
 A maintainer should monitor the community-operators PR and address any CI feedback. OperatorHub reviewers listed in `bundle/ci.yaml` must approve before the PR can merge.
 
