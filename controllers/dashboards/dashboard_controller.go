@@ -23,6 +23,8 @@ import (
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	persesv1Common "github.com/perses/perses/pkg/model/api/v1/common"
 
+	v1 "github.com/perses/perses/pkg/client/api/v1"
+
 	logger "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -86,14 +88,29 @@ func (r *PersesDashboardReconciler) reconcileDashboardInAllInstances(ctx context
 }
 
 func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, perses persesv1alpha2.Perses, dashboard *persesv1alpha2.PersesDashboard) (*ctrl.Result, common.ConditionStatusReason, error) {
-	persesClient, err := r.ClientFactory.CreateClient(ctx, r.APIReader, perses)
-
+	clients, err := r.ClientFactory.CreateClientsForAllPods(ctx, r.APIReader, perses)
 	if err != nil {
-		dlog.WithError(err).Error("Failed to create perses rest client")
+		dlog.WithError(err).Error("Failed to create perses rest clients")
 		return subreconciler.RequeueWithErrorAndReason(err, common.ReasonConnectionFailed)
 	}
 
-	_, err = persesClient.Project().Get(dashboard.Namespace)
+	var errs []error
+	for _, persesClient := range clients {
+		if err := r.syncDashboardToClient(ctx, persesClient, dashboard); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		return subreconciler.RequeueWithErrorAndReason(errors.Join(errs...), common.ReasonBackendError)
+	}
+
+	res, err := subreconciler.ContinueReconciling()
+	return res, "", err
+}
+
+func (r *PersesDashboardReconciler) syncDashboardToClient(ctx context.Context, persesClient v1.ClientInterface, dashboard *persesv1alpha2.PersesDashboard) error {
+	_, err := persesClient.Project().Get(dashboard.Namespace)
 
 	if err != nil {
 		if errors.Is(err, perseshttp.RequestNotFoundError) {
@@ -111,13 +128,13 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 
 			if err != nil {
 				dlog.WithError(err).Errorf("Failed to create perses project: %s", dashboard.Namespace)
-				return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
+				return err
 			}
 
 			dlog.Infof("Project created: %s", dashboard.Namespace)
 		} else {
 			dlog.WithError(err).Errorf("project error: %s", dashboard.Namespace)
-			return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
+			return err
 		}
 	}
 
@@ -137,33 +154,24 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 	if err != nil {
 		if errors.Is(err, perseshttp.RequestNotFoundError) {
 			_, err = persesClient.Dashboard(dashboard.Namespace).Create(persesDashboard)
-
 			if err != nil {
 				dlog.WithError(err).Errorf("Failed to create dashboard: %s", dashboard.Name)
-				return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
+				return err
 			}
-
 			dlog.Infof("Dashboard created: %s", dashboard.Name)
-
-			res, err := subreconciler.ContinueReconciling()
-			return res, "", err
+			return nil
 		}
-
-		return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
-	} else {
-		_, err = persesClient.Dashboard(dashboard.Namespace).Update(persesDashboard)
-
-		if err != nil {
-			dlog.WithError(err).Errorf("Failed to update dashboard: %s", dashboard.Name)
-
-			return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
-		}
-
-		dlog.Infof("Dashboard updated: %s", dashboard.Name)
+		return err
 	}
 
-	res, err := subreconciler.ContinueReconciling()
-	return res, "", err
+	_, err = persesClient.Dashboard(dashboard.Namespace).Update(persesDashboard)
+	if err != nil {
+		dlog.WithError(err).Errorf("Failed to update dashboard: %s", dashboard.Name)
+		return err
+	}
+
+	dlog.Infof("Dashboard updated: %s", dashboard.Name)
+	return nil
 }
 
 func (r *PersesDashboardReconciler) deleteDashboardInAllInstances(ctx context.Context, _ ctrl.Request, dashbboardNamespace string, dashboardName string) (*ctrl.Result, error) {
@@ -190,35 +198,46 @@ func (r *PersesDashboardReconciler) deleteDashboardInAllInstances(ctx context.Co
 }
 
 func (r *PersesDashboardReconciler) deleteDashboard(ctx context.Context, perses persesv1alpha2.Perses, dashboardNamespace string, dashboardName string) (*ctrl.Result, error) {
-	persesClient, err := r.ClientFactory.CreateClient(ctx, r.APIReader, perses)
-
+	clients, err := r.ClientFactory.CreateClientsForAllPods(ctx, r.APIReader, perses)
 	if err != nil {
-		dlog.WithError(err).Error("Failed to create perses rest client")
+		dlog.WithError(err).Error("Failed to create perses rest clients")
 		return subreconciler.RequeueWithError(err)
 	}
 
-	_, err = persesClient.Project().Get(dashboardNamespace)
+	var errs []error
+	for _, persesClient := range clients {
+		if err := r.deleteDashboardFromClient(persesClient, dashboardNamespace, dashboardName); err != nil {
+			errs = append(errs, err)
+		}
+	}
 
+	if len(errs) > 0 {
+		return subreconciler.RequeueWithError(errors.Join(errs...))
+	}
+
+	return subreconciler.ContinueReconciling()
+}
+
+func (r *PersesDashboardReconciler) deleteDashboardFromClient(persesClient v1.ClientInterface, dashboardNamespace string, dashboardName string) error {
+	_, err := persesClient.Project().Get(dashboardNamespace)
 	if err != nil {
+		if errors.Is(err, perseshttp.RequestNotFoundError) {
+			return nil
+		}
 		dlog.WithError(err).Errorf("project error: %s", dashboardNamespace)
-
-		return subreconciler.RequeueWithError(err)
+		return err
 	}
 
 	err = persesClient.Dashboard(dashboardNamespace).Delete(dashboardName)
-
-	// Ignore NotFound — the resource may have already been deleted from Perses directly.
-	// Any other error means the delete failed and should be retried.
 	if err != nil {
 		if errors.Is(err, perseshttp.RequestNotFoundError) {
 			dlog.Infof("Dashboard not found: %s", dashboardName)
-			return subreconciler.ContinueReconciling()
+			return nil
 		}
 		dlog.WithError(err).Errorf("Failed to delete dashboard: %s", dashboardName)
-		return subreconciler.RequeueWithError(err)
+		return err
 	}
 
 	dlog.Infof("Dashboard deleted: %s", dashboardName)
-
-	return subreconciler.ContinueReconciling()
+	return nil
 }

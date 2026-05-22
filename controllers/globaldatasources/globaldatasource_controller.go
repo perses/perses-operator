@@ -87,24 +87,37 @@ func (r *PersesGlobalDatasourceReconciler) reconcileGlobalDatasourcesInAllInstan
 }
 
 func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalDatasource(ctx context.Context, perses persesv1alpha2.Perses, globaldatasource *persesv1alpha2.PersesGlobalDatasource) (*ctrl.Result, persescommon.ConditionStatusReason, error) {
-	persesClient, err := r.ClientFactory.CreateClient(ctx, r.APIReader, perses)
-
+	clients, err := r.ClientFactory.CreateClientsForAllPods(ctx, r.APIReader, perses)
 	if err != nil {
-		gdlog.WithError(err).Error("Failed to create perses rest client")
+		gdlog.WithError(err).Error("Failed to create perses rest clients")
 		return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonConnectionFailed)
-
 	}
 
-	// create a secret holding the secret configuration so the globaldatasource can reference it
-	if persescommon.HasSecretConfig(globaldatasource.Spec.Client) {
-		_, reason, err := r.syncPersesGlobalSecret(ctx, persesClient, globaldatasource)
-		if err != nil {
-			gdlog.WithError(err).Errorf("Failed to create globaldatasource secret: %s", globaldatasource.Name)
-			return subreconciler.RequeueWithErrorAndReason(err, reason)
+	var errs []error
+	for _, persesClient := range clients {
+		if err := r.syncGlobalDatasourceToClient(ctx, persesClient, globaldatasource); err != nil {
+			errs = append(errs, err)
 		}
 	}
 
-	_, err = persesClient.GlobalDatasource().Get(globaldatasource.Name)
+	if len(errs) > 0 {
+		return subreconciler.RequeueWithErrorAndReason(errors.Join(errs...), persescommon.ReasonBackendError)
+	}
+
+	res, err := subreconciler.ContinueReconciling()
+	return res, "", err
+}
+
+func (r *PersesGlobalDatasourceReconciler) syncGlobalDatasourceToClient(ctx context.Context, persesClient v1.ClientInterface, globaldatasource *persesv1alpha2.PersesGlobalDatasource) error {
+	if persescommon.HasSecretConfig(globaldatasource.Spec.Client) {
+		_, _, err := r.syncPersesGlobalSecret(ctx, persesClient, globaldatasource)
+		if err != nil {
+			gdlog.WithError(err).Errorf("Failed to create globaldatasource secret: %s", globaldatasource.Name)
+			return err
+		}
+	}
+
+	_, err := persesClient.GlobalDatasource().Get(globaldatasource.Name)
 
 	globalDatasourceWithName := &persesv1.GlobalDatasource{
 		Kind: persesv1.KindGlobalDatasource,
@@ -118,34 +131,24 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalDatasource(ctx contex
 	if err != nil {
 		if errors.Is(err, perseshttp.RequestNotFoundError) {
 			_, err = persesClient.GlobalDatasource().Create(globalDatasourceWithName)
-
 			if err != nil {
 				gdlog.WithError(err).Errorf("Failed to create globaldatasource: %s", globaldatasource.Name)
-				return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
-
+				return err
 			}
-
 			gdlog.Infof("GlobalDatasource created: %s", globaldatasource.Name)
-
-			res, err := subreconciler.ContinueReconciling()
-			return res, "", err
+			return nil
 		}
-
-		res, err := subreconciler.RequeueWithError(err)
-		return res, persescommon.ReasonBackendError, err
-	} else {
-		_, err = persesClient.GlobalDatasource().Update(globalDatasourceWithName)
-
-		if err != nil {
-			gdlog.WithError(err).Errorf("Failed to update globaldatasource: %s", globaldatasource.Name)
-			return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
-		}
-
-		gdlog.Infof("GlobalDatasource updated: %s", globaldatasource.Name)
+		return err
 	}
 
-	res, err := subreconciler.ContinueReconciling()
-	return res, "", err
+	_, err = persesClient.GlobalDatasource().Update(globalDatasourceWithName)
+	if err != nil {
+		gdlog.WithError(err).Errorf("Failed to update globaldatasource: %s", globaldatasource.Name)
+		return err
+	}
+
+	gdlog.Infof("GlobalDatasource updated: %s", globaldatasource.Name)
+	return nil
 }
 
 // creates/updates a Perses Global Secret with configuration,
@@ -370,43 +373,51 @@ func (r *PersesGlobalDatasourceReconciler) deleteGlobalDatasourceInAllInstances(
 }
 
 func (r *PersesGlobalDatasourceReconciler) deleteGlobalDatasource(ctx context.Context, perses persesv1alpha2.Perses, datasourceName string) (*ctrl.Result, error) {
-	persesClient, err := r.ClientFactory.CreateClient(ctx, r.APIReader, perses)
-
+	clients, err := r.ClientFactory.CreateClientsForAllPods(ctx, r.APIReader, perses)
 	if err != nil {
-		gdlog.WithError(err).Error("Failed to create perses rest client")
+		gdlog.WithError(err).Error("Failed to create perses rest clients")
 		return subreconciler.RequeueWithError(err)
 	}
 
-	// Ignore NotFound — the resource may have already been deleted from Perses directly.
-	// Any other error means the delete failed and should be retried.
-	// Secret delete is attempted regardless of whether the datasource was found or not.
-	err = persesClient.GlobalDatasource().Delete(datasourceName)
+	var errs []error
+	for _, persesClient := range clients {
+		if err := r.deleteGlobalDatasourceFromClient(persesClient, datasourceName); err != nil {
+			errs = append(errs, err)
+		}
+	}
 
+	if len(errs) > 0 {
+		return subreconciler.RequeueWithError(errors.Join(errs...))
+	}
+
+	return subreconciler.ContinueReconciling()
+}
+
+func (r *PersesGlobalDatasourceReconciler) deleteGlobalDatasourceFromClient(persesClient v1.ClientInterface, datasourceName string) error {
+	err := persesClient.GlobalDatasource().Delete(datasourceName)
 	if err != nil {
 		if errors.Is(err, perseshttp.RequestNotFoundError) {
 			gdlog.Infof("GlobalDatasource not found: %s", datasourceName)
 		} else {
 			gdlog.WithError(err).Errorf("Failed to delete global datasource: %s", datasourceName)
-			return subreconciler.RequeueWithError(err)
+			return err
 		}
 	} else {
 		gdlog.Infof("GlobalDatasource deleted: %s", datasourceName)
 	}
 
 	secretName := datasourceName + persescommon.SecretNameSuffix
-
 	err = persesClient.GlobalSecret().Delete(secretName)
-
 	if err != nil {
 		if errors.Is(err, perseshttp.RequestNotFoundError) {
 			gdlog.Infof("GlobalSecret not found: %s", secretName)
 		} else {
 			gdlog.WithError(err).Errorf("Failed to delete global secret: %s", secretName)
-			return subreconciler.RequeueWithError(err)
+			return err
 		}
 	} else {
 		gdlog.Infof("GlobalSecret deleted: %s", secretName)
 	}
 
-	return subreconciler.ContinueReconciling()
+	return nil
 }
