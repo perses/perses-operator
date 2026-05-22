@@ -23,6 +23,8 @@
   make installer-check
   ```
 
+  `make bundle-check` runs `make bundle`, which sets `metadata.annotations.containerImage` to the operator image for the version in `VERSION` (same ref as the manager deployment). That value is required for OperatorHub CI; include the updated `bundle/` and `config/manifests/` files in the release PR.
+
 - Review the generated `CHANGELOG.md` for valid output. Things to check include:
   - Entries in the `CHANGELOG.md` are meant to be in this order:
     * `[FEATURE]`
@@ -66,16 +68,24 @@ Once the release branch is no longer needed, you should open a new PR based on `
 
 ## 4. Publish to OperatorHub (automated)
 
-When the GitHub release is published, a workflow automatically creates a pull request to submit the new operator version to [k8s-operatorhub/community-operators](https://github.com/k8s-operatorhub/community-operators/pulls) (OperatorHub.io).
+When a GitHub release is published, the **Publish operator to OperatorHub** workflow runs and opens a pull request against [k8s-operatorhub/community-operators](https://github.com/k8s-operatorhub/community-operators/pulls) (OperatorHub.io).
 
-A maintainer should monitor the PR and address any CI feedback from the community-operators repository.
+You can also run it manually from **Actions → Create OperatorHub pull request → Run workflow**:
+
+- **release_ref** (required): release tag to publish, for example `v0.4.0`
+- **version_replaced** (optional): previous version already on OperatorHub, for example `0.1.1`. Leave empty to auto-detect the latest version in the catalog.
+- **org** / **repo**: default to `k8s-operatorhub` / `community-operators`
+
+The workflow builds the bundle from the release tag, sets `replaces` from the latest version on OperatorHub (or from `version_replaced`), and aligns both `containerImage` and the manager deployment image with the release image. If auto-detection cannot find a prior catalog version, the workflow fails and you must set `version_replaced` explicitly.
+
+A maintainer should monitor the community-operators PR and address any CI feedback. OperatorHub reviewers listed in `bundle/ci.yaml` must approve before the PR can merge.
 
 ### One-time setup prerequisites
 
 Before the automation can run, the following must be configured once:
 
 1. **Bot account**: The `persesbot` GitHub account must have a fork of [k8s-operatorhub/community-operators](https://github.com/k8s-operatorhub/community-operators).
-2. **GitHub secret**: A Personal Access Token with `repo` scope for the bot account must be added as `PERSESBOT_GITHUB_TOKEN` in the repository settings.
+2. **GitHub secret**: A Personal Access Token with `repo` scope for the bot account must be added as `BOT_TOKEN` in the repository settings.
 3. **CLA/DCO**: The bot account should sign the CNCF CLA or Linux Foundation DCO if required.
 
 ## 5. Update the Helm chart

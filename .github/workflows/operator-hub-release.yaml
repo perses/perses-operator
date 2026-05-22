@@ -12,6 +12,11 @@ on:
       release_ref:
         type: string
         required: true
+      version_replaced:
+        description: Previous operator version on OperatorHub (for example 0.1.1). Empty = auto-detect from upstream catalog.
+        type: string
+        required: false
+        default: ""
     secrets:
       BOT_TOKEN:
         required: true
@@ -31,6 +36,11 @@ on:
         description: Release tag to publish from (for example v0.4.0)
         required: true
         type: string
+      version_replaced:
+        description: Previous version on OperatorHub (for example 0.1.1). Leave empty to use the latest version already in the catalog.
+        required: false
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -93,6 +103,41 @@ jobs:
           repository: ${{ env.BOT_USER }}/${{ inputs.repo }}
           token: ${{ secrets.BOT_TOKEN }}
 
+      - name: Determine previous OperatorHub version
+        id: operatorhub_prev
+        env:
+          VERSION: ${{ steps.prepare_release.outputs.version }}
+          VERSION_REPLACED_INPUT: ${{ inputs.version_replaced }}
+        run: |
+          if [ -n "${VERSION_REPLACED_INPUT}" ]; then
+            echo "version_replaced=${VERSION_REPLACED_INPUT}" >> "$GITHUB_OUTPUT"
+            echo "Using explicit version_replaced=${VERSION_REPLACED_INPUT}"
+            exit 0
+          fi
+
+          operator_dir="operators/${OPERATOR_NAME}"
+          if [ ! -d "${operator_dir}" ]; then
+            echo "::error::${operator_dir} not found on fork after sync; cannot determine version_replaced." >&2
+            echo "Set workflow input version_replaced to the last version on OperatorHub (for example 0.1.1)." >&2
+            exit 1
+          fi
+
+          prev="$(
+            find "${operator_dir}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' |
+              grep -v "^${VERSION}$" |
+              sort -V |
+              tail -1
+          )"
+
+          if [ -z "${prev}" ]; then
+            echo "::error::No prior ${OPERATOR_NAME} version in catalog to replace." >&2
+            echo "Set workflow input version_replaced if this is not the first OperatorHub release." >&2
+            exit 1
+          fi
+
+          echo "version_replaced=${prev}" >> "$GITHUB_OUTPUT"
+          echo "Auto-detected version_replaced=${prev} (latest on OperatorHub before ${VERSION})"
+
       - name: Checkout perses-operator at release tag
         uses: actions/checkout@v6
         with:
@@ -107,7 +152,23 @@ jobs:
 
       - name: Generate bundle manifests
         working-directory: tmp/
+        env:
+          VERSION: ${{ steps.prepare_release.outputs.version }}
+          VERSION_REPLACED: ${{ steps.operatorhub_prev.outputs.version_replaced }}
+          IMG: docker.io/persesdev/perses-operator:v${{ steps.prepare_release.outputs.version }}
         run: make bundle
+
+      - name: Align containerImage annotation with release image
+        working-directory: tmp/
+        env:
+          IMG: docker.io/persesdev/perses-operator:v${{ steps.prepare_release.outputs.version }}
+        run: |
+          csv="bundle/manifests/perses-operator.clusterserviceversion.yaml"
+          if ! grep -q 'containerImage:' "$csv"; then
+            echo "containerImage annotation not found in ${csv}" >&2
+            exit 1
+          fi
+          sed -i "s|^[[:space:]]*containerImage:.*|    containerImage: ${IMG}|" "$csv"
 
       - name: Copy bundle to versioned directory
         env:

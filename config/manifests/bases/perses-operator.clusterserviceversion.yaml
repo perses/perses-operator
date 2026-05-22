@@ -108,7 +108,7 @@ metadata:
       ]
     capabilities: Basic Install
     categories: Monitoring
-    containerImage: docker.io/persesdev/perses-operator:v0.1.0
+    containerImage: docker.io/persesdev/perses-operator:v0.4.0
     repository: https://github.com/perses/perses-operator
   labels:
     operatorframework.io/arch.amd64: supported
@@ -465,7 +465,7 @@ spec:
               containers:
               - args:
                 - --leader-elect
-                image: docker.io/persesdev/perses-operator:v0.1.0
+                image: docker.io/persesdev/perses-operator:v0.4.0
                 imagePullPolicy: Always
                 livenessProbe:
                   httpGet:
