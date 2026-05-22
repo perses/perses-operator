@@ -1992,7 +1992,7 @@ metadata:
     capabilities: Basic Install
     categories: Monitoring
     containerImage: docker.io/persesdev/perses-operator:v0.4.0
-    createdAt: "2026-05-21T15:46:55Z"
+    createdAt: "2026-05-22T10:12:19Z"
     operators.operatorframework.io/builder: operator-sdk-v1.42.0
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/perses/perses-operator
@@ -2540,6 +2540,8 @@ spec:
     name: Gabriel Bernal
   - email: augustin.husson@amadeus.com
     name: Augustin Husson
+  - email: janantha@redhat.com
+    name: Jayapriya Pai
   maturity: alpha
   minKubeVersion: 1.25.0
   provider:
