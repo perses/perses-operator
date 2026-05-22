@@ -87,6 +87,7 @@ main() {
 		reviewers:
 		  - jgbernalp
 		  - Nexucis
+		  - slashpai
 	EOF
 
 	operator-sdk bundle validate ./bundle \

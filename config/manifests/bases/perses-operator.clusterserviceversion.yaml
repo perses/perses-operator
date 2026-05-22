@@ -518,6 +518,8 @@ spec:
     name: Gabriel Bernal
   - email: augustin.husson@amadeus.com
     name: Augustin Husson
+  - email: janantha@redhat.com
+    name: Jayapriya Pai
   maturity: alpha
   minKubeVersion: 1.25.0
   provider:
