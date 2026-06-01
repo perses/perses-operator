@@ -19,6 +19,7 @@ import (
 	"time"
 
 	logger "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -237,6 +238,25 @@ func (r *PersesGlobalDatasourceReconciler) findGlobalDatasourcesForPerses(ctx co
 	return common.MetadataListToRequests(ctx, r.Client, persesv1alpha2.GroupVersion.WithKind("PersesGlobalDatasourceList"))
 }
 
+func (r *PersesGlobalDatasourceReconciler) findGlobalDatasourcesForPod(ctx context.Context, obj client.Object) []reconcile.Request {
+	pod, ok := obj.(*corev1.Pod)
+	if !ok {
+		return nil
+	}
+
+	instanceName := pod.Labels["app.kubernetes.io/instance"]
+	if instanceName == "" {
+		return nil
+	}
+
+	managedBy := pod.Labels["app.kubernetes.io/managed-by"]
+	if managedBy != "perses-operator" {
+		return nil
+	}
+
+	return r.findGlobalDatasourcesForPerses(ctx, obj)
+}
+
 // SetupWithManager sets up the controller with the Manager.
 // It watches PersesGlobalDatasource resources and also watches Perses instances
 // to trigger re-reconciliation of all global datasources when a Perses instance becomes
@@ -250,6 +270,11 @@ func (r *PersesGlobalDatasourceReconciler) SetupWithManager(mgr ctrl.Manager) er
 			&persesv1alpha2.Perses{},
 			handler.EnqueueRequestsFromMapFunc(r.findGlobalDatasourcesForPerses),
 			builder.WithPredicates(common.PersesAvailabilityPredicate()),
+		).
+		Watches(
+			&corev1.Pod{},
+			handler.EnqueueRequestsFromMapFunc(r.findGlobalDatasourcesForPod),
+			builder.WithPredicates(common.PodReadinessPredicate()),
 		).
 		Complete(r)
 }

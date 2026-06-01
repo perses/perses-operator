@@ -19,6 +19,7 @@ import (
 	"time"
 
 	logger "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -237,6 +238,28 @@ func (r *PersesDashboardReconciler) findDashboardsForPerses(ctx context.Context,
 	return common.MetadataListToRequests(ctx, r.Client, persesv1alpha2.GroupVersion.WithKind("PersesDashboardList"))
 }
 
+// findDashboardsForPod returns reconcile requests for all PersesDashboards
+// when a pod belonging to a Perses instance becomes ready. This ensures
+// resources are re-synced to pods that restarted and lost their state.
+func (r *PersesDashboardReconciler) findDashboardsForPod(ctx context.Context, obj client.Object) []reconcile.Request {
+	pod, ok := obj.(*corev1.Pod)
+	if !ok {
+		return nil
+	}
+
+	instanceName := pod.Labels["app.kubernetes.io/instance"]
+	if instanceName == "" {
+		return nil
+	}
+
+	managedBy := pod.Labels["app.kubernetes.io/managed-by"]
+	if managedBy != "perses-operator" {
+		return nil
+	}
+
+	return r.findDashboardsForPerses(ctx, obj)
+}
+
 // SetupWithManager sets up the controller with the Manager.
 // It watches PersesDashboard resources and also watches Perses instances
 // to trigger re-reconciliation of all dashboards when a Perses instance becomes
@@ -251,6 +274,11 @@ func (r *PersesDashboardReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&persesv1alpha2.Perses{},
 			handler.EnqueueRequestsFromMapFunc(r.findDashboardsForPerses),
 			builder.WithPredicates(common.PersesAvailabilityPredicate()),
+		).
+		Watches(
+			&corev1.Pod{},
+			handler.EnqueueRequestsFromMapFunc(r.findDashboardsForPod),
+			builder.WithPredicates(common.PodReadinessPredicate()),
 		).
 		Complete(r)
 }
