@@ -1,0 +1,21 @@
+# Step 1: Perses with file storage and replicas > 1 (separate PVC per pod).
+apiVersion: perses.dev/v1alpha2
+kind: Perses
+metadata:
+  name: perses-multi-replica
+  labels:
+    app.kubernetes.io/instance: perses-multi-replica
+spec:
+  replicas: 3
+  metadata:
+    labels:
+      instance: perses-multi-replica
+  config:
+    database:
+      file:
+        extension: yaml
+        folder: /perses
+  containerPort: 8080
+  resources:
+    requests:
+      memory: 128Mi
