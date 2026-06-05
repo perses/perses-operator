@@ -47,7 +47,7 @@ func TestNewMetrics(t *testing.T) {
 				Name: "perses_operator_managed_perses_instances",
 				Help: "Number of Perses instances managed by the operator",
 			},
-			[]string{"resource_namespace"},
+			[]string{"resource_namespace", "resource_name"},
 		),
 		ready: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
@@ -64,7 +64,7 @@ func TestNewMetrics(t *testing.T) {
 	// Set some values so metrics appear in output
 	m.reconcileOperations.WithLabelValues("test").Add(1)
 	m.reconcileErrors.WithLabelValues("test", "test_reason").Add(0)
-	m.persesInstances.WithLabelValues("test-ns").Set(1)
+	m.persesInstances.WithLabelValues("test-ns", "test-perses").Set(1)
 	m.Ready("test").Set(1)
 
 	// Verify metrics are registered
@@ -159,22 +159,22 @@ func TestPersesInstancesGauge(t *testing.T) {
 				Name: "perses_operator_managed_perses_instances",
 				Help: "Number of Perses instances managed by the operator",
 			},
-			[]string{"resource_namespace"},
+			[]string{"resource_namespace", "resource_name"},
 		),
 		resources: make(map[resourceKey]map[string]int),
 	}
 	reg.MustRegister(m.persesInstances)
 
 	// Set instance counts
-	m.PersesInstances("perses-dev").Set(1)
-	m.PersesInstances("production").Set(3)
+	m.PersesInstances("perses-dev", "perses-1").Set(1)
+	m.PersesInstances("production", "perses-prod").Set(1)
 
 	// Verify values
 	expected := `
 		# HELP perses_operator_managed_perses_instances Number of Perses instances managed by the operator
 		# TYPE perses_operator_managed_perses_instances gauge
-		perses_operator_managed_perses_instances{resource_namespace="perses-dev"} 1
-		perses_operator_managed_perses_instances{resource_namespace="production"} 3
+		perses_operator_managed_perses_instances{resource_name="perses-1",resource_namespace="perses-dev"} 1
+		perses_operator_managed_perses_instances{resource_name="perses-prod",resource_namespace="production"} 1
 	`
 	err := testutil.CollectAndCompare(m.persesInstances, strings.NewReader(expected))
 	assert.NoError(t, err)
@@ -268,6 +268,127 @@ func TestResourceStateString(t *testing.T) {
 			assert.Equal(t, tt.expected, tt.state.String())
 		})
 	}
+}
+
+func TestDeletePersesInstance(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	m := &Metrics{
+		persesInstances: prometheus.NewGaugeVec(
+			prometheus.GaugeOpts{
+				Name: "perses_operator_managed_perses_instances",
+				Help: "Number of Perses instances managed by the operator",
+			},
+			[]string{"resource_namespace", "resource_name"},
+		),
+		resources: make(map[resourceKey]map[string]int),
+	}
+	reg.MustRegister(m.persesInstances)
+
+	// Set instances for two namespaces
+	m.PersesInstances("perses-dev", "perses-1").Set(1)
+	m.PersesInstances("production", "perses-prod").Set(1)
+
+	// Delete one instance
+	m.DeletePersesInstance("perses-dev", "perses-1")
+
+	// Verify only production remains
+	expected := `
+		# HELP perses_operator_managed_perses_instances Number of Perses instances managed by the operator
+		# TYPE perses_operator_managed_perses_instances gauge
+		perses_operator_managed_perses_instances{resource_name="perses-prod",resource_namespace="production"} 1
+	`
+	err := testutil.CollectAndCompare(m.persesInstances, strings.NewReader(expected))
+	assert.NoError(t, err)
+
+	// Deleting a non-existent instance should not panic
+	m.DeletePersesInstance("nonexistent", "nonexistent")
+}
+
+func TestForgetObject(t *testing.T) {
+	m := &Metrics{
+		resources: make(map[resourceKey]map[string]int),
+	}
+
+	// Set synced and failed entries for multiple objects
+	m.SetSyncedResources("ns1/resource1", "dashboard", 1)
+	m.SetSyncedResources("ns1/resource2", "dashboard", 1)
+	m.SetFailedResources("ns1/resource1", "dashboard", 1)
+	m.SetSyncedResources("ns2/resource3", "datasource", 1)
+
+	// Forget resource1
+	m.ForgetObject("ns1/resource1")
+
+	// Verify resource1 is removed from both synced and failed maps
+	m.mtx.RLock()
+	defer m.mtx.RUnlock()
+
+	syncedDashboard := resourceKey{resource: "dashboard", state: synced}
+	failedDashboard := resourceKey{resource: "dashboard", state: failed}
+	syncedDatasource := resourceKey{resource: "datasource", state: synced}
+
+	assert.Equal(t, 1, len(m.resources[syncedDashboard]), "Should have 1 synced dashboard after forget")
+	assert.Equal(t, 1, len(m.resources[syncedDatasource]), "Datasource should be unaffected")
+
+	// Empty outer map entries should be removed
+	_, outerExists := m.resources[failedDashboard]
+	assert.False(t, outerExists, "Empty outer map entry should be removed")
+
+	// resource2 should still exist
+	assert.Equal(t, 1, m.resources[syncedDashboard]["ns1/resource2"])
+	// resource1 should be gone
+	_, exists := m.resources[syncedDashboard]["ns1/resource1"]
+	assert.False(t, exists, "resource1 should be removed from synced map")
+}
+
+func TestForgetObjectCollectOutput(t *testing.T) {
+	reg := prometheus.NewRegistry()
+	m := &Metrics{
+		resources: make(map[resourceKey]map[string]int),
+	}
+	reg.MustRegister(m)
+
+	m.SetSyncedResources("ns1/resource1", "dashboard", 1)
+	m.SetSyncedResources("ns1/resource2", "dashboard", 1)
+	m.SetFailedResources("ns1/resource3", "dashboard", 1)
+
+	// Forget resource1 and resource3
+	m.ForgetObject("ns1/resource1")
+	m.ForgetObject("ns1/resource3")
+
+	// Collect and verify totals — the failed entry should disappear entirely
+	// since no objects remain in that category
+	expected := `
+		# HELP perses_operator_managed_resources Number of resources managed by the operator per state (synced/failed)
+		# TYPE perses_operator_managed_resources gauge
+		perses_operator_managed_resources{resource="dashboard",state="synced"} 1
+	`
+	err := testutil.CollectAndCompare(m, strings.NewReader(expected))
+	assert.NoError(t, err)
+}
+
+func TestForgetObjectConcurrency(t *testing.T) {
+	m := &Metrics{
+		resources: make(map[resourceKey]map[string]int),
+	}
+
+	done := make(chan bool)
+	for i := 0; i < 10; i++ {
+		go func(id int) {
+			key := "test/resource"
+			m.SetSyncedResources(key, "dashboard", id)
+			m.SetFailedResources(key, "datasource", id)
+			m.ForgetObject(key)
+			done <- true
+		}(i)
+	}
+
+	for i := 0; i < 10; i++ {
+		<-done
+	}
+
+	m.mtx.RLock()
+	defer m.mtx.RUnlock()
+	assert.NotNil(t, m.resources)
 }
 
 func TestMetricsConcurrency(t *testing.T) {

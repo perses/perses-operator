@@ -90,7 +90,7 @@ func NewMetrics() *Metrics {
 				Name: "perses_operator_managed_perses_instances",
 				Help: "Number of Perses instances managed by the operator",
 			},
-			[]string{"resource_namespace"},
+			[]string{"resource_namespace", "resource_name"},
 		),
 		ready: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
@@ -124,9 +124,15 @@ func (m *Metrics) ReconcileErrors(controller, reason string) prometheus.Counter 
 	return m.reconcileErrors.With(prometheus.Labels{"controller": controller, "reason": reason})
 }
 
-// PersesInstances returns a gauge to track Perses instance count.
-func (m *Metrics) PersesInstances(namespace string) prometheus.Gauge {
-	return m.persesInstances.With(prometheus.Labels{"resource_namespace": namespace})
+// PersesInstances returns a gauge to track a specific Perses instance.
+func (m *Metrics) PersesInstances(namespace, name string) prometheus.Gauge {
+	return m.persesInstances.With(prometheus.Labels{"resource_namespace": namespace, "resource_name": name})
+}
+
+// DeletePersesInstance removes the gauge entry for the given Perses instance.
+// It should be called when a Perses instance is deleted to clean up stale label sets.
+func (m *Metrics) DeletePersesInstance(namespace, name string) {
+	m.persesInstances.DeleteLabelValues(namespace, name)
 }
 
 // Ready returns a gauge to track operator readiness for the given controller.
@@ -144,13 +150,26 @@ func (m *Metrics) SetFailedResources(objKey, resource string, v int) {
 	m.setResources(objKey, resourceKey{resource: resource, state: failed}, v)
 }
 
+// ForgetObject removes all resource entries for the given object key.
+// It should be called when a controller detects that the object has been deleted.
+func (m *Metrics) ForgetObject(objKey string) {
+	m.mtx.Lock()
+	defer m.mtx.Unlock()
+
+	for rKey := range m.resources {
+		delete(m.resources[rKey], objKey)
+		if len(m.resources[rKey]) == 0 {
+			delete(m.resources, rKey)
+		}
+	}
+}
+
 func (m *Metrics) setResources(objKey string, resKey resourceKey, v int) {
 	m.mtx.Lock()
 	defer m.mtx.Unlock()
 
 	if _, found := m.resources[resKey]; !found {
-		m.resources[resourceKey{resource: resKey.resource, state: synced}] = make(map[string]int)
-		m.resources[resourceKey{resource: resKey.resource, state: failed}] = make(map[string]int)
+		m.resources[resKey] = make(map[string]int)
 	}
 
 	m.resources[resKey][objKey] = v

@@ -86,6 +86,9 @@ func (r *PersesDatasourceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			if r.ReconciliationTracker != nil {
 				r.ReconciliationTracker.ForgetObject(objKey)
 			}
+			if r.Metrics != nil {
+				r.Metrics.ForgetObject(objKey)
+			}
 			return subreconciler.Evaluate(r.deleteDatasourceInAllInstances(ctx, req.Namespace, req.Name))
 		}
 		log.WithError(err).Error("Failed to get perses datasource")
