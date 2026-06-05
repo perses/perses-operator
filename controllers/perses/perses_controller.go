@@ -65,12 +65,13 @@ type Config struct {
 // PersesReconciler reconciles a Perses object
 type PersesReconciler struct {
 	client.Client
-	APIReader             client.Reader // uncached reader for Secret data (cached client strips Data via Transform)
-	Scheme                *runtime.Scheme
-	Recorder              record.EventRecorder
-	Config                Config
-	Metrics               *operatormetrics.Metrics
-	ReconciliationTracker *operatormetrics.ReconciliationTracker
+	APIReader              client.Reader // uncached reader for Secret data (cached client strips Data via Transform)
+	Scheme                 *runtime.Scheme
+	Recorder               record.EventRecorder
+	Config                 Config
+	Metrics                *operatormetrics.Metrics
+	ReconciliationTracker  *operatormetrics.ReconciliationTracker
+	ClientCacheInvalidator common.PersesClientCacheInvalidator
 }
 
 var log = logger.WithField("module", "perses_controller")
@@ -97,6 +98,13 @@ func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 			if r.ReconciliationTracker != nil {
 				r.ReconciliationTracker.ForgetObject(objKey)
 			}
+			if r.Metrics != nil {
+				r.Metrics.ForgetObject(objKey)
+				r.Metrics.DeletePersesInstance(req.Namespace, req.Name)
+			}
+			if r.ClientCacheInvalidator != nil {
+				r.ClientCacheInvalidator.ForgetInstance(objKey)
+			}
 			return subreconciler.Evaluate(subreconciler.DoNotRequeue())
 		}
 		log.WithError(err).Error("Failed to get perses")
@@ -106,9 +114,9 @@ func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		return subreconciler.Evaluate(subreconciler.RequeueWithError(err))
 	}
 
-	// Update Perses instance count
-	if r.Metrics != nil {
-		r.Metrics.PersesInstances(perses.Namespace).Set(1)
+	// Update Perses instance count (skip for objects being deleted)
+	if r.Metrics != nil && perses.GetDeletionTimestamp() == nil {
+		r.Metrics.PersesInstances(perses.Namespace, perses.Name).Set(1)
 	}
 
 	// Store perses in context for all sub-reconcilers

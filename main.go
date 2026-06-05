@@ -236,12 +236,15 @@ func main() {
 	opMetrics := operatormetrics.NewMetrics()
 	reconciliationTracker := operatormetrics.NewReconciliationTracker(ctrlmetrics.Registry)
 
+	persesClientFactory := common.NewWithConfig()
+
 	if err = (&persescontroller.PersesReconciler{
-		Client:                mgr.GetClient(),
-		APIReader:             mgr.GetAPIReader(),
-		Scheme:                mgr.GetScheme(),
-		Metrics:               opMetrics,
-		ReconciliationTracker: reconciliationTracker,
+		Client:                 mgr.GetClient(),
+		APIReader:              mgr.GetAPIReader(),
+		Scheme:                 mgr.GetScheme(),
+		Metrics:                opMetrics,
+		ReconciliationTracker:  reconciliationTracker,
+		ClientCacheInvalidator: persesClientFactory,
 		Config: persescontroller.Config{
 			PersesImage:          persesImage,
 			TLSMinVersion:        tlsMinVersion,
@@ -259,7 +262,7 @@ func main() {
 		Scheme:                mgr.GetScheme(),
 		Metrics:               opMetrics,
 		ReconciliationTracker: reconciliationTracker,
-		ClientFactory:         common.NewWithConfig(),
+		ClientFactory:         persesClientFactory,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PersesDashboard")
 		os.Exit(1)
@@ -271,7 +274,7 @@ func main() {
 		Scheme:                mgr.GetScheme(),
 		Metrics:               opMetrics,
 		ReconciliationTracker: reconciliationTracker,
-		ClientFactory:         common.NewWithConfig(),
+		ClientFactory:         persesClientFactory,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PersesDatasource")
 		os.Exit(1)
@@ -283,7 +286,7 @@ func main() {
 		Scheme:                mgr.GetScheme(),
 		Metrics:               opMetrics,
 		ReconciliationTracker: reconciliationTracker,
-		ClientFactory:         common.NewWithConfig(),
+		ClientFactory:         persesClientFactory,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PersesGlobalDatasource")
 		os.Exit(1)
