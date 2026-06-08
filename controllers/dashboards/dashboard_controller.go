@@ -121,7 +121,7 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 		}
 	}
 
-	_, err = persesClient.Dashboard(dashboard.Namespace).Get(dashboard.Name)
+	existing, err := persesClient.Dashboard(dashboard.Namespace).Get(dashboard.Name)
 
 	persesDashboard := &persesv1.Dashboard{
 		Kind: persesv1.KindDashboard,
@@ -150,17 +150,21 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 		}
 
 		return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
-	} else {
-		_, err = persesClient.Dashboard(dashboard.Namespace).Update(persesDashboard)
-
-		if err != nil {
-			dlog.WithError(err).Errorf("Failed to update dashboard: %s", dashboard.Name)
-
-			return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
-		}
-
-		dlog.Infof("Dashboard updated: %s", dashboard.Name)
 	}
+
+	if common.DashboardInSync(existing, persesDashboard) {
+		dlog.Debugf("Dashboard already in sync: %s", dashboard.Name)
+		res, err := subreconciler.ContinueReconciling()
+		return res, "", err
+	}
+
+	_, err = persesClient.Dashboard(dashboard.Namespace).Update(persesDashboard)
+	if err != nil {
+		dlog.WithError(err).Errorf("Failed to update dashboard: %s", dashboard.Name)
+		return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
+	}
+
+	dlog.Infof("Dashboard updated: %s", dashboard.Name)
 
 	res, err := subreconciler.ContinueReconciling()
 	return res, "", err

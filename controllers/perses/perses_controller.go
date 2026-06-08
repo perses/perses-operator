@@ -186,7 +186,11 @@ func (r *PersesReconciler) updatePersesStatus(
 		if err := r.Get(ctx, req.NamespacedName, fresh); err != nil {
 			return err
 		}
+		before := fresh.Status.DeepCopy()
 		updateFn(fresh)
+		if equality.Semantic.DeepEqual(*before, fresh.Status) {
+			return nil
+		}
 		return r.Status().Update(ctx, fresh)
 	})
 

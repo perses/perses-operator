@@ -104,7 +104,7 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalDatasource(ctx contex
 		}
 	}
 
-	_, err = persesClient.GlobalDatasource().Get(globaldatasource.Name)
+	existing, err := persesClient.GlobalDatasource().Get(globaldatasource.Name)
 
 	globalDatasourceWithName := &persesv1.GlobalDatasource{
 		Kind: persesv1.KindGlobalDatasource,
@@ -122,7 +122,6 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalDatasource(ctx contex
 			if err != nil {
 				gdlog.WithError(err).Errorf("Failed to create globaldatasource: %s", globaldatasource.Name)
 				return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
-
 			}
 
 			gdlog.Infof("GlobalDatasource created: %s", globaldatasource.Name)
@@ -133,16 +132,21 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalDatasource(ctx contex
 
 		res, err := subreconciler.RequeueWithError(err)
 		return res, persescommon.ReasonBackendError, err
-	} else {
-		_, err = persesClient.GlobalDatasource().Update(globalDatasourceWithName)
-
-		if err != nil {
-			gdlog.WithError(err).Errorf("Failed to update globaldatasource: %s", globaldatasource.Name)
-			return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
-		}
-
-		gdlog.Infof("GlobalDatasource updated: %s", globaldatasource.Name)
 	}
+
+	if persescommon.GlobalDatasourceInSync(existing, globalDatasourceWithName) {
+		gdlog.Debugf("GlobalDatasource already in sync: %s", globaldatasource.Name)
+		res, err := subreconciler.ContinueReconciling()
+		return res, "", err
+	}
+
+	_, err = persesClient.GlobalDatasource().Update(globalDatasourceWithName)
+	if err != nil {
+		gdlog.WithError(err).Errorf("Failed to update globaldatasource: %s", globaldatasource.Name)
+		return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
+	}
+
+	gdlog.Infof("GlobalDatasource updated: %s", globaldatasource.Name)
 
 	res, err := subreconciler.ContinueReconciling()
 	return res, "", err
