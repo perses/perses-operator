@@ -156,7 +156,11 @@ func (r *PersesDashboardReconciler) updateDashboardStatus(
 		if err := r.Get(ctx, req.NamespacedName, fresh); err != nil {
 			return err
 		}
+		before := common.SnapshotConditions(fresh.Status.Conditions)
 		updateFn(fresh)
+		if !common.ConditionsChanged(before, fresh.Status.Conditions) {
+			return nil
+		}
 		return r.Status().Update(ctx, fresh)
 	})
 
