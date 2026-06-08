@@ -55,7 +55,7 @@ func dashboardFromContext(ctx context.Context) (*persesv1alpha2.PersesDashboard,
 // PersesDashboardReconciler reconciles a PersesDashboard object
 type PersesDashboardReconciler struct {
 	client.Client
-	APIReader             client.Reader // uncached reader for Secret data (cached client strips Data via Transform)
+	APIReader             client.Reader // uncached reader — cached client strips Spec via Transform
 	Scheme                *runtime.Scheme
 	Recorder              record.EventRecorder
 	ClientFactory         common.PersesClientFactory
@@ -80,7 +80,7 @@ func (r *PersesDashboardReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	// Find once and store in context for all sub-reconcilers, handle deletion if not found
 	dashboard := &persesv1alpha2.PersesDashboard{}
-	if err := r.Get(ctx, req.NamespacedName, dashboard); err != nil {
+	if err := r.APIReader.Get(ctx, req.NamespacedName, dashboard); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Infof("perses dashboard resource not found. Deleting '%s' in '%s'", req.Name, req.Namespace)
 			if r.ReconciliationTracker != nil {

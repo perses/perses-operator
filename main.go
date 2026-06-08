@@ -30,7 +30,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	k8sapiflag "k8s.io/component-base/cli/flag"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
@@ -122,7 +122,7 @@ func main() {
 	if watchAllSecrets && watchSecretLabelsFlag != "" {
 		setupLog.Info("--watch-all-secrets is set, --watch-secret-labels will be ignored")
 	}
-	cacheByObject := internalcache.BuildCacheByObject(secretSelector, watchAllSecrets, tlsClusterProfile)
+	cacheOpts := internalcache.BuildCacheOptions(secretSelector, watchAllSecrets, tlsClusterProfile)
 
 	// Parse and validate TLS settings
 	parsedTLSMinVersion, err := operatortls.ParseTLSVersion(tlsMinVersion)
@@ -215,9 +215,7 @@ func main() {
 		// after the manager stops then its usage might be unsafe.
 		// LeaderElectionReleaseOnCancel: true,
 		PprofBindAddress: "127.0.0.1:8083",
-		Cache: cache.Options{
-			ByObject: cacheByObject,
-		},
+		Cache: cacheOpts,
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
