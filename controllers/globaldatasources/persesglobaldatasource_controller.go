@@ -54,7 +54,7 @@ func globalDatasourceFromContext(ctx context.Context) (*persesv1alpha2.PersesGlo
 // PersesGlobalDatasourceReconciler reconciles a PersesDatasource object
 type PersesGlobalDatasourceReconciler struct {
 	client.Client
-	APIReader             client.Reader // uncached reader for Secret data (cached client strips Data via Transform)
+	APIReader             client.Reader // uncached reader — cached client strips Spec via Transform
 	Scheme                *runtime.Scheme
 	Recorder              record.EventRecorder
 	ClientFactory         common.PersesClientFactory
@@ -79,7 +79,7 @@ func (r *PersesGlobalDatasourceReconciler) Reconcile(ctx context.Context, req ct
 	log.Infof("Reconciling PersesGlobalDatasource: %s", req.Name)
 
 	globaldatasource := &persesv1alpha2.PersesGlobalDatasource{}
-	if err := r.Get(ctx, req.NamespacedName, globaldatasource); err != nil {
+	if err := r.APIReader.Get(ctx, req.NamespacedName, globaldatasource); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Infof("perses globaldatasource resource not found. Deleting '%s'", req.Name)
 			if r.ReconciliationTracker != nil {

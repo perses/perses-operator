@@ -15,6 +15,7 @@ package cache
 
 import (
 	configv1 "github.com/openshift/api/config/v1"
+	persesv1alpha2 "github.com/rhobs/perses-operator/api/v1alpha2"
 	"github.com/rhobs/perses-operator/internal/perses/common"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -33,17 +34,30 @@ func ParseSecretLabelSelector(raw string) (labels.Selector, error) {
 	return labels.Parse(raw)
 }
 
-// BuildCacheByObject builds the cache.ByObject map for the manager's cache configuration.
+// BuildCacheOptions builds the cache configuration for the manager.
+//
+// ManagedFields are stripped from all cached objects via DefaultTransform to reduce
+// memory usage. Per-object Transforms override DefaultTransform, so they also strip
+// ManagedFields explicitly.
 //
 // Operator-created resources (Deployment, StatefulSet, ConfigMap, Service) are filtered
 // by the fixed label app.kubernetes.io/managed-by=perses-operator.
 //
+// CRD resources (PersesDashboard, PersesDatasource, PersesGlobalDatasource) have their
+// Spec stripped from the cache. Controllers use APIReader for the full object.
+//
 // Secrets are filtered by secretSelector. If secretSelector is nil (no flag provided),
 // the default label perses.dev/watch=true is used. If watchAllSecrets is true, no label
 // filter is applied to secrets (preserving pre-change behavior).
-//
 // Secret data is always stripped from the cache via Transform regardless of label filtering.
-func BuildCacheByObject(secretSelector labels.Selector, watchAllSecrets bool, tlsClusterProfile bool) map[client.Object]cache.ByObject {
+func BuildCacheOptions(secretSelector labels.Selector, watchAllSecrets bool, tlsClusterProfile bool) cache.Options {
+	return cache.Options{
+		DefaultTransform: cache.TransformStripManagedFields(),
+		ByObject:         buildCacheByObject(secretSelector, watchAllSecrets, tlsClusterProfile),
+	}
+}
+
+func buildCacheByObject(secretSelector labels.Selector, watchAllSecrets bool, tlsClusterProfile bool) map[client.Object]cache.ByObject {
 	managedBySelector := labels.SelectorFromSet(labels.Set{
 		common.PersesManagedByLabel: common.PersesManagedByValue,
 	})
@@ -61,14 +75,44 @@ func BuildCacheByObject(secretSelector labels.Selector, watchAllSecrets bool, tl
 		&corev1.Service{}: {
 			Label: managedBySelector,
 		},
+		&persesv1alpha2.PersesDashboard{}: {
+			Transform: func(obj any) (any, error) {
+				if d, ok := obj.(*persesv1alpha2.PersesDashboard); ok {
+					d.ManagedFields = nil
+					d.Spec.Config = persesv1alpha2.Dashboard{}
+					d.Spec.InstanceSelector = nil
+				}
+				return obj, nil
+			},
+		},
+		&persesv1alpha2.PersesDatasource{}: {
+			Transform: func(obj any) (any, error) {
+				if d, ok := obj.(*persesv1alpha2.PersesDatasource); ok {
+					d.ManagedFields = nil
+					d.Spec.Config = persesv1alpha2.Datasource{}
+					d.Spec.Client = nil
+					d.Spec.InstanceSelector = nil
+				}
+				return obj, nil
+			},
+		},
+		&persesv1alpha2.PersesGlobalDatasource{}: {
+			Transform: func(obj any) (any, error) {
+				if d, ok := obj.(*persesv1alpha2.PersesGlobalDatasource); ok {
+					d.ManagedFields = nil
+					d.Spec.Config = persesv1alpha2.Datasource{}
+					d.Spec.Client = nil
+					d.Spec.InstanceSelector = nil
+				}
+				return obj, nil
+			},
+		},
 	}
 
 	secretEntry := cache.ByObject{
-		// Strip secret data from the cache to reduce memory usage.
-		// All controllers watch or read secrets but only need metadata for change detection.
-		// Controllers that need actual secret data use the APIReader instead.
 		Transform: func(obj any) (any, error) {
 			if secret, ok := obj.(*corev1.Secret); ok {
+				secret.ManagedFields = nil
 				secret.Data = nil
 				secret.StringData = nil
 			}

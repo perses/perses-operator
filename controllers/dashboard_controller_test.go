@@ -258,6 +258,135 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 			}, time.Minute, time.Second).Should(Succeed())
 		})
 
+		It("should call Update on the Perses API when the dashboard spec changes", func() {
+			By("Creating the custom resource for the Kind PersesDashboard")
+			dashboard := &persesv1alpha2.PersesDashboard{}
+			err := k8sClient.Get(ctx, dashboardNamespaceName, dashboard)
+			if err != nil && errors.IsNotFound(err) {
+				dashboard = &persesv1alpha2.PersesDashboard{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      DashboardName,
+						Namespace: PersesNamespace,
+					},
+					Spec: persesv1alpha2.PersesDashboardSpec{
+						Config: persesv1alpha2.Dashboard{
+							Spec: newDashboard.Spec,
+						},
+					},
+				}
+				err = k8sClient.Create(ctx, dashboard)
+				Expect(err).To(Not(HaveOccurred()))
+			}
+
+			By("Checking if the custom resource was successfully created")
+			Eventually(func() error {
+				return k8sClient.Get(ctx, dashboardNamespaceName, dashboard)
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Initial reconciliation - creates the dashboard in Perses")
+			mockPersesClient := new(internal.MockClient)
+			mockDashboard := new(internal.MockDashboard)
+			mockPersesClient.On("Dashboard", PersesNamespace).Return(mockDashboard)
+			mockDashboard.On("Get", DashboardName).Return(&persesv1.Dashboard{}, perseshttp.RequestNotFoundError)
+			mockDashboard.On("Create", newDashboard).Return(&persesv1.Dashboard{}, nil)
+
+			dashboardReconciler := &dashboardcontroller.PersesDashboardReconciler{
+				Client:        k8sClient,
+				APIReader:     k8sClient,
+				Scheme:        k8sClient.Scheme(),
+				ClientFactory: common.NewWithClient(mockPersesClient),
+			}
+
+			_, err = dashboardReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: dashboardNamespaceName,
+			})
+			Expect(err).To(Not(HaveOccurred()))
+			mockDashboard.AssertCalled(GinkgoT(), "Create", newDashboard)
+
+			By("Updating the dashboard spec")
+			Eventually(func() error {
+				if err := k8sClient.Get(ctx, dashboardNamespaceName, dashboard); err != nil {
+					return err
+				}
+				dashboard.Spec.Config.Spec.Duration = "10m"
+				dashboard.Spec.Config.Spec.Display = &speccommon.Display{Name: "Updated Dashboard"}
+				return k8sClient.Update(ctx, dashboard)
+			}, time.Second*10, time.Millisecond*250).Should(Succeed())
+
+			By("Re-reconciling with the updated spec")
+			mockPersesClient2 := new(internal.MockClient)
+			mockDashboard2 := new(internal.MockDashboard)
+			mockPersesClient2.On("Dashboard", PersesNamespace).Return(mockDashboard2)
+
+			existingDashboard := &persesv1.Dashboard{
+				Kind: persesv1.KindDashboard,
+				Metadata: persesv1.ProjectMetadata{
+					Metadata: persesv1.Metadata{
+						Name: DashboardName,
+					},
+				},
+				Spec: newDashboard.Spec,
+			}
+			mockDashboard2.On("Get", DashboardName).Return(existingDashboard, nil)
+
+			updatedDashboard := &persesv1.Dashboard{
+				Kind: persesv1.KindDashboard,
+				Metadata: persesv1.ProjectMetadata{
+					Metadata: persesv1.Metadata{
+						Name: DashboardName,
+					},
+				},
+				Spec: dashboardSpec.Spec{
+					Display:  &speccommon.Display{Name: "Updated Dashboard"},
+					Duration: "10m",
+					Layouts:  []dashboardSpec.Layout{},
+					Panels: map[string]*dashboardSpec.Panel{
+						"panel1": {
+							Kind: "Panel",
+							Spec: dashboardSpec.PanelSpec{
+								Display: &dashboardSpec.PanelDisplay{
+									Name: "test-panel",
+								},
+								Plugin: speccommon.Plugin{
+									Kind: "PrometheusPlugin",
+									Spec: map[string]any{},
+								},
+							},
+						},
+					},
+				},
+			}
+			mockDashboard2.On("Update", updatedDashboard).Return(updatedDashboard, nil)
+
+			dashboardReconciler2 := &dashboardcontroller.PersesDashboardReconciler{
+				Client:        k8sClient,
+				APIReader:     k8sClient,
+				Scheme:        k8sClient.Scheme(),
+				ClientFactory: common.NewWithClient(mockPersesClient2),
+			}
+
+			_, err = dashboardReconciler2.Reconcile(ctx, reconcile.Request{
+				NamespacedName: dashboardNamespaceName,
+			})
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Verifying that Update was called (not Create)")
+			mockDashboard2.AssertCalled(GinkgoT(), "Update", updatedDashboard)
+			mockDashboard2.AssertNotCalled(GinkgoT(), "Create")
+
+			By("Cleaning up")
+			mockDashboard2.On("Delete", DashboardName).Return(nil)
+			dashboardToDelete := &persesv1alpha2.PersesDashboard{}
+			err = k8sClient.Get(ctx, dashboardNamespaceName, dashboardToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+			err = k8sClient.Delete(ctx, dashboardToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+			_, err = dashboardReconciler2.Reconcile(ctx, reconcile.Request{
+				NamespacedName: dashboardNamespaceName,
+			})
+			Expect(err).To(Not(HaveOccurred()))
+		})
+
 		It("should show the error on CR dashboard status when the backend returns one", func() {
 			By("Creating the custom resource for the Kind PersesDashboard")
 			dashboard := &persesv1alpha2.PersesDashboard{}
