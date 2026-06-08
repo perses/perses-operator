@@ -54,7 +54,7 @@ func datasourceFromContext(ctx context.Context) (*persesv1alpha2.PersesDatasourc
 // PersesDatasourceReconciler reconciles a PersesDatasource object
 type PersesDatasourceReconciler struct {
 	client.Client
-	APIReader             client.Reader // uncached reader for Secret data (cached client strips Data via Transform)
+	APIReader             client.Reader // uncached reader — cached client strips Spec via Transform
 	Scheme                *runtime.Scheme
 	Recorder              record.EventRecorder
 	ClientFactory         common.PersesClientFactory
@@ -80,11 +80,14 @@ func (r *PersesDatasourceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// Find once and store in context for all sub-reconcilers, handle deletion if not found
 	datasource := &persesv1alpha2.PersesDatasource{}
-	if err := r.Get(ctx, req.NamespacedName, datasource); err != nil {
+	if err := r.APIReader.Get(ctx, req.NamespacedName, datasource); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Infof("perses datasource resource not found. Deleting '%s' in '%s'", req.Name, req.Namespace)
 			if r.ReconciliationTracker != nil {
 				r.ReconciliationTracker.ForgetObject(objKey)
+			}
+			if r.Metrics != nil {
+				r.Metrics.ForgetObject(objKey)
 			}
 			return subreconciler.Evaluate(r.deleteDatasourceInAllInstances(ctx, req.Namespace, req.Name))
 		}
@@ -153,7 +156,11 @@ func (r *PersesDatasourceReconciler) updateDatasourceStatus(
 		if err := r.Get(ctx, req.NamespacedName, fresh); err != nil {
 			return err
 		}
+		before := common.SnapshotConditions(fresh.Status.Conditions)
 		updateFn(fresh)
+		if !common.ConditionsChanged(before, fresh.Status.Conditions) {
+			return nil
+		}
 		return r.Status().Update(ctx, fresh)
 	})
 

@@ -133,7 +133,7 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 		}
 	}
 
-	_, err = persesClient.Datasource(datasource.Namespace).Get(datasource.Name)
+	existing, err := persesClient.Datasource(datasource.Namespace).Get(datasource.Name)
 
 	datasourceWithName := &persesv1.Datasource{
 		Kind: persesv1.KindDatasource,
@@ -162,16 +162,21 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 		}
 
 		return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
-	} else {
-		_, err = persesClient.Datasource(datasource.Namespace).Update(datasourceWithName)
-
-		if err != nil {
-			dlog.WithError(err).Errorf("Failed to update datasource: %s", datasource.Name)
-			return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
-		}
-
-		dlog.Infof("Datasource updated: %s", datasource.Name)
 	}
+
+	if persescommon.DatasourceInSync(existing, datasourceWithName) {
+		dlog.Debugf("Datasource already in sync: %s", datasource.Name)
+		res, err := subreconciler.ContinueReconciling()
+		return res, "", err
+	}
+
+	_, err = persesClient.Datasource(datasource.Namespace).Update(datasourceWithName)
+	if err != nil {
+		dlog.WithError(err).Errorf("Failed to update datasource: %s", datasource.Name)
+		return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
+	}
+
+	dlog.Infof("Datasource updated: %s", datasource.Name)
 
 	res, err := subreconciler.ContinueReconciling()
 	return res, "", err
