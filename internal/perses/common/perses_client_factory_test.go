@@ -22,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
 
-	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
+	persesv1alpha2 "github.com/rhobs/perses-operator/api/v1alpha2"
 )
 
 func TestConfigFingerprint(t *testing.T) {
