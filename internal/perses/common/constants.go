@@ -14,11 +14,19 @@
 package common
 
 import (
+	"context"
+
+	log "github.com/sirupsen/logrus"
+
 	"github.com/rhobs/perses-operator/api/v1alpha2"
 	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 const (
@@ -126,6 +134,29 @@ func PersesBecameAvailable(oldObj, newObj client.Object) bool {
 	wasAvailable := meta.IsStatusConditionTrue(oldPerses.Status.Conditions, TypeAvailablePerses)
 	isAvailable := meta.IsStatusConditionTrue(newPerses.Status.Conditions, TypeAvailablePerses)
 	return !wasAvailable && isAvailable
+}
+
+// MetadataListToRequests lists all objects of the given GVK from the metadata-only
+// cache and returns a reconcile.Request for each one. It is intended for use in
+// mapper functions passed to handler.EnqueueRequestsFromMapFunc.
+func MetadataListToRequests(ctx context.Context, r client.Reader, gvk schema.GroupVersionKind) []reconcile.Request {
+	list := &metav1.PartialObjectMetadataList{}
+	list.SetGroupVersionKind(gvk)
+	if err := r.List(ctx, list); err != nil {
+		log.WithError(err).Errorf("Failed to list %s for Perses instance change", gvk.Kind)
+		return nil
+	}
+
+	requests := make([]reconcile.Request, len(list.Items))
+	for i, obj := range list.Items {
+		requests[i] = reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      obj.Name,
+				Namespace: obj.Namespace,
+			},
+		}
+	}
+	return requests
 }
 
 // PersesAvailabilityPredicate returns a predicate that triggers reconciliation

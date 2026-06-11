@@ -46,9 +46,11 @@ func newTestDashboardReconciler(objects ...runtime.Object) *PersesDashboardRecon
 	}
 	clientBuilder = clientBuilder.WithStatusSubresource(&persesv1alpha2.PersesDashboard{})
 
+	c := clientBuilder.Build()
 	return &PersesDashboardReconciler{
-		Client: clientBuilder.Build(),
-		Scheme: scheme,
+		Client:    c,
+		APIReader: c,
+		Scheme:    scheme,
 	}
 }
 
