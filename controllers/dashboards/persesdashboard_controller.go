@@ -22,7 +22,6 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -55,7 +54,7 @@ func dashboardFromContext(ctx context.Context) (*persesv1alpha2.PersesDashboard,
 // PersesDashboardReconciler reconciles a PersesDashboard object
 type PersesDashboardReconciler struct {
 	client.Client
-	APIReader             client.Reader // uncached reader — cached client strips Spec via Transform
+	APIReader             client.Reader // uncached reader — OnlyMetadata watch caches metadata only
 	Scheme                *runtime.Scheme
 	Recorder              record.EventRecorder
 	ClientFactory         common.PersesClientFactory
@@ -153,7 +152,7 @@ func (r *PersesDashboardReconciler) updateDashboardStatus(
 
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		fresh := &persesv1alpha2.PersesDashboard{}
-		if err := r.Get(ctx, req.NamespacedName, fresh); err != nil {
+		if err := r.APIReader.Get(ctx, req.NamespacedName, fresh); err != nil {
 			return err
 		}
 		before := common.SnapshotConditions(fresh.Status.Conditions)
@@ -230,22 +229,7 @@ func (r *PersesDashboardReconciler) setStatusToDegraded(
 // Each dashboard's instanceSelector labels determine which Perses instances it syncs to.
 // If no instanceSelector is set, the dashboard syncs to all Perses instances.
 func (r *PersesDashboardReconciler) findDashboardsForPerses(ctx context.Context, _ client.Object) []reconcile.Request {
-	dashboards := &persesv1alpha2.PersesDashboardList{}
-	if err := r.List(ctx, dashboards); err != nil {
-		log.WithError(err).Error("Failed to list dashboards for Perses instance change")
-		return nil
-	}
-
-	requests := make([]reconcile.Request, len(dashboards.Items))
-	for i, d := range dashboards.Items {
-		requests[i] = reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      d.Name,
-				Namespace: d.Namespace,
-			},
-		}
-	}
-	return requests
+	return common.MetadataListToRequests(ctx, r.Client, persesv1alpha2.GroupVersion.WithKind("PersesDashboardList"))
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -257,7 +241,7 @@ func (r *PersesDashboardReconciler) findDashboardsForPerses(ctx context.Context,
 // own reconciliation loop.
 func (r *PersesDashboardReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&persesv1alpha2.PersesDashboard{}).
+		For(&persesv1alpha2.PersesDashboard{}, builder.OnlyMetadata).
 		Watches(
 			&persesv1alpha2.Perses{},
 			handler.EnqueueRequestsFromMapFunc(r.findDashboardsForPerses),

@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -54,7 +53,7 @@ func globalDatasourceFromContext(ctx context.Context) (*persesv1alpha2.PersesGlo
 // PersesGlobalDatasourceReconciler reconciles a PersesDatasource object
 type PersesGlobalDatasourceReconciler struct {
 	client.Client
-	APIReader             client.Reader // uncached reader — cached client strips Spec via Transform
+	APIReader             client.Reader // uncached reader — OnlyMetadata watch caches metadata only
 	Scheme                *runtime.Scheme
 	Recorder              record.EventRecorder
 	ClientFactory         common.PersesClientFactory
@@ -153,7 +152,7 @@ func (r *PersesGlobalDatasourceReconciler) updateGlobalDatasourceStatus(
 
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		fresh := &persesv1alpha2.PersesGlobalDatasource{}
-		if err := r.Get(ctx, req.NamespacedName, fresh); err != nil {
+		if err := r.APIReader.Get(ctx, req.NamespacedName, fresh); err != nil {
 			return err
 		}
 		before := common.SnapshotConditions(fresh.Status.Conditions)
@@ -230,22 +229,7 @@ func (r *PersesGlobalDatasourceReconciler) setStatusToDegraded(
 // Global datasources are cluster-scoped and their instanceSelector labels determine
 // which Perses instances they sync to. If no instanceSelector is set, they sync to all instances.
 func (r *PersesGlobalDatasourceReconciler) findGlobalDatasourcesForPerses(ctx context.Context, _ client.Object) []reconcile.Request {
-	datasources := &persesv1alpha2.PersesGlobalDatasourceList{}
-	if err := r.List(ctx, datasources); err != nil {
-		log.WithError(err).Error("Failed to list globaldatasources for Perses instance change")
-		return nil
-	}
-
-	requests := make([]reconcile.Request, len(datasources.Items))
-	for i, d := range datasources.Items {
-		requests[i] = reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      d.Name,
-				Namespace: d.Namespace,
-			},
-		}
-	}
-	return requests
+	return common.MetadataListToRequests(ctx, r.Client, persesv1alpha2.GroupVersion.WithKind("PersesGlobalDatasourceList"))
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -256,7 +240,7 @@ func (r *PersesGlobalDatasourceReconciler) findGlobalDatasourcesForPerses(ctx co
 // ready at creation, and deletion is handled by the global datasource's own reconciliation loop.
 func (r *PersesGlobalDatasourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&persesv1alpha2.PersesGlobalDatasource{}).
+		For(&persesv1alpha2.PersesGlobalDatasource{}, builder.OnlyMetadata).
 		Watches(
 			&persesv1alpha2.Perses{},
 			handler.EnqueueRequestsFromMapFunc(r.findGlobalDatasourcesForPerses),

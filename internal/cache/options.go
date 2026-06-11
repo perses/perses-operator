@@ -15,7 +15,6 @@ package cache
 
 import (
 	configv1 "github.com/openshift/api/config/v1"
-	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 	"github.com/perses/perses-operator/internal/perses/common"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -43,8 +42,8 @@ func ParseSecretLabelSelector(raw string) (labels.Selector, error) {
 // Operator-created resources (Deployment, StatefulSet, ConfigMap, Service) are filtered
 // by the fixed label app.kubernetes.io/managed-by=perses-operator.
 //
-// CRD resources (PersesDashboard, PersesDatasource, PersesGlobalDatasource) have their
-// Spec stripped from the cache. Controllers use APIReader for the full object.
+// CRD resources (PersesDashboard, PersesDatasource, PersesGlobalDatasource) are not
+// cached here — their controllers use builder.OnlyMetadata and APIReader instead.
 //
 // Secrets are filtered by secretSelector. If secretSelector is nil (no flag provided),
 // the default label perses.dev/watch=true is used. If watchAllSecrets is true, no label
@@ -74,38 +73,6 @@ func buildCacheByObject(secretSelector labels.Selector, watchAllSecrets bool, tl
 		},
 		&corev1.Service{}: {
 			Label: managedBySelector,
-		},
-		&persesv1alpha2.PersesDashboard{}: {
-			Transform: func(obj any) (any, error) {
-				if d, ok := obj.(*persesv1alpha2.PersesDashboard); ok {
-					d.ManagedFields = nil
-					d.Spec.Config = persesv1alpha2.Dashboard{}
-					d.Spec.InstanceSelector = nil
-				}
-				return obj, nil
-			},
-		},
-		&persesv1alpha2.PersesDatasource{}: {
-			Transform: func(obj any) (any, error) {
-				if d, ok := obj.(*persesv1alpha2.PersesDatasource); ok {
-					d.ManagedFields = nil
-					d.Spec.Config = persesv1alpha2.Datasource{}
-					d.Spec.Client = nil
-					d.Spec.InstanceSelector = nil
-				}
-				return obj, nil
-			},
-		},
-		&persesv1alpha2.PersesGlobalDatasource{}: {
-			Transform: func(obj any) (any, error) {
-				if d, ok := obj.(*persesv1alpha2.PersesGlobalDatasource); ok {
-					d.ManagedFields = nil
-					d.Spec.Config = persesv1alpha2.Datasource{}
-					d.Spec.Client = nil
-					d.Spec.InstanceSelector = nil
-				}
-				return obj, nil
-			},
 		},
 	}
 
