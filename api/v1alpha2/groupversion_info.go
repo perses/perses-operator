@@ -17,16 +17,36 @@
 package v1alpha2
 
 import (
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/scheme"
 )
+
+// groupVersionRegistrar replaces the deprecated sigs.k8s.io/controller-runtime/pkg/scheme.Builder
+// to avoid pulling controller-runtime into API packages.
+type groupVersionRegistrar struct {
+	gv schema.GroupVersion
+	runtime.SchemeBuilder
+}
+
+func (r *groupVersionRegistrar) Register(objs ...runtime.Object) {
+	r.SchemeBuilder.Register(func(s *runtime.Scheme) error {
+		s.AddKnownTypes(r.gv, objs...)
+		metav1.AddToGroupVersion(s, r.gv)
+		return nil
+	})
+}
+
+func (r *groupVersionRegistrar) AddToScheme(s *runtime.Scheme) error {
+	return r.SchemeBuilder.AddToScheme(s)
+}
 
 var (
 	// GroupVersion is group version used to register these objects
 	GroupVersion = schema.GroupVersion{Group: "perses.dev", Version: "v1alpha2"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
-	SchemeBuilder = &scheme.Builder{GroupVersion: GroupVersion}
+	SchemeBuilder = &groupVersionRegistrar{gv: GroupVersion}
 
 	// AddToScheme adds the types in this group-version to the given scheme.
 	AddToScheme = SchemeBuilder.AddToScheme

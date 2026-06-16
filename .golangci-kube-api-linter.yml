@@ -7,7 +7,7 @@
 version: "2"
 
 run:
-  go: "1.25"
+  go: "1.26"
   allow-parallel-runners: true
 
 linters:
@@ -29,6 +29,7 @@ linters:
     paths:
       - _test\.go
       - zz_generated.*\.go$
+      - groupversion_info\.go$
     rules:
       - linters:
           - kubeapilinter
