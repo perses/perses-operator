@@ -1992,8 +1992,8 @@ metadata:
     capabilities: Basic Install
     categories: Monitoring
     containerImage: docker.io/persesdev/perses-operator:v0.4.0
-    createdAt: "2026-05-22T10:12:19Z"
-    operators.operatorframework.io/builder: operator-sdk-v1.42.0
+    createdAt: "2026-06-16T13:44:56Z"
+    operators.operatorframework.io/builder: operator-sdk-v1.42.2
     operators.operatorframework.io/project_layout: go.kubebuilder.io/v4
     repository: https://github.com/perses/perses-operator
   labels:
