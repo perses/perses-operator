@@ -23,14 +23,14 @@ KUSTOMIZE = $(LOCALBIN)/kustomize
 KUSTOMIZE_VERSION = v5.8.1
 
 CONTROLLER_GEN = $(LOCALBIN)/controller-gen
-CONTROLLER_TOOLS_VERSION = v0.20.0
+CONTROLLER_TOOLS_VERSION = v0.20.1
 
 GOJSONTOYAML_BINARY = $(LOCALBIN)/gojsontoyaml
 GOJSONTOYAML_VERSION = v0.1.0
 
 ENVTEST = $(LOCALBIN)/setup-envtest
-ENVTEST_VERSION = release-0.22  # Version of setup-envtest binary
-ENVTEST_K8S_VERSION = 1.34.0    # Kubernetes version for test assets
+ENVTEST_VERSION = release-0.24  # Version of setup-envtest binary
+ENVTEST_K8S_VERSION = 1.36.0    # Kubernetes version for test assets
 
 JSONNET_BINARY = $(LOCALBIN)/jsonnet
 JSONNET_VERSION = v0.21.0
@@ -42,19 +42,19 @@ JSONNETLINT_BINARY = $(LOCALBIN)/jsonnet-lint
 JSONNETLINT_VERSION = v0.21.0
 
 CONVERSION_GEN = $(LOCALBIN)/conversion-gen
-CONVERSION_GEN_VERSION = v0.35.0
+CONVERSION_GEN_VERSION = v0.36.2
 
 YQ = $(LOCALBIN)/yq
-YQ_VERSION = v4.52.2
+YQ_VERSION = v4.53.3
 
 CRD_REF_DOCS = $(LOCALBIN)/crd-ref-docs
 CRD_REF_DOCS_VERSION = v0.3.0
 
 OPERATOR_SDK = $(LOCALBIN)/operator-sdk
-OPERATOR_SDK_VERSION = v1.42.0
+OPERATOR_SDK_VERSION = v1.42.2
 
 OPM = $(LOCALBIN)/opm
-OPM_VERSION = v1.61.0
+OPM_VERSION = v1.65.0
 
 GINKGO = $(LOCALBIN)/ginkgo
 GINKGO_VERSION = $(shell grep 'github.com/onsi/ginkgo/v2' go.mod | awk '{print $$2}')
@@ -67,12 +67,12 @@ MDOX = $(LOCALBIN)/mdox
 MDOX_VERSION = main
 
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
-GOLANGCI_LINT_VERSION = v2.10.1
+GOLANGCI_LINT_VERSION = v2.12.2
 
 GOLANGCI_LINT_KAL = $(LOCALBIN)/golangci-lint-kube-api-linter
 
 SHFMT = $(LOCALBIN)/shfmt
-SHFMT_VERSION = v3.13.0
+SHFMT_VERSION = v3.13.1
 
 SHELLCHECK = $(LOCALBIN)/shellcheck
 SHELLCHECK_VERSION = v0.11.0
