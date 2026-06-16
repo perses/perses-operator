@@ -29,6 +29,7 @@ linters:
     paths:
       - _test\.go
       - zz_generated.*\.go$
+      - groupversion_info\.go$
     rules:
       - linters:
           - kubeapilinter
