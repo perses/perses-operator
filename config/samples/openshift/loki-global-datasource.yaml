@@ -1,0 +1,25 @@
+apiVersion: perses.dev/v1alpha2
+kind: PersesGlobalDatasource
+metadata:
+  name: loki-datasource
+spec:
+  config:
+    display:
+      name: "Loki Datasource (Application Logs)"
+    default: true
+    plugin:
+      kind: "LokiDatasource"
+      spec:
+        proxy:
+          kind: HTTPProxy
+          spec:
+            url: https://logging-loki-gateway-http.openshift-logging.svc.cluster.local:8080/api/logs/v1/application
+            headers:
+              X-Scope-OrgID: application
+            secret: loki-datasource-secret # must be `${name}-secret`
+  client:
+    tls:
+      enable: true
+      caCert:
+        type: file
+        certPath: /ca/service-ca.crt

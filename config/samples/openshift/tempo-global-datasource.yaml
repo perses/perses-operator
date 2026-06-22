@@ -1,0 +1,23 @@
+apiVersion: perses.dev/v1alpha2
+kind: PersesGlobalDatasource
+metadata:
+  name: tempo-datasource
+spec:
+  config:
+    display:
+      name: "Tempo Global Datasource"
+    default: true
+    plugin:
+      kind: "TempoDatasource"
+      spec:
+        proxy:
+          kind: HTTPProxy
+          spec:
+            url: https://tempo-simplest-gateway.openshift-tracing.svc.cluster.local:8080/api/traces/v1/tenant1/tempo
+            secret: tempo-datasource-secret # must be `${name}-secret`
+  client:
+    tls:
+      enable: true
+      caCert:
+        type: file
+        certPath: /ca/service-ca.crt
