@@ -1,6 +1,6 @@
 module github.com/rhobs/perses-operator
 
-go 1.26.4
+go 1.26.3
 
 require (
 	github.com/brunoga/deep v1.3.1
