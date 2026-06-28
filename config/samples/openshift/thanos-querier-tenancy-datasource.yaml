@@ -1,0 +1,26 @@
+apiVersion: perses.dev/v1alpha1
+kind: PersesDatasource
+metadata:
+  name: thanos-querier-tenancy-datasource
+  namespace: perses-dev
+spec:
+  config:
+    display:
+      name: "Thanos Querier Tenancy Datasource"
+    default: true
+    plugin:
+      kind: "PrometheusDatasource"
+      spec:
+        proxy:
+          kind: HTTPProxy
+          spec:
+            url: https://thanos-querier.openshift-monitoring.svc.cluster.local:9092 # 9092 port is used for multi-tenancy
+            secret: thanos-querier-tenancy-datasource-secret # must be `${name}-secret`
+          queryParams:
+            namespace: "${namespace:queryparam}" # this will be used to add the namespaces from variable selection as query parameters for multi-tenancy
+  client:
+    tls:
+      enable: true
+      caCert:
+        type: file
+        certPath: /ca/service-ca.crt
