@@ -46,9 +46,11 @@ func newTestDatasourceReconciler(objects ...runtime.Object) *PersesDatasourceRec
 	}
 	clientBuilder = clientBuilder.WithStatusSubresource(&persesv1alpha2.PersesDatasource{})
 
+	c := clientBuilder.Build()
 	return &PersesDatasourceReconciler{
-		Client: clientBuilder.Build(),
-		Scheme: scheme,
+		Client:    c,
+		APIReader: c,
+		Scheme:    scheme,
 	}
 }
 

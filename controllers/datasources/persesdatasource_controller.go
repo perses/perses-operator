@@ -23,7 +23,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -54,7 +53,7 @@ func datasourceFromContext(ctx context.Context) (*persesv1alpha2.PersesDatasourc
 // PersesDatasourceReconciler reconciles a PersesDatasource object
 type PersesDatasourceReconciler struct {
 	client.Client
-	APIReader             client.Reader // uncached reader — cached client strips Spec via Transform
+	APIReader             client.Reader // uncached reader — OnlyMetadata watch caches metadata only
 	Scheme                *runtime.Scheme
 	Recorder              record.EventRecorder
 	ClientFactory         common.PersesClientFactory
@@ -153,7 +152,7 @@ func (r *PersesDatasourceReconciler) updateDatasourceStatus(
 
 	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		fresh := &persesv1alpha2.PersesDatasource{}
-		if err := r.Get(ctx, req.NamespacedName, fresh); err != nil {
+		if err := r.APIReader.Get(ctx, req.NamespacedName, fresh); err != nil {
 			return err
 		}
 		before := common.SnapshotConditions(fresh.Status.Conditions)
@@ -230,22 +229,7 @@ func (r *PersesDatasourceReconciler) setStatusToDegraded(
 // Each datasource's instanceSelector labels determine which Perses instances it syncs to.
 // If no instanceSelector is set, the datasource syncs to all Perses instances.
 func (r *PersesDatasourceReconciler) findDatasourcesForPerses(ctx context.Context, _ client.Object) []reconcile.Request {
-	datasources := &persesv1alpha2.PersesDatasourceList{}
-	if err := r.List(ctx, datasources); err != nil {
-		log.WithError(err).Error("Failed to list datasources for Perses instance change")
-		return nil
-	}
-
-	requests := make([]reconcile.Request, len(datasources.Items))
-	for i, d := range datasources.Items {
-		requests[i] = reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      d.Name,
-				Namespace: d.Namespace,
-			},
-		}
-	}
-	return requests
+	return common.MetadataListToRequests(ctx, r.Client, persesv1alpha2.GroupVersion.WithKind("PersesDatasourceList"))
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -257,7 +241,7 @@ func (r *PersesDatasourceReconciler) findDatasourcesForPerses(ctx context.Contex
 // own reconciliation loop.
 func (r *PersesDatasourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&persesv1alpha2.PersesDatasource{}).
+		For(&persesv1alpha2.PersesDatasource{}, builder.OnlyMetadata).
 		Watches(
 			&persesv1alpha2.Perses{},
 			handler.EnqueueRequestsFromMapFunc(r.findDatasourcesForPerses),

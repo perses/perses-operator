@@ -18,9 +18,6 @@ import (
 	"testing"
 
 	configv1 "github.com/openshift/api/config/v1"
-	persesCommon "github.com/perses/spec/go/common"
-	persesDashboard "github.com/perses/spec/go/dashboard"
-	persesDatasource "github.com/perses/spec/go/datasource"
 	persesv1alpha2 "github.com/rhobs/perses-operator/api/v1alpha2"
 	"github.com/rhobs/perses-operator/internal/perses/common"
 	appsv1 "k8s.io/api/apps/v1"
@@ -359,17 +356,21 @@ func TestBuildCacheByObject_NoTLSClusterProfile(t *testing.T) {
 	}
 }
 
-func getCRDTransform(t *testing.T, target client.Object) func(obj any) (any, error) {
-	t.Helper()
+func TestBuildCacheByObject_NoCRDEntries(t *testing.T) {
 	byObject := buildCacheByObject(nil, false, false)
-	entry := findByObjectEntry(byObject, target)
-	if entry == nil {
-		t.Fatalf("expected ByObject entry for %T", target)
+
+	crdTypes := []client.Object{
+		&persesv1alpha2.PersesDashboard{},
+		&persesv1alpha2.PersesDatasource{},
+		&persesv1alpha2.PersesGlobalDatasource{},
 	}
-	if entry.Transform == nil {
-		t.Fatalf("expected Transform on %T entry", target)
+
+	for _, obj := range crdTypes {
+		entry := findByObjectEntry(byObject, obj)
+		if entry != nil {
+			t.Errorf("expected no ByObject entry for %T (controllers use builder.OnlyMetadata instead)", obj)
+		}
 	}
-	return entry.Transform
 }
 
 func TestBuildCacheOptions_SetsDefaultTransform(t *testing.T) {
@@ -407,28 +408,6 @@ func TestBuildCacheOptions_ContainsByObject(t *testing.T) {
 	}
 }
 
-func TestBuildCacheByObject_DashboardTransformStripsManagedFields(t *testing.T) {
-	transform := getCRDTransform(t, &persesv1alpha2.PersesDashboard{})
-
-	dashboard := &persesv1alpha2.PersesDashboard{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-dash",
-			ManagedFields: []metav1.ManagedFieldsEntry{
-				{Manager: "kubectl", Operation: metav1.ManagedFieldsOperationApply},
-			},
-		},
-	}
-
-	result, err := transform(dashboard)
-	if err != nil {
-		t.Fatalf("Transform returned error: %v", err)
-	}
-
-	if result.(*persesv1alpha2.PersesDashboard).ManagedFields != nil {
-		t.Error("expected ManagedFields to be nil after Transform")
-	}
-}
-
 func TestBuildCacheByObject_SecretTransformStripsManagedFields(t *testing.T) {
 	transform := getSecretTransform(t)
 
@@ -451,183 +430,3 @@ func TestBuildCacheByObject_SecretTransformStripsManagedFields(t *testing.T) {
 	}
 }
 
-func TestBuildCacheByObject_DashboardTransformStripsSpec(t *testing.T) {
-	transform := getCRDTransform(t, &persesv1alpha2.PersesDashboard{})
-
-	dashboard := &persesv1alpha2.PersesDashboard{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            "test-dash",
-			Namespace:       "test-ns",
-			ResourceVersion: "12345",
-			Labels:          map[string]string{"app": "test"},
-			Annotations:     map[string]string{"perses.dev/tags": "oncall"},
-		},
-		Spec: persesv1alpha2.PersesDashboardSpec{
-			Config: persesv1alpha2.Dashboard{
-				Spec: persesDashboard.Spec{
-					Display:  &persesCommon.Display{Name: "My Dashboard"},
-					Duration: "5m",
-				},
-			},
-			InstanceSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"env": "prod"},
-			},
-		},
-		Status: persesv1alpha2.PersesDashboardStatus{
-			Conditions: []metav1.Condition{{
-				Type:   common.TypeAvailablePerses,
-				Status: metav1.ConditionTrue,
-				Reason: "Reconciled",
-			}},
-		},
-	}
-
-	result, err := transform(dashboard)
-	if err != nil {
-		t.Fatalf("Transform returned error: %v", err)
-	}
-
-	d := result.(*persesv1alpha2.PersesDashboard)
-
-	if d.Spec.Config.Display != nil || d.Spec.Config.Duration != "" {
-		t.Error("expected Spec.Config to be zeroed")
-	}
-	if d.Spec.InstanceSelector != nil {
-		t.Error("expected Spec.InstanceSelector to be nil")
-	}
-
-	if d.Name != "test-dash" || d.Namespace != "test-ns" || d.ResourceVersion != "12345" {
-		t.Error("expected ObjectMeta to be preserved")
-	}
-	if d.Labels["app"] != "test" || d.Annotations["perses.dev/tags"] != "oncall" {
-		t.Error("expected Labels and Annotations to be preserved")
-	}
-	if len(d.Status.Conditions) != 1 || d.Status.Conditions[0].Type != common.TypeAvailablePerses {
-		t.Error("expected Status.Conditions to be preserved")
-	}
-}
-
-func TestBuildCacheByObject_DashboardTransformEmptyObject(t *testing.T) {
-	transform := getCRDTransform(t, &persesv1alpha2.PersesDashboard{})
-
-	dashboard := &persesv1alpha2.PersesDashboard{}
-	result, err := transform(dashboard)
-	if err != nil {
-		t.Fatalf("Transform returned error: %v", err)
-	}
-
-	if result.(*persesv1alpha2.PersesDashboard) == nil {
-		t.Error("expected non-nil result")
-	}
-}
-
-func TestBuildCacheByObject_DatasourceTransformStripsSpec(t *testing.T) {
-	transform := getCRDTransform(t, &persesv1alpha2.PersesDatasource{})
-
-	datasource := &persesv1alpha2.PersesDatasource{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            "test-ds",
-			Namespace:       "test-ns",
-			ResourceVersion: "67890",
-		},
-		Spec: persesv1alpha2.DatasourceSpec{
-			Config: persesv1alpha2.Datasource{
-				Spec: persesDatasource.Spec{
-					Default: true,
-					Plugin:  persesCommon.Plugin{Kind: "PrometheusDatasource"},
-				},
-			},
-			Client: &persesv1alpha2.Client{
-				BasicAuth: &persesv1alpha2.BasicAuth{Username: "admin"},
-			},
-			InstanceSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"env": "prod"},
-			},
-		},
-		Status: persesv1alpha2.PersesDatasourceStatus{
-			Conditions: []metav1.Condition{{
-				Type:   common.TypeAvailablePerses,
-				Status: metav1.ConditionTrue,
-			}},
-		},
-	}
-
-	result, err := transform(datasource)
-	if err != nil {
-		t.Fatalf("Transform returned error: %v", err)
-	}
-
-	d := result.(*persesv1alpha2.PersesDatasource)
-
-	if d.Spec.Config.Default || d.Spec.Config.Plugin.Kind != "" {
-		t.Error("expected Spec.Config to be zeroed")
-	}
-	if d.Spec.Client != nil {
-		t.Error("expected Spec.Client to be nil")
-	}
-	if d.Spec.InstanceSelector != nil {
-		t.Error("expected Spec.InstanceSelector to be nil")
-	}
-
-	if d.Name != "test-ds" || d.ResourceVersion != "67890" {
-		t.Error("expected ObjectMeta to be preserved")
-	}
-	if len(d.Status.Conditions) != 1 {
-		t.Error("expected Status.Conditions to be preserved")
-	}
-}
-
-func TestBuildCacheByObject_GlobalDatasourceTransformStripsSpec(t *testing.T) {
-	transform := getCRDTransform(t, &persesv1alpha2.PersesGlobalDatasource{})
-
-	gds := &persesv1alpha2.PersesGlobalDatasource{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            "test-gds",
-			ResourceVersion: "11111",
-		},
-		Spec: persesv1alpha2.DatasourceSpec{
-			Config: persesv1alpha2.Datasource{
-				Spec: persesDatasource.Spec{
-					Default: true,
-					Plugin:  persesCommon.Plugin{Kind: "PrometheusDatasource"},
-				},
-			},
-			Client: &persesv1alpha2.Client{
-				BasicAuth: &persesv1alpha2.BasicAuth{Username: "admin"},
-			},
-			InstanceSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"env": "prod"},
-			},
-		},
-		Status: persesv1alpha2.PersesGlobalDatasourceStatus{
-			Conditions: []metav1.Condition{{
-				Type:   common.TypeAvailablePerses,
-				Status: metav1.ConditionTrue,
-			}},
-		},
-	}
-
-	result, err := transform(gds)
-	if err != nil {
-		t.Fatalf("Transform returned error: %v", err)
-	}
-
-	d := result.(*persesv1alpha2.PersesGlobalDatasource)
-
-	if d.Spec.Config.Default || d.Spec.Config.Plugin.Kind != "" {
-		t.Error("expected Spec.Config to be zeroed")
-	}
-	if d.Spec.Client != nil {
-		t.Error("expected Spec.Client to be nil")
-	}
-	if d.Spec.InstanceSelector != nil {
-		t.Error("expected Spec.InstanceSelector to be nil")
-	}
-
-	if d.Name != "test-gds" || d.ResourceVersion != "11111" {
-		t.Error("expected ObjectMeta to be preserved")
-	}
-	if len(d.Status.Conditions) != 1 {
-		t.Error("expected Status.Conditions to be preserved")
-	}
-}
