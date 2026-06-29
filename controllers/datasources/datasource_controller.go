@@ -21,6 +21,7 @@ import (
 	"time"
 
 	v1 "github.com/perses/perses/pkg/client/api/v1"
+	"github.com/perses/perses/pkg/client/api/validate"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	"github.com/perses/perses/pkg/model/api/v1/common"
@@ -144,6 +145,14 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 			},
 		},
 		Spec: datasource.Spec.Config.DatasourceSpec,
+	}
+
+	if validateErr := validate.New(persesClient.RESTClient()).Datasource(datasourceWithName); validateErr != nil {
+		dlog.WithError(validateErr).Errorf("Datasource validation failed: %s", datasource.Name)
+		return subreconciler.RequeueWithErrorAndReason(
+			fmt.Errorf("datasource %q failed server-side validation: %w", datasource.Name, validateErr),
+			persescommon.ReasonValidationFailed,
+		)
 	}
 
 	if err != nil {

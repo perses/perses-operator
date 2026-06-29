@@ -21,6 +21,7 @@ import (
 	"time"
 
 	v1 "github.com/perses/perses/pkg/client/api/v1"
+	"github.com/perses/perses/pkg/client/api/validate"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	"github.com/perses/perses/pkg/model/api/v1/secret"
@@ -113,6 +114,14 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalDatasource(ctx contex
 			Tags: persescommon.ParseTags(globaldatasource.Annotations),
 		},
 		Spec: globaldatasource.Spec.Config.DatasourceSpec,
+	}
+
+	if validateErr := validate.New(persesClient.RESTClient()).GlobalDatasource(globalDatasourceWithName); validateErr != nil {
+		gdlog.WithError(validateErr).Errorf("GlobalDatasource validation failed: %s", globaldatasource.Name)
+		return subreconciler.RequeueWithErrorAndReason(
+			fmt.Errorf("global datasource %q failed server-side validation: %w", globaldatasource.Name, validateErr),
+			persescommon.ReasonValidationFailed,
+		)
 	}
 
 	if err != nil {

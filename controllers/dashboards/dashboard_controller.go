@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/perses/perses/pkg/client/api/validate"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	persesv1Common "github.com/perses/perses/pkg/model/api/v1/common"
@@ -132,6 +133,14 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 			},
 		},
 		Spec: dashboard.Spec.Config.DashboardSpec,
+	}
+
+	if validateErr := validate.New(persesClient.RESTClient()).Dashboard(persesDashboard); validateErr != nil {
+		dlog.WithError(validateErr).Errorf("Dashboard validation failed: %s", dashboard.Name)
+		return subreconciler.RequeueWithErrorAndReason(
+			fmt.Errorf("dashboard %q failed server-side validation: %w", dashboard.Name, validateErr),
+			common.ReasonValidationFailed,
+		)
 	}
 
 	if err != nil {
