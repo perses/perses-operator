@@ -63,10 +63,18 @@ func newMockClientWithValidateServer(validateErr string) (*MockClient, *httptest
 		w.WriteHeader(http.StatusNotFound)
 	}))
 
-	parsedURL, _ := common.ParseURL(server.URL)
-	restClient, _ := clientConfig.NewRESTClient(clientConfig.RestConfigClient{
+	parsedURL, err := common.ParseURL(server.URL)
+	if err != nil {
+		server.Close()
+		panic(fmt.Sprintf("MockValidateServer: failed to parse test server URL: %v", err))
+	}
+	restClient, err := clientConfig.NewRESTClient(clientConfig.RestConfigClient{
 		URL: parsedURL,
 	})
+	if err != nil {
+		server.Close()
+		panic(fmt.Sprintf("MockValidateServer: failed to create REST client: %v", err))
+	}
 
 	return &MockClient{restClient: restClient}, server
 }
