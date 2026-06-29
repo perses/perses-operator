@@ -83,6 +83,8 @@ const (
 	ReasonInvalidConfiguration ConditionStatusReason = "InvalidConfiguration"
 	// Failure to be used when resource that started the reconciliation is unable to be found
 	ReasonMissingResource ConditionStatusReason = "MissingResource"
+	// Failure to be used when server-side validation of a resource fails
+	ReasonValidationFailed ConditionStatusReason = "ValidationFailed"
 	// Generic failure for when the reason is due to the backend returning an error
 	ReasonBackendError ConditionStatusReason = "PersesBackendError"
 )

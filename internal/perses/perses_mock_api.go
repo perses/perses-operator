@@ -14,7 +14,15 @@
 package perses
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+
 	v1 "github.com/perses/perses/pkg/client/api/v1"
+	clientConfig "github.com/perses/perses/pkg/client/config"
+	"github.com/perses/perses/pkg/client/perseshttp"
+	"github.com/perses/perses/pkg/model/api/v1/common"
 	modelv1 "github.com/perses/perses/pkg/model/api/v1"
 	"github.com/stretchr/testify/mock"
 )
@@ -22,6 +30,45 @@ import (
 type MockClient struct {
 	v1.ClientInterface
 	mock.Mock
+	restClient *perseshttp.RESTClient
+}
+
+func (c *MockClient) RESTClient() *perseshttp.RESTClient {
+	return c.restClient
+}
+
+// NewMockClientWithValidation creates a MockClient wired to a validate server
+// that always returns 200 (valid). Caller must close the returned server.
+func NewMockClientWithValidation() (*MockClient, *httptest.Server) {
+	return newMockClientWithValidateServer("")
+}
+
+// NewMockClientWithValidationError creates a MockClient wired to a validate server
+// that returns 400 with the given error message. Caller must close the returned server.
+func NewMockClientWithValidationError(errMsg string) (*MockClient, *httptest.Server) {
+	return newMockClientWithValidateServer(errMsg)
+}
+
+func newMockClientWithValidateServer(validateErr string) (*MockClient, *httptest.Server) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/api/validate/") {
+			if validateErr != "" {
+				w.WriteHeader(http.StatusBadRequest)
+				fmt.Fprint(w, validateErr)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+		w.WriteHeader(http.StatusNotFound)
+	}))
+
+	parsedURL, _ := common.ParseURL(server.URL)
+	restClient, _ := clientConfig.NewRESTClient(clientConfig.RestConfigClient{
+		URL: parsedURL,
+	})
+
+	return &MockClient{restClient: restClient}, server
 }
 
 type project struct {
