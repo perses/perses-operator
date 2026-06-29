@@ -27,6 +27,7 @@ Dockerfile.cross
 .vscode
 
 /dist
+tmp/
 
 .goreleaser.yaml
 

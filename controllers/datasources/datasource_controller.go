@@ -134,8 +134,6 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 		}
 	}
 
-	existing, err := persesClient.Datasource(datasource.Namespace).Get(datasource.Name)
-
 	datasourceWithName := &persesv1.Datasource{
 		Kind: persesv1.KindDatasource,
 		Metadata: persesv1.ProjectMetadata{
@@ -154,6 +152,8 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 			persescommon.ReasonValidationFailed,
 		)
 	}
+
+	existing, err := persesClient.Datasource(datasource.Namespace).Get(datasource.Name)
 
 	if err != nil {
 		if errors.Is(err, perseshttp.RequestNotFoundError) {

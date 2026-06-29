@@ -16,6 +16,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -166,7 +167,8 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 			}, time.Minute, time.Second).Should(Succeed())
 
 			// Mock the Perses API to assert that Is creating a new dashboard when reconciling
-			mockPersesClient := new(internal.MockClient)
+			mockPersesClient, validateServer := internal.NewMockClientWithValidation()
+			defer validateServer.Close()
 			mockDashboard := new(internal.MockDashboard)
 
 			mockPersesClient.On("Dashboard", PersesNamespace).Return(mockDashboard)
@@ -284,7 +286,8 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 			}, time.Minute, time.Second).Should(Succeed())
 
 			By("Initial reconciliation - creates the dashboard in Perses")
-			mockPersesClient := new(internal.MockClient)
+			mockPersesClient, validateServer := internal.NewMockClientWithValidation()
+			defer validateServer.Close()
 			mockDashboard := new(internal.MockDashboard)
 			mockPersesClient.On("Dashboard", PersesNamespace).Return(mockDashboard)
 			mockDashboard.On("Get", DashboardName).Return(&persesv1.Dashboard{}, perseshttp.RequestNotFoundError)
@@ -314,7 +317,8 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 			}, time.Second*10, time.Millisecond*250).Should(Succeed())
 
 			By("Re-reconciling with the updated spec")
-			mockPersesClient2 := new(internal.MockClient)
+			mockPersesClient2, validateServer2 := internal.NewMockClientWithValidation()
+			defer validateServer2.Close()
 			mockDashboard2 := new(internal.MockDashboard)
 			mockPersesClient2.On("Dashboard", PersesNamespace).Return(mockDashboard2)
 
@@ -415,7 +419,8 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 			}, time.Minute, time.Second).Should(Succeed())
 
 			// Mock the Perses API to assert that Is creating a new dashboard when reconciling
-			mockPersesClient := new(internal.MockClient)
+			mockPersesClient, validateServer := internal.NewMockClientWithValidation()
+			defer validateServer.Close()
 			mockDashboard := new(internal.MockDashboard)
 
 			mockPersesClient.On("Dashboard", PersesNamespace).Return(mockDashboard)
@@ -524,7 +529,8 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 				Expect(err).To(Not(HaveOccurred()))
 			}
 
-			mockPersesClient := new(internal.MockClient)
+			mockPersesClient, validateServer := internal.NewMockClientWithValidation()
+			defer validateServer.Close()
 			mockDashboard := new(internal.MockDashboard)
 
 			mockPersesClient.On("Dashboard", PersesNamespace).Return(mockDashboard)
@@ -551,6 +557,103 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 			})
 			Expect(err).To(HaveOccurred())
 			mockDashboard.AssertCalled(GinkgoT(), "Delete", DashboardName)
+		})
+
+		It("should set degraded status with ValidationFailed reason when server-side validation fails", func() {
+			By("Creating the custom resource for the Kind PersesDashboard")
+			dashboard := &persesv1alpha2.PersesDashboard{}
+			err := k8sClient.Get(ctx, dashboardNamespaceName, dashboard)
+			if err != nil && errors.IsNotFound(err) {
+				perses := &persesv1alpha2.PersesDashboard{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      DashboardName,
+						Namespace: PersesNamespace,
+					},
+					Spec: persesv1alpha2.PersesDashboardSpec{
+						Config: persesv1alpha2.Dashboard{
+							DashboardSpec: newDashboard.Spec,
+						},
+					},
+				}
+
+				err = k8sClient.Create(ctx, perses)
+				Expect(err).To(Not(HaveOccurred()))
+			}
+
+			By("Checking if the custom resource was successfully created")
+			Eventually(func() error {
+				found := &persesv1alpha2.PersesDashboard{}
+				return k8sClient.Get(ctx, dashboardNamespaceName, found)
+			}, time.Minute, time.Second).Should(Succeed())
+
+			mockPersesClient, validateServer := internal.NewMockClientWithValidationError("invalid panel plugin kind")
+			defer validateServer.Close()
+			mockDashboard := new(internal.MockDashboard)
+
+			mockPersesClient.On("Dashboard", PersesNamespace).Return(mockDashboard)
+
+			By("Reconciling the custom resource - validation should fail before Create is called")
+			dashboardReconciler := &dashboardcontroller.PersesDashboardReconciler{
+				Client:        k8sClient,
+				APIReader:     k8sClient,
+				Scheme:        k8sClient.Scheme(),
+				ClientFactory: common.NewWithClient(mockPersesClient),
+			}
+
+			_, err = dashboardReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: dashboardNamespaceName,
+			})
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed server-side validation"))
+
+			By("Checking that Create was never called on the Perses API")
+			mockDashboard.AssertNotCalled(GinkgoT(), "Create")
+			mockDashboard.AssertNotCalled(GinkgoT(), "Get")
+
+			By("Checking the Status Conditions show ValidationFailed")
+			Eventually(func() error {
+				dashboardWithStatus := &persesv1alpha2.PersesDashboard{}
+				err = k8sClient.Get(ctx, dashboardNamespaceName, dashboardWithStatus)
+
+				if len(dashboardWithStatus.Status.Conditions) == 0 {
+					return fmt.Errorf("No status condition was added to the perses dashboard instance")
+				}
+
+				degradedCond := apimeta.FindStatusCondition(dashboardWithStatus.Status.Conditions, common.TypeDegradedPerses)
+				if degradedCond == nil {
+					return fmt.Errorf("Degraded condition not found on the perses dashboard instance")
+				}
+				if degradedCond.Status != metav1.ConditionTrue {
+					return fmt.Errorf("Expected Degraded=True but got %s", degradedCond.Status)
+				}
+				if degradedCond.Reason != string(common.ReasonValidationFailed) {
+					return fmt.Errorf("Expected reason %s but got %s", common.ReasonValidationFailed, degradedCond.Reason)
+				}
+				if !strings.Contains(degradedCond.Message, "failed server-side validation") {
+					return fmt.Errorf("Expected message to contain 'failed server-side validation' but got: %s", degradedCond.Message)
+				}
+
+				availableCond := apimeta.FindStatusCondition(dashboardWithStatus.Status.Conditions, common.TypeAvailablePerses)
+				if availableCond == nil {
+					return fmt.Errorf("Available condition not found on the perses dashboard instance")
+				}
+				if availableCond.Status != metav1.ConditionFalse {
+					return fmt.Errorf("Expected Available=False but got %s", availableCond.Status)
+				}
+				if availableCond.Reason != string(common.ReasonValidationFailed) {
+					return fmt.Errorf("Expected reason %s but got %s", common.ReasonValidationFailed, availableCond.Reason)
+				}
+
+				return err
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Cleaning up")
+			dashboardToDelete := &persesv1alpha2.PersesDashboard{}
+			err = k8sClient.Get(ctx, dashboardNamespaceName, dashboardToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+			err = k8sClient.Delete(ctx, dashboardToDelete)
+			Expect(err).To(Not(HaveOccurred()))
 		})
 	})
 
@@ -707,7 +810,8 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 			}, time.Minute, time.Second).Should(Succeed())
 
 			// Mock the Perses API - should only be called once for the matching instance
-			mockPersesClient := new(internal.MockClient)
+			mockPersesClient, validateServer := internal.NewMockClientWithValidation()
+			defer validateServer.Close()
 			mockDashboard := new(internal.MockDashboard)
 
 			mockPersesClient.On("Dashboard", SelectorNamespace).Return(mockDashboard)
@@ -784,7 +888,8 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 			}, time.Minute, time.Second).Should(Succeed())
 
 			// Mock the Perses API - should be called for all instances
-			mockPersesClient := new(internal.MockClient)
+			mockPersesClient, validateServer := internal.NewMockClientWithValidation()
+			defer validateServer.Close()
 			mockDashboard := new(internal.MockDashboard)
 
 			mockPersesClient.On("Dashboard", SelectorNamespace).Return(mockDashboard)
@@ -939,7 +1044,8 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 				Spec: dashboard.Spec.Config.DashboardSpec,
 			}
 
-			mockPersesClient := new(internal.MockClient)
+			mockPersesClient, validateServer := internal.NewMockClientWithValidation()
+			defer validateServer.Close()
 			mockDashboard := new(internal.MockDashboard)
 
 			mockPersesClient.On("Dashboard", TagsNamespace).Return(mockDashboard)

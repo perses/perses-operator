@@ -187,7 +187,8 @@ var _ = Describe("Datasource controller", Ordered, func() {
 			}, time.Minute, time.Second).Should(Succeed())
 
 			// Mock the Perses API to assert that Is creating a new datasource when reconciling
-			mockPersesClient := new(internal.MockClient)
+			mockPersesClient, validateServer := internal.NewMockClientWithValidation()
+			defer validateServer.Close()
 			mockDatasource := new(internal.MockDatasource)
 			mockSecret := new(internal.MockSecret)
 
@@ -311,7 +312,8 @@ var _ = Describe("Datasource controller", Ordered, func() {
 			}, time.Minute, time.Second).Should(Succeed())
 
 			// Mock the Perses API to assert that Is creating a new datasource when reconciling
-			mockPersesClient := new(internal.MockClient)
+			mockPersesClient, validateServer := internal.NewMockClientWithValidation()
+			defer validateServer.Close()
 			mockDatasource := new(internal.MockDatasource)
 			mockSecret := new(internal.MockSecret)
 
@@ -424,7 +426,8 @@ var _ = Describe("Datasource controller", Ordered, func() {
 				Expect(err).To(Not(HaveOccurred()))
 			}
 
-			mockPersesClient := new(internal.MockClient)
+			mockPersesClient, validateServer := internal.NewMockClientWithValidation()
+			defer validateServer.Close()
 			mockDatasource := new(internal.MockDatasource)
 
 			mockPersesClient.On("Datasource", PersesNamespace).Return(mockDatasource)
@@ -451,6 +454,101 @@ var _ = Describe("Datasource controller", Ordered, func() {
 			})
 			Expect(err).To(HaveOccurred())
 			mockDatasource.AssertCalled(GinkgoT(), "Delete", DatasourceName)
+		})
+
+		It("should set degraded status with ValidationFailed reason when server-side validation fails", func() {
+			By("Creating the custom resource for the Kind PersesDatasource")
+			datasource := &persesv1alpha2.PersesDatasource{}
+			err := k8sClient.Get(ctx, datasourceNamespaceName, datasource)
+			if err != nil && errors.IsNotFound(err) {
+				datasource = &persesv1alpha2.PersesDatasource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      DatasourceName,
+						Namespace: PersesNamespace,
+					},
+					Spec: persesv1alpha2.DatasourceSpec{
+						Config: persesv1alpha2.Datasource{
+							DatasourceSpec: newDatasource.Spec,
+						},
+					},
+				}
+
+				err = k8sClient.Create(ctx, datasource)
+				Expect(err).To(Not(HaveOccurred()))
+			}
+
+			By("Checking if the custom resource was successfully created")
+			Eventually(func() error {
+				found := &persesv1alpha2.PersesDatasource{}
+				return k8sClient.Get(ctx, datasourceNamespaceName, found)
+			}, time.Minute, time.Second).Should(Succeed())
+
+			mockPersesClient, validateServer := internal.NewMockClientWithValidationError("invalid datasource plugin kind")
+			defer validateServer.Close()
+			mockDatasource := new(internal.MockDatasource)
+
+			mockPersesClient.On("Datasource", PersesNamespace).Return(mockDatasource)
+			mockPersesClient.On("Secret", PersesNamespace).Return(new(internal.MockSecret))
+
+			By("Reconciling the custom resource - validation should fail before Create is called")
+			datasourceReconciler := &datasourcecontroller.PersesDatasourceReconciler{
+				Client:        k8sClient,
+				APIReader:     k8sClient,
+				Scheme:        k8sClient.Scheme(),
+				ClientFactory: common.NewWithClient(mockPersesClient),
+			}
+
+			_, err = datasourceReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: datasourceNamespaceName,
+			})
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed server-side validation"))
+
+			By("Checking that Create was never called on the Perses API")
+			mockDatasource.AssertNotCalled(GinkgoT(), "Create")
+			mockDatasource.AssertNotCalled(GinkgoT(), "Get")
+
+			By("Checking the Status Conditions show ValidationFailed")
+			Eventually(func() error {
+				datasourceWithStatus := &persesv1alpha2.PersesDatasource{}
+				err = k8sClient.Get(ctx, datasourceNamespaceName, datasourceWithStatus)
+
+				if len(datasourceWithStatus.Status.Conditions) == 0 {
+					return fmt.Errorf("No status condition was added to the perses datasource instance")
+				}
+
+				degradedCond := apimeta.FindStatusCondition(datasourceWithStatus.Status.Conditions, common.TypeDegradedPerses)
+				if degradedCond == nil {
+					return fmt.Errorf("Degraded condition not found on the perses datasource instance")
+				}
+				if degradedCond.Status != metav1.ConditionTrue {
+					return fmt.Errorf("Expected Degraded=True but got %s", degradedCond.Status)
+				}
+				if degradedCond.Reason != string(common.ReasonValidationFailed) {
+					return fmt.Errorf("Expected reason %s but got %s", common.ReasonValidationFailed, degradedCond.Reason)
+				}
+
+				availableCond := apimeta.FindStatusCondition(datasourceWithStatus.Status.Conditions, common.TypeAvailablePerses)
+				if availableCond == nil {
+					return fmt.Errorf("Available condition not found on the perses datasource instance")
+				}
+				if availableCond.Status != metav1.ConditionFalse {
+					return fmt.Errorf("Expected Available=False but got %s", availableCond.Status)
+				}
+				if availableCond.Reason != string(common.ReasonValidationFailed) {
+					return fmt.Errorf("Expected reason %s but got %s", common.ReasonValidationFailed, availableCond.Reason)
+				}
+
+				return err
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Cleaning up")
+			datasourceToDelete := &persesv1alpha2.PersesDatasource{}
+			err = k8sClient.Get(ctx, datasourceNamespaceName, datasourceToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+			err = k8sClient.Delete(ctx, datasourceToDelete)
+			Expect(err).To(Not(HaveOccurred()))
 		})
 	})
 
@@ -588,7 +686,8 @@ var _ = Describe("Datasource controller", Ordered, func() {
 			}, time.Minute, time.Second).Should(Succeed())
 
 			// Mock the Perses API to assert that Is creating a new datasource when reconciling
-			mockPersesClient := new(internal.MockClient)
+			mockPersesClient, validateServer := internal.NewMockClientWithValidation()
+			defer validateServer.Close()
 			mockDatasource := new(internal.MockDatasource)
 			mockSecret := new(internal.MockSecret)
 
@@ -712,7 +811,8 @@ var _ = Describe("Datasource controller", Ordered, func() {
 			}, time.Minute, time.Second).Should(Succeed())
 
 			// Mock the Perses API to assert that Is creating a new datasource when reconciling
-			mockPersesClient := new(internal.MockClient)
+			mockPersesClient, validateServer := internal.NewMockClientWithValidation()
+			defer validateServer.Close()
 			mockDatasource := new(internal.MockDatasource)
 			mockSecret := new(internal.MockSecret)
 
@@ -916,7 +1016,8 @@ var _ = Describe("Datasource controller", Ordered, func() {
 			Expect(err).To(Not(HaveOccurred()))
 
 			By("Setting up mock Perses API expectations")
-			mockPersesClient := new(internal.MockClient)
+			mockPersesClient, validateServer := internal.NewMockClientWithValidation()
+			defer validateServer.Close()
 			mockDatasource := new(internal.MockDatasource)
 			mockSecret := new(internal.MockSecret)
 

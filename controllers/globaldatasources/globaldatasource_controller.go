@@ -105,8 +105,6 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalDatasource(ctx contex
 		}
 	}
 
-	existing, err := persesClient.GlobalDatasource().Get(globaldatasource.Name)
-
 	globalDatasourceWithName := &persesv1.GlobalDatasource{
 		Kind: persesv1.KindGlobalDatasource,
 		Metadata: persesv1.Metadata{
@@ -123,6 +121,8 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalDatasource(ctx contex
 			persescommon.ReasonValidationFailed,
 		)
 	}
+
+	existing, err := persesClient.GlobalDatasource().Get(globaldatasource.Name)
 
 	if err != nil {
 		if errors.Is(err, perseshttp.RequestNotFoundError) {

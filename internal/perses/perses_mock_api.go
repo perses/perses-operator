@@ -54,7 +54,7 @@ func newMockClientWithValidateServer(validateErr string) (*MockClient, *httptest
 		if strings.HasPrefix(r.URL.Path, "/api/validate/") {
 			if validateErr != "" {
 				w.WriteHeader(http.StatusBadRequest)
-				fmt.Fprint(w, validateErr)
+				_, _ = fmt.Fprint(w, validateErr)
 				return
 			}
 			w.WriteHeader(http.StatusOK)

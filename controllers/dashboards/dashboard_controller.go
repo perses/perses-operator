@@ -122,8 +122,6 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 		}
 	}
 
-	existing, err := persesClient.Dashboard(dashboard.Namespace).Get(dashboard.Name)
-
 	persesDashboard := &persesv1.Dashboard{
 		Kind: persesv1.KindDashboard,
 		Metadata: persesv1.ProjectMetadata{
@@ -142,6 +140,8 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 			common.ReasonValidationFailed,
 		)
 	}
+
+	existing, err := persesClient.Dashboard(dashboard.Namespace).Get(dashboard.Name)
 
 	if err != nil {
 		if errors.Is(err, perseshttp.RequestNotFoundError) {
