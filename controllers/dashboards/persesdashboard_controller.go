@@ -124,7 +124,8 @@ func (r *PersesDashboardReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	// Track metrics
 	if r.Metrics != nil {
 		if reconcileErr != nil {
-			r.Metrics.ReconcileErrors("persesdashboard", "reconciliation_failed").Inc()
+			reason := string(common.ExtractReason(reconcileErr, "reconciliation_failed"))
+			r.Metrics.ReconcileErrors("persesdashboard", reason).Inc()
 			r.Metrics.SetFailedResources(objKey, "dashboard", 1)
 		} else {
 			r.Metrics.SetSyncedResources(objKey, "dashboard", 1)
@@ -221,7 +222,10 @@ func (r *PersesDashboardReconciler) setStatusToDegraded(
 		return result, err
 	}
 
-	return degradedResult, degradedError
+	if degradedError != nil {
+		return degradedResult, common.NewReasonError(degradedError, degradedReason)
+	}
+	return degradedResult, nil
 }
 
 // findDashboardsForPerses returns reconcile requests for all PersesDashboards
