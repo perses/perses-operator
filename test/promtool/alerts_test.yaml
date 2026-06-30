@@ -58,7 +58,7 @@ tests:
   # 2 errors per 5 operations = 40% error rate
   - interval: 1m
     input_series:
-      - series: 'perses_operator_reconcile_errors_total{job="perses-operator",controller="perses",namespace="perses-dev"}'
+      - series: 'perses_operator_reconcile_errors_total{job="perses-operator",controller="perses",namespace="perses-dev",reason="reconciliation_failed"}'
         values: "0+2x20"
       - series: 'perses_operator_reconcile_operations_total{job="perses-operator",controller="perses",namespace="perses-dev"}'
         values: "0+5x20"
@@ -70,21 +70,59 @@ tests:
               severity: warning
               controller: perses
               namespace: perses-dev
+              reason: reconciliation_failed
             exp_annotations:
               summary: "Errors while reconciling objects."
-              description: "40% of reconciling operations failed for perses controller in perses-dev namespace."
+              description: "40% of reconciling operations failed for perses controller in perses-dev namespace (reason: reconciliation_failed)."
 
   # PersesOperatorReconcileErrors: does NOT fire when error ratio < 10%
   # 1 error per 100 operations = 1% error rate
   - interval: 1m
     input_series:
-      - series: 'perses_operator_reconcile_errors_total{job="perses-operator",controller="perses",namespace="perses-dev"}'
+      - series: 'perses_operator_reconcile_errors_total{job="perses-operator",controller="perses",namespace="perses-dev",reason="reconciliation_failed"}'
         values: "0+1x20"
       - series: 'perses_operator_reconcile_operations_total{job="perses-operator",controller="perses",namespace="perses-dev"}'
         values: "0+100x20"
     alert_rule_test:
       - eval_time: 15m
         alertname: PersesOperatorReconcileErrors
+        exp_alerts: []
+
+  # PersesOperatorValidationFailures: fires when validation errors increase
+  - interval: 1m
+    input_series:
+      - series: 'perses_operator_reconcile_errors_total{job="perses-operator",controller="persesdashboard",namespace="perses-dev",reason="ValidationFailed"}'
+        values: "0 0 0 0 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16"
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: PersesOperatorValidationFailures
+        exp_alerts:
+          - exp_labels:
+              severity: warning
+              controller: persesdashboard
+              namespace: perses-dev
+            exp_annotations:
+              summary: "Resources failing server-side validation."
+              description: "persesdashboard controller in perses-dev namespace has resources failing Perses server-side validation. Check resource status conditions for details."
+
+  # PersesOperatorValidationFailures: does NOT fire for non-validation errors
+  - interval: 1m
+    input_series:
+      - series: 'perses_operator_reconcile_errors_total{job="perses-operator",controller="persesdashboard",namespace="perses-dev",reason="reconciliation_failed"}'
+        values: "0 0 0 0 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16"
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: PersesOperatorValidationFailures
+        exp_alerts: []
+
+  # PersesOperatorValidationFailures: does NOT fire when count is zero
+  - interval: 1m
+    input_series:
+      - series: 'perses_operator_reconcile_errors_total{job="perses-operator",controller="persesdashboard",namespace="perses-dev",reason="ValidationFailed"}'
+        values: "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: PersesOperatorValidationFailures
         exp_alerts: []
 
   # PersesOperatorSyncFailed: fires when failed syncs > 0 for 10m
