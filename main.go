@@ -51,6 +51,7 @@ import (
 	"github.com/perses/perses-operator/internal/operator"
 	"github.com/perses/perses-operator/internal/perses/common"
 	operatortls "github.com/perses/perses-operator/internal/tls"
+	"github.com/perses/perses-operator/internal/validation"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -83,6 +84,7 @@ func main() {
 	var tlsCipherSuites string
 	var tlsClusterProfile bool
 	var tlsConfigureOperands bool
+	var promqlValidationMode string
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8082", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -106,6 +108,8 @@ func main() {
 			"Watches for changes and restarts the operator. Requires an OpenShift cluster.")
 	flag.BoolVar(&tlsConfigureOperands, common.TLSConfigureOperandsFlag, false,
 		"Propagate TLS settings to managed Perses pods. Without this flag, TLS only applies to the operator itself.")
+	flag.StringVar(&promqlValidationMode, "promql-validation-mode", "enforce",
+		"How to handle invalid PromQL in dashboards: enforce (reject), warn (allow with warning), disabled (skip validation).")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -113,6 +117,12 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	parsedPromQLMode, err := validation.ParsePromQLValidationMode(promqlValidationMode)
+	if err != nil {
+		setupLog.Error(err, "invalid --promql-validation-mode value")
+		os.Exit(1)
+	}
 
 	secretSelector, err := internalcache.ParseSecretLabelSelector(watchSecretLabelsFlag)
 	if err != nil {
@@ -301,7 +311,7 @@ func main() {
 			os.Exit(1)
 		}
 
-		if err = (&persesv1alpha1.PersesDashboard{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&persesv1alpha1.PersesDashboard{}).SetupWebhookWithManager(mgr, &validation.DashboardValidator{Mode: parsedPromQLMode}); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "PersesDashboard")
 			os.Exit(1)
 		}
