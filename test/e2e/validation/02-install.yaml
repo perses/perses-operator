@@ -1,0 +1,79 @@
+apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  name: valid-dashboard
+spec:
+  instanceSelector:
+    matchLabels:
+      app.kubernetes.io/instance: perses-validation-test
+  config:
+    display:
+      name: Valid Dashboard
+    duration: 5m
+    panels:
+      testPanel:
+        kind: Panel
+        spec:
+          display:
+            name: Test Panel
+          plugin:
+            kind: TimeSeriesChart
+            spec: {}
+          queries:
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: up
+    layouts:
+      - kind: Grid
+        spec:
+          display:
+            title: Row 1
+            collapse:
+              open: true
+          items:
+            - x: 0
+              "y": 0
+              width: 24
+              height: 6
+              content:
+                "$ref": "#/spec/panels/testPanel"
+---
+apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  name: invalid-dashboard
+spec:
+  instanceSelector:
+    matchLabels:
+      app.kubernetes.io/instance: perses-validation-test
+  config:
+    display:
+      name: Invalid Dashboard
+    duration: 5m
+    panels:
+      badPanel:
+        kind: Panel
+        spec:
+          display:
+            name: Bad Panel
+          plugin:
+            kind: NonExistentPluginThatDoesNotExist
+            spec:
+              foo: bar
+    layouts:
+      - kind: Grid
+        spec:
+          display:
+            title: Row 1
+            collapse:
+              open: true
+          items:
+            - x: 0
+              "y": 0
+              width: 24
+              height: 6
+              content:
+                "$ref": "#/spec/panels/badPanel"
