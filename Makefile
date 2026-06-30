@@ -191,6 +191,7 @@ jsonnet-resources: jsonnet gojsontoyaml
 	rm -f jsonnet/examples/*.yaml
 	$(JSONNET_BINARY) -m jsonnet/examples jsonnet/example.jsonnet | $(XARGS) -I{} sh -c 'cat {} | $(GOJSONTOYAML_BINARY) > {}.yaml' -- {}
 	find jsonnet/examples -type f -not -name "*.*" -delete
+	@echo "NOTE: If you modified alerting rules, update test/promtool/alerts_test.yaml and run 'make test-alerts'."
 
 JSONNET_SRC = $(shell find . -type f -not -path './*vendor_jsonnet/*' \( -name '*.libsonnet' -o -name '*.jsonnet' \))
 
@@ -267,11 +268,10 @@ test-integration: manifests generate fmt vet envtest ginkgo ## Run integration t
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) -p path)" $(GINKGO) --procs=4 -v --coverprofile=cover-integration.out --output-dir=. ./controllers/...
 
 .PHONY: test-alerts
-test-alerts: jsonnet-resources yq ## Run promtool unit tests for alerting rules (requires promtool).
-	@command -v promtool >/dev/null 2>&1 || { echo "promtool is required but not installed."; exit 1; }
+test-alerts: jsonnet-resources yq promtool ## Run promtool unit tests for alerting rules.
 	@echo ">>>>> Testing alerting rules"
 	$(YQ) '.spec' jsonnet/examples/prometheusRule.yaml > test/promtool/rules.yaml
-	promtool test rules test/promtool/alerts_test.yaml; ret=$$?; rm -f test/promtool/rules.yaml; exit $$ret
+	$(PROMTOOL) test rules test/promtool/alerts_test.yaml; ret=$$?; rm -f test/promtool/rules.yaml; exit $$ret
 
 .PHONY: lint-jsonnet
 lint-jsonnet: $(JSONNETLINT_BINARY)
