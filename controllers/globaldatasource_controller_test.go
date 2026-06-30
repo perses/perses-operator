@@ -460,7 +460,7 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 			mockGlobalDatasource := new(internal.MockGlobalDatasource)
 
 			mockPersesClient.On("GlobalDatasource").Return(mockGlobalDatasource)
-			mockPersesClient.On("GlobalSecret").Return(new(internal.MockGlobalSecret))
+			mockGlobalDatasource.On("Get", GlobalDatasourceName).Return(&persesv1.GlobalDatasource{}, perseshttp.RequestNotFoundError)
 
 			By("Reconciling the custom resource - validation should fail before Create is called")
 			globaldatasourceReconciler := &globaldatasourcecontroller.PersesGlobalDatasourceReconciler{
@@ -479,7 +479,6 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 
 			By("Checking that Create was never called on the Perses API")
 			mockGlobalDatasource.AssertNotCalled(GinkgoT(), "Create")
-			mockGlobalDatasource.AssertNotCalled(GinkgoT(), "Get")
 
 			By("Checking the Status Conditions show ValidationFailed")
 			Eventually(func() error {

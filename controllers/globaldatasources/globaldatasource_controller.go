@@ -96,15 +96,6 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalDatasource(ctx contex
 
 	}
 
-	// create a secret holding the secret configuration so the globaldatasource can reference it
-	if persescommon.HasSecretConfig(globaldatasource.Spec.Client) {
-		_, reason, err := r.syncPersesGlobalSecret(ctx, persesClient, globaldatasource)
-		if err != nil {
-			gdlog.WithError(err).Errorf("Failed to create globaldatasource secret: %s", globaldatasource.Name)
-			return subreconciler.RequeueWithErrorAndReason(err, reason)
-		}
-	}
-
 	globalDatasourceWithName := &persesv1.GlobalDatasource{
 		Kind: persesv1.KindGlobalDatasource,
 		Metadata: persesv1.Metadata{
@@ -114,48 +105,59 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalDatasource(ctx contex
 		Spec: globaldatasource.Spec.Config.DatasourceSpec,
 	}
 
-	if validateErr := validate.New(persesClient.RESTClient()).GlobalDatasource(globalDatasourceWithName); validateErr != nil {
-		gdlog.WithError(validateErr).Errorf("GlobalDatasource validation failed: %s", globaldatasource.Name)
-		return subreconciler.RequeueWithErrorAndReason(
-			fmt.Errorf("global datasource %q failed server-side validation: %w", globaldatasource.Name, validateErr),
-			persescommon.ReasonValidationFailed,
-		)
-	}
-
 	existing, err := persesClient.GlobalDatasource().Get(globaldatasource.Name)
+	notFound := err != nil && errors.Is(err, perseshttp.RequestNotFoundError)
 
-	if err != nil {
-		if errors.Is(err, perseshttp.RequestNotFoundError) {
-			_, err = persesClient.GlobalDatasource().Create(globalDatasourceWithName)
-
-			if err != nil {
-				gdlog.WithError(err).Errorf("Failed to create globaldatasource: %s", globaldatasource.Name)
-				return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
-			}
-
-			gdlog.Infof("GlobalDatasource created: %s", globaldatasource.Name)
-
-			res, err := subreconciler.ContinueReconciling()
-			return res, "", err
-		}
-
+	if err != nil && !notFound {
 		res, err := subreconciler.RequeueWithError(err)
 		return res, persescommon.ReasonBackendError, err
 	}
 
-	if persescommon.GlobalDatasourceInSync(existing, globalDatasourceWithName) {
+	if !notFound && persescommon.GlobalDatasourceInSync(existing, globalDatasourceWithName) {
 		gdlog.Debugf("GlobalDatasource already in sync: %s", globaldatasource.Name)
 		res, err := subreconciler.ContinueReconciling()
 		return res, "", err
 	}
 
-	_, err = persesClient.GlobalDatasource().Update(globalDatasourceWithName)
-	if err != nil {
-		gdlog.WithError(err).Errorf("Failed to update globaldatasource: %s", globaldatasource.Name)
-		return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
+	if validateErr := validate.New(persesClient.RESTClient()).GlobalDatasource(globalDatasourceWithName); validateErr != nil {
+		if persescommon.IsClientError(validateErr) {
+			gdlog.WithError(validateErr).Errorf("GlobalDatasource validation failed: %s", globaldatasource.Name)
+			return subreconciler.RequeueWithErrorAndReason(
+				fmt.Errorf("global datasource %q failed server-side validation: %w", globaldatasource.Name, validateErr),
+				persescommon.ReasonValidationFailed,
+			)
+		}
+		gdlog.WithError(validateErr).Errorf("GlobalDatasource validation request failed: %s", globaldatasource.Name)
+		return subreconciler.RequeueWithErrorAndReason(
+			fmt.Errorf("global datasource %q validation request failed: %w", globaldatasource.Name, validateErr),
+			persescommon.ReasonBackendError,
+		)
 	}
 
-	gdlog.Infof("GlobalDatasource updated: %s", globaldatasource.Name)
+	// Sync secret only after validation passes to avoid orphaned secrets
+	if persescommon.HasSecretConfig(globaldatasource.Spec.Client) {
+		_, reason, err := r.syncPersesGlobalSecret(ctx, persesClient, globaldatasource)
+		if err != nil {
+			gdlog.WithError(err).Errorf("Failed to create globaldatasource secret: %s", globaldatasource.Name)
+			return subreconciler.RequeueWithErrorAndReason(err, reason)
+		}
+	}
+
+	if notFound {
+		_, err = persesClient.GlobalDatasource().Create(globalDatasourceWithName)
+		if err != nil {
+			gdlog.WithError(err).Errorf("Failed to create globaldatasource: %s", globaldatasource.Name)
+			return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
+		}
+		gdlog.Infof("GlobalDatasource created: %s", globaldatasource.Name)
+	} else {
+		_, err = persesClient.GlobalDatasource().Update(globalDatasourceWithName)
+		if err != nil {
+			gdlog.WithError(err).Errorf("Failed to update globaldatasource: %s", globaldatasource.Name)
+			return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
+		}
+		gdlog.Infof("GlobalDatasource updated: %s", globaldatasource.Name)
+	}
 
 	res, err := subreconciler.ContinueReconciling()
 	return res, "", err

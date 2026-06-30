@@ -488,7 +488,7 @@ var _ = Describe("Datasource controller", Ordered, func() {
 			mockDatasource := new(internal.MockDatasource)
 
 			mockPersesClient.On("Datasource", PersesNamespace).Return(mockDatasource)
-			mockPersesClient.On("Secret", PersesNamespace).Return(new(internal.MockSecret))
+			mockDatasource.On("Get", DatasourceName).Return(&persesv1.Datasource{}, perseshttp.RequestNotFoundError)
 
 			By("Reconciling the custom resource - validation should fail before Create is called")
 			datasourceReconciler := &datasourcecontroller.PersesDatasourceReconciler{
@@ -507,7 +507,6 @@ var _ = Describe("Datasource controller", Ordered, func() {
 
 			By("Checking that Create was never called on the Perses API")
 			mockDatasource.AssertNotCalled(GinkgoT(), "Create")
-			mockDatasource.AssertNotCalled(GinkgoT(), "Get")
 
 			By("Checking the Status Conditions show ValidationFailed")
 			Eventually(func() error {

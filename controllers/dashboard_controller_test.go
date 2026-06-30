@@ -591,6 +591,7 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 			mockDashboard := new(internal.MockDashboard)
 
 			mockPersesClient.On("Dashboard", PersesNamespace).Return(mockDashboard)
+			mockDashboard.On("Get", DashboardName).Return(&persesv1.Dashboard{}, perseshttp.RequestNotFoundError)
 
 			By("Reconciling the custom resource - validation should fail before Create is called")
 			dashboardReconciler := &dashboardcontroller.PersesDashboardReconciler{
@@ -609,7 +610,6 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 
 			By("Checking that Create was never called on the Perses API")
 			mockDashboard.AssertNotCalled(GinkgoT(), "Create")
-			mockDashboard.AssertNotCalled(GinkgoT(), "Get")
 
 			By("Checking the Status Conditions show ValidationFailed")
 			Eventually(func() error {
