@@ -15,8 +15,11 @@ package common
 
 import (
 	"context"
+	"errors"
+	"net/http"
 
 	"github.com/perses/perses-operator/api/v1alpha2"
+	"github.com/perses/perses/pkg/client/perseshttp"
 	logger "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -83,9 +86,22 @@ const (
 	ReasonInvalidConfiguration ConditionStatusReason = "InvalidConfiguration"
 	// Failure to be used when resource that started the reconciliation is unable to be found
 	ReasonMissingResource ConditionStatusReason = "MissingResource"
+	// Failure to be used when server-side validation of a resource fails
+	ReasonValidationFailed ConditionStatusReason = "ValidationFailed"
 	// Generic failure for when the reason is due to the backend returning an error
 	ReasonBackendError ConditionStatusReason = "PersesBackendError"
 )
+
+// IsClientError returns true if the error is an HTTP 4xx response from the
+// Perses API, indicating a client-side error such as a validation failure.
+// Returns false for 5xx errors, network errors, or non-HTTP errors.
+func IsClientError(err error) bool {
+	var reqErr *perseshttp.RequestError
+	if errors.As(err, &reqErr) {
+		return reqErr.StatusCode >= http.StatusBadRequest && reqErr.StatusCode < http.StatusInternalServerError
+	}
+	return false
+}
 
 // isTLSEnabled checks if TLS is enabled in the Perses configuration
 func isTLSEnabled(perses *v1alpha2.Perses) bool {

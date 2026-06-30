@@ -161,7 +161,8 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 			}, time.Minute, time.Second).Should(Succeed())
 
 			// Mock the Perses API to assert that Is creating a new globaldatasource when reconciling
-			mockPersesClient := new(internal.MockClient)
+			mockPersesClient, validateServer := internal.NewMockClientWithValidation()
+			defer validateServer.Close()
 			mockGlobalDatasource := new(internal.MockGlobalDatasource)
 			mockGlobalSecret := new(internal.MockGlobalSecret)
 
@@ -285,7 +286,8 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 			}, time.Minute, time.Second).Should(Succeed())
 
 			// Mock the Perses API to assert that Is creating a new globaldatasource when reconciling
-			mockPersesClient := new(internal.MockClient)
+			mockPersesClient, validateServer := internal.NewMockClientWithValidation()
+			defer validateServer.Close()
 			mockGlobalDatasource := new(internal.MockGlobalDatasource)
 			mockGlobalSecret := new(internal.MockGlobalSecret)
 
@@ -397,7 +399,8 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 				Expect(err).To(Not(HaveOccurred()))
 			}
 
-			mockPersesClient := new(internal.MockClient)
+			mockPersesClient, validateServer := internal.NewMockClientWithValidation()
+			defer validateServer.Close()
 			mockGlobalDatasource := new(internal.MockGlobalDatasource)
 
 			mockPersesClient.On("GlobalDatasource").Return(mockGlobalDatasource)
@@ -424,6 +427,99 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 			})
 			Expect(err).To(HaveOccurred())
 			mockGlobalDatasource.AssertCalled(GinkgoT(), "Delete", GlobalDatasourceName)
+		})
+
+		It("should set degraded status with ValidationFailed reason when server-side validation fails", func() {
+			By("Creating the custom resource for the Kind PersesGlobalDatasource")
+			globaldatasource := &persesv1alpha2.PersesGlobalDatasource{}
+			err := k8sClient.Get(ctx, globaldatasourceNamespaceName, globaldatasource)
+			if err != nil && errors.IsNotFound(err) {
+				globaldatasource = &persesv1alpha2.PersesGlobalDatasource{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: GlobalDatasourceName,
+					},
+					Spec: persesv1alpha2.DatasourceSpec{
+						Config: persesv1alpha2.Datasource{
+							DatasourceSpec: newGlobalDatasource.Spec,
+						},
+					},
+				}
+
+				err = k8sClient.Create(ctx, globaldatasource)
+				Expect(err).To(Not(HaveOccurred()))
+			}
+
+			By("Checking if the custom resource was successfully created")
+			Eventually(func() error {
+				found := &persesv1alpha2.PersesGlobalDatasource{}
+				return k8sClient.Get(ctx, globaldatasourceNamespaceName, found)
+			}, time.Minute, time.Second).Should(Succeed())
+
+			mockPersesClient, validateServer := internal.NewMockClientWithValidationError("invalid global datasource plugin kind")
+			defer validateServer.Close()
+			mockGlobalDatasource := new(internal.MockGlobalDatasource)
+
+			mockPersesClient.On("GlobalDatasource").Return(mockGlobalDatasource)
+			mockGlobalDatasource.On("Get", GlobalDatasourceName).Return(&persesv1.GlobalDatasource{}, perseshttp.RequestNotFoundError)
+
+			By("Reconciling the custom resource - validation should fail before Create is called")
+			globaldatasourceReconciler := &globaldatasourcecontroller.PersesGlobalDatasourceReconciler{
+				Client:        k8sClient,
+				APIReader:     k8sClient,
+				Scheme:        k8sClient.Scheme(),
+				ClientFactory: common.NewWithClient(mockPersesClient),
+			}
+
+			_, err = globaldatasourceReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: globaldatasourceNamespaceName,
+			})
+
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("failed server-side validation"))
+
+			By("Checking that Create was never called on the Perses API")
+			mockGlobalDatasource.AssertNotCalled(GinkgoT(), "Create")
+
+			By("Checking the Status Conditions show ValidationFailed")
+			Eventually(func() error {
+				gdWithStatus := &persesv1alpha2.PersesGlobalDatasource{}
+				err = k8sClient.Get(ctx, globaldatasourceNamespaceName, gdWithStatus)
+
+				if len(gdWithStatus.Status.Conditions) == 0 {
+					return fmt.Errorf("No status condition was added to the perses globaldatasource instance")
+				}
+
+				degradedCond := apimeta.FindStatusCondition(gdWithStatus.Status.Conditions, common.TypeDegradedPerses)
+				if degradedCond == nil {
+					return fmt.Errorf("Degraded condition not found on the perses globaldatasource instance")
+				}
+				if degradedCond.Status != metav1.ConditionTrue {
+					return fmt.Errorf("Expected Degraded=True but got %s", degradedCond.Status)
+				}
+				if degradedCond.Reason != string(common.ReasonValidationFailed) {
+					return fmt.Errorf("Expected reason %s but got %s", common.ReasonValidationFailed, degradedCond.Reason)
+				}
+
+				availableCond := apimeta.FindStatusCondition(gdWithStatus.Status.Conditions, common.TypeAvailablePerses)
+				if availableCond == nil {
+					return fmt.Errorf("Available condition not found on the perses globaldatasource instance")
+				}
+				if availableCond.Status != metav1.ConditionFalse {
+					return fmt.Errorf("Expected Available=False but got %s", availableCond.Status)
+				}
+				if availableCond.Reason != string(common.ReasonValidationFailed) {
+					return fmt.Errorf("Expected reason %s but got %s", common.ReasonValidationFailed, availableCond.Reason)
+				}
+
+				return err
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Cleaning up")
+			gdToDelete := &persesv1alpha2.PersesGlobalDatasource{}
+			err = k8sClient.Get(ctx, globaldatasourceNamespaceName, gdToDelete)
+			Expect(err).To(Not(HaveOccurred()))
+			err = k8sClient.Delete(ctx, gdToDelete)
+			Expect(err).To(Not(HaveOccurred()))
 		})
 	})
 })

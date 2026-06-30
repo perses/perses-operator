@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/perses/perses/pkg/client/api/validate"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	persesv1Common "github.com/perses/perses/pkg/model/api/v1/common"
@@ -121,8 +122,6 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 		}
 	}
 
-	existing, err := persesClient.Dashboard(dashboard.Namespace).Get(dashboard.Name)
-
 	persesDashboard := &persesv1.Dashboard{
 		Kind: persesv1.KindDashboard,
 		Metadata: persesv1.ProjectMetadata{
@@ -134,37 +133,49 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 		Spec: dashboard.Spec.Config.DashboardSpec,
 	}
 
-	if err != nil {
-		if errors.Is(err, perseshttp.RequestNotFoundError) {
-			_, err = persesClient.Dashboard(dashboard.Namespace).Create(persesDashboard)
+	existing, err := persesClient.Dashboard(dashboard.Namespace).Get(dashboard.Name)
+	notFound := err != nil && errors.Is(err, perseshttp.RequestNotFoundError)
 
-			if err != nil {
-				dlog.WithError(err).Errorf("Failed to create dashboard: %s", dashboard.Name)
-				return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
-			}
-
-			dlog.Infof("Dashboard created: %s", dashboard.Name)
-
-			res, err := subreconciler.ContinueReconciling()
-			return res, "", err
-		}
-
+	if err != nil && !notFound {
 		return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
 	}
 
-	if common.DashboardInSync(existing, persesDashboard) {
+	if !notFound && common.DashboardInSync(existing, persesDashboard) {
 		dlog.Debugf("Dashboard already in sync: %s", dashboard.Name)
 		res, err := subreconciler.ContinueReconciling()
 		return res, "", err
 	}
 
-	_, err = persesClient.Dashboard(dashboard.Namespace).Update(persesDashboard)
-	if err != nil {
-		dlog.WithError(err).Errorf("Failed to update dashboard: %s", dashboard.Name)
-		return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
+	if validateErr := validate.New(persesClient.RESTClient()).Dashboard(persesDashboard); validateErr != nil {
+		if common.IsClientError(validateErr) {
+			dlog.WithError(validateErr).Errorf("Dashboard validation failed: %s", dashboard.Name)
+			return subreconciler.RequeueWithErrorAndReason(
+				fmt.Errorf("dashboard %q failed server-side validation: %w", dashboard.Name, validateErr),
+				common.ReasonValidationFailed,
+			)
+		}
+		dlog.WithError(validateErr).Errorf("Dashboard validation request failed: %s", dashboard.Name)
+		return subreconciler.RequeueWithErrorAndReason(
+			fmt.Errorf("dashboard %q validation request failed: %w", dashboard.Name, validateErr),
+			common.ReasonBackendError,
+		)
 	}
 
-	dlog.Infof("Dashboard updated: %s", dashboard.Name)
+	if notFound {
+		_, err = persesClient.Dashboard(dashboard.Namespace).Create(persesDashboard)
+		if err != nil {
+			dlog.WithError(err).Errorf("Failed to create dashboard: %s", dashboard.Name)
+			return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
+		}
+		dlog.Infof("Dashboard created: %s", dashboard.Name)
+	} else {
+		_, err = persesClient.Dashboard(dashboard.Namespace).Update(persesDashboard)
+		if err != nil {
+			dlog.WithError(err).Errorf("Failed to update dashboard: %s", dashboard.Name)
+			return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
+		}
+		dlog.Infof("Dashboard updated: %s", dashboard.Name)
+	}
 
 	res, err := subreconciler.ContinueReconciling()
 	return res, "", err

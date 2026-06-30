@@ -1,0 +1,28 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+commands:
+  - script: |
+      REASON=$(kubectl get persesdashboard valid-dashboard -n $NAMESPACE -o jsonpath='{.status.conditions[?(@.type=="Available")].reason}')
+      if [ "$REASON" != "Reconciled" ]; then
+        echo "FAIL: Expected valid-dashboard Available reason 'Reconciled' but got '$REASON'"
+        exit 1
+      fi
+      echo "PASS: valid-dashboard reconciled successfully"
+  - script: |
+      REASON=$(kubectl get persesdashboard invalid-dashboard -n $NAMESPACE -o jsonpath='{.status.conditions[?(@.type=="Degraded")].reason}')
+      if [ "$REASON" != "ValidationFailed" ]; then
+        echo "FAIL: Expected invalid-dashboard Degraded reason 'ValidationFailed' but got '$REASON'"
+        exit 1
+      fi
+      STATUS=$(kubectl get persesdashboard invalid-dashboard -n $NAMESPACE -o jsonpath='{.status.conditions[?(@.type=="Available")].status}')
+      if [ "$STATUS" != "False" ]; then
+        echo "FAIL: Expected invalid-dashboard Available status 'False' but got '$STATUS'"
+        exit 1
+      fi
+      MSG=$(kubectl get persesdashboard invalid-dashboard -n $NAMESPACE -o jsonpath='{.status.conditions[?(@.type=="Degraded")].message}')
+      echo "$MSG" | grep -q "failed server-side validation" || {
+        echo "FAIL: Expected message to contain 'failed server-side validation' but got: $MSG"
+        exit 1
+      }
+      echo "PASS: invalid-dashboard correctly shows ValidationFailed"

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	v1 "github.com/perses/perses/pkg/client/api/v1"
+	"github.com/perses/perses/pkg/client/api/validate"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	"github.com/perses/perses/pkg/model/api/v1/common"
@@ -124,17 +125,6 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 		}
 	}
 
-	// create a secret holding the secret configuration so the datasource can reference it
-	if persescommon.HasSecretConfig(datasource.Spec.Client) {
-		_, reason, err := r.syncPersesSecret(ctx, persesClient, datasource)
-		if err != nil {
-			dlog.WithError(err).Errorf("Failed to create datasource secret: %s", datasource.Name)
-			return subreconciler.RequeueWithErrorAndReason(err, reason)
-		}
-	}
-
-	existing, err := persesClient.Datasource(datasource.Namespace).Get(datasource.Name)
-
 	datasourceWithName := &persesv1.Datasource{
 		Kind: persesv1.KindDatasource,
 		Metadata: persesv1.ProjectMetadata{
@@ -146,37 +136,58 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 		Spec: datasource.Spec.Config.DatasourceSpec,
 	}
 
-	if err != nil {
-		if errors.Is(err, perseshttp.RequestNotFoundError) {
-			_, err = persesClient.Datasource(datasource.Namespace).Create(datasourceWithName)
+	existing, err := persesClient.Datasource(datasource.Namespace).Get(datasource.Name)
+	notFound := err != nil && errors.Is(err, perseshttp.RequestNotFoundError)
 
-			if err != nil {
-				dlog.WithError(err).Errorf("Failed to create datasource: %s", datasource.Name)
-				return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
-			}
-
-			dlog.Infof("Datasource created: %s", datasource.Name)
-
-			res, err := subreconciler.ContinueReconciling()
-			return res, "", err
-		}
-
+	if err != nil && !notFound {
 		return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
 	}
 
-	if persescommon.DatasourceInSync(existing, datasourceWithName) {
+	if !notFound && persescommon.DatasourceInSync(existing, datasourceWithName) {
 		dlog.Debugf("Datasource already in sync: %s", datasource.Name)
 		res, err := subreconciler.ContinueReconciling()
 		return res, "", err
 	}
 
-	_, err = persesClient.Datasource(datasource.Namespace).Update(datasourceWithName)
-	if err != nil {
-		dlog.WithError(err).Errorf("Failed to update datasource: %s", datasource.Name)
-		return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
+	if validateErr := validate.New(persesClient.RESTClient()).Datasource(datasourceWithName); validateErr != nil {
+		if persescommon.IsClientError(validateErr) {
+			dlog.WithError(validateErr).Errorf("Datasource validation failed: %s", datasource.Name)
+			return subreconciler.RequeueWithErrorAndReason(
+				fmt.Errorf("datasource %q failed server-side validation: %w", datasource.Name, validateErr),
+				persescommon.ReasonValidationFailed,
+			)
+		}
+		dlog.WithError(validateErr).Errorf("Datasource validation request failed: %s", datasource.Name)
+		return subreconciler.RequeueWithErrorAndReason(
+			fmt.Errorf("datasource %q validation request failed: %w", datasource.Name, validateErr),
+			persescommon.ReasonBackendError,
+		)
 	}
 
-	dlog.Infof("Datasource updated: %s", datasource.Name)
+	// Sync secret only after validation passes to avoid orphaned secrets
+	if persescommon.HasSecretConfig(datasource.Spec.Client) {
+		_, reason, err := r.syncPersesSecret(ctx, persesClient, datasource)
+		if err != nil {
+			dlog.WithError(err).Errorf("Failed to create datasource secret: %s", datasource.Name)
+			return subreconciler.RequeueWithErrorAndReason(err, reason)
+		}
+	}
+
+	if notFound {
+		_, err = persesClient.Datasource(datasource.Namespace).Create(datasourceWithName)
+		if err != nil {
+			dlog.WithError(err).Errorf("Failed to create datasource: %s", datasource.Name)
+			return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
+		}
+		dlog.Infof("Datasource created: %s", datasource.Name)
+	} else {
+		_, err = persesClient.Datasource(datasource.Namespace).Update(datasourceWithName)
+		if err != nil {
+			dlog.WithError(err).Errorf("Failed to update datasource: %s", datasource.Name)
+			return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
+		}
+		dlog.Infof("Datasource updated: %s", datasource.Name)
+	}
 
 	res, err := subreconciler.ContinueReconciling()
 	return res, "", err
