@@ -8,7 +8,6 @@
 [![go](https://github.com/perses/perses-operator/actions/workflows/go.yaml/badge.svg)](https://github.com/perses/perses-operator/actions/workflows/go.yaml)
 [![e2e](https://github.com/perses/perses-operator/actions/workflows/e2e.yaml/badge.svg)](https://github.com/perses/perses-operator/actions/workflows/e2e.yaml)
 [![docs](https://github.com/perses/perses-operator/actions/workflows/docs.yaml/badge.svg)](https://github.com/perses/perses-operator/actions/workflows/docs.yaml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/perses/perses-operator)](https://goreportcard.com/report/github.com/perses/perses-operator)
 [![persesdev/perses-operator](https://img.shields.io/docker/v/persesdev/perses-operator?sort=semver&label=persesdev%2Fperses-operator)](https://hub.docker.com/r/persesdev/perses-operator/tags)
 [![join slack](https://img.shields.io/badge/join%20slack-%23perses--dev-brightgreen.svg)](https://cloud-native.slack.com/messages/C07KQR95WBE)
 
