@@ -98,7 +98,7 @@ jobs:
               --force
 
       - name: Checkout community-operators fork
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: ${{ env.BOT_USER }}/${{ inputs.repo }}
           token: ${{ secrets.BOT_TOKEN }}
@@ -139,7 +139,7 @@ jobs:
           echo "Auto-detected version_replaced=${prev} (latest on OperatorHub before ${VERSION})"
 
       - name: Checkout perses-operator at release tag
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: ${{ github.repository }}
           ref: ${{ steps.prepare_release.outputs.release_ref }}
