@@ -5,7 +5,7 @@ go 1.26.4
 require (
 	github.com/brunoga/deep v1.3.1
 	github.com/onsi/ginkgo/v2 v2.32.0
-	github.com/onsi/gomega v1.42.0
+	github.com/onsi/gomega v1.42.1
 	github.com/openshift/api v0.0.0-20260615110019-261e3a0546f3
 	github.com/openshift/controller-runtime-common v0.0.0-20260428152732-64ee174f5e2e
 	github.com/openshift/library-go v0.0.0-20260615113748-bc9d4056464b
