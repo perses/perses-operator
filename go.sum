@@ -257,8 +257,8 @@ github.com/openshift/controller-runtime-common v0.0.0-20260428152732-64ee174f5e2
 github.com/openshift/controller-runtime-common v0.0.0-20260428152732-64ee174f5e2e/go.mod h1:XGabTMnNbz0M5Oa7IbscZp/jmcc7aHobvOCUWwkzKvM=
 github.com/openshift/library-go v0.0.0-20260615113748-bc9d4056464b h1:fmTTzoHLhRf4QsMKw4cEbnvUeUcgcaNesh5mueWnaVs=
 github.com/openshift/library-go v0.0.0-20260615113748-bc9d4056464b/go.mod h1:/HBhy6jm/igWI3Y1vYFwFG3ZCcXmnNsKUT6VBpPyM9A=
-github.com/perses/common v0.31.0 h1:3jDf6RvtKg7F+hahoPgljl2pHRSSgb/bt+ELlmFc/qk=
-github.com/perses/common v0.31.0/go.mod h1:YQ71/UC6KCogfiTRuh3FLar11KolNGScwms5MVlc/f4=
+github.com/perses/common v0.31.1 h1:Rr4XfHexru+4fbovvB6uDd3nycP76JMegVTTFRkp/lM=
+github.com/perses/common v0.31.1/go.mod h1:utnPOuEk6q0JkaD9I8auzlsDLEkuLnVsNZZHsKIl9T8=
 github.com/perses/perses v0.53.1 h1:9VY/6p9QWrZwPSV7qiwTMSOsgcB37Lb1AXKT0ORXc6I=
 github.com/perses/perses v0.53.1/go.mod h1:ro8fsgBkHYOdrL/MV+fdP9mflKzYCy/+gcbxiaReI/A=
 github.com/pjbgf/sha1cd v0.3.2 h1:a9wb0bp1oC2TGwStyn0Umc/IGKQnEgF0vVaZ8QF8eo4=
