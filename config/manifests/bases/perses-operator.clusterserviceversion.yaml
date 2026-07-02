@@ -109,6 +109,8 @@ metadata:
     capabilities: Basic Install
     categories: Monitoring
     containerImage: docker.io/persesdev/perses-operator:v0.4.0
+    description: Kubernetes operator for deploying and managing Perses observability
+      dashboards, instances, and datasources as custom resources.
     repository: https://github.com/perses/perses-operator
   labels:
     operatorframework.io/arch.amd64: supported
@@ -310,8 +312,69 @@ spec:
       - displayName: Conditions
         path: conditions
       version: v1alpha1
-  description: The Perses Operator deploys and manages Perses instances, dashboards
-    and datasources.
+  description: |-
+    The Perses Operator provides [Kubernetes](https://kubernetes.io/) native deployment and management of [Perses](https://github.com/perses/perses) and related resources. The purpose of this operator is to simplify and automate the deployment and management of Perses observability dashboards on Kubernetes clusters.
+
+    ### Operator features
+
+    * **Kubernetes Custom Resources**: Use Kubernetes custom resources to deploy and manage Perses instances, dashboards, and datasources.
+    * **Dashboard-as-Code**: Declaratively manage dashboards and datasources as Kubernetes resources, with automatic synchronization to Perses instances.
+    * **Flexible Storage**: Configure SQL database (Deployment) or file-based storage with PVC (StatefulSet) or emptyDir from a native Kubernetes resource.
+    * **TLS and Authentication**: Configure server TLS, client mTLS, and datasource proxy TLS. Support for BasicAuth, OAuth, and native Kubernetes authentication.
+    * **Multi-Instance Sync**: Use `instanceSelector` on dashboards and datasources to target specific Perses instances, with namespace-to-project mapping for isolation.
+    * **Observability**: Built-in Prometheus metrics and alerting rules compatible with the [Prometheus Operator](https://github.com/prometheus-operator/prometheus-operator).
+
+    ### Custom Resource Definitions
+
+    The operator acts on the following Custom Resource Definitions (CRDs):
+
+    * **`Perses`**, which defines a desired Perses server deployment. The operator manages the underlying Deployment or StatefulSet, Service, and ConfigMap based on the spec.
+    * **`PersesDashboard`**, which declaratively specifies a dashboard to be synced to Perses instances. Kubernetes namespaces map to Perses projects.
+    * **`PersesDatasource`**, which declaratively specifies a project-scoped datasource to be synced to matching Perses instances.
+    * **`PersesGlobalDatasource`**, which declaratively specifies a cluster-scoped datasource shared across all Perses projects.
+
+    ### Before you start
+
+    1. Ensure Kubernetes 1.25+ is available in your cluster.
+    2. Ensure [cert-manager](https://cert-manager.io/) is installed in the cluster. It is required for webhook TLS certificates.
+
+    ### Getting Started
+
+    After installing this operator via OperatorHub, create a `Perses` custom resource to deploy a Perses instance. Example manifests are available in the OperatorHub console (**alm-examples**) and in the [v1alpha2 samples](https://github.com/perses/perses-operator/tree/main/config/samples/v1alpha2) on GitHub.
+
+    1. Create a namespace for your Perses resources:
+
+        ```bash
+        kubectl create namespace perses-dev
+        ```
+
+    2. Apply a sample `Perses` resource (adjust to your environment):
+
+        ```bash
+        kubectl apply -f https://raw.githubusercontent.com/perses/perses-operator/main/config/samples/v1alpha2/perses.yaml -n perses-dev
+        ```
+
+    3. Access the Perses UI:
+
+        ```bash
+        kubectl -n perses-dev port-forward svc/perses-sample 8080:8080
+        ```
+
+    For advanced configuration, see the [User Guide](https://perses.dev/perses-operator/docs/user-guide/) and [API Reference](https://perses.dev/perses-operator/docs/api/).
+
+    ### Upgrading
+
+    CRDs default to `perses.dev/v1alpha2`. The `v1alpha1` API version is deprecated and will be removed in a future release. Existing `v1alpha1` resources are automatically converted via the conversion webhook when cert-manager is enabled. Users should migrate their manifests to use `v1alpha2`. See the [User Guide](https://perses.dev/perses-operator/docs/user-guide/) for details.
+
+    ### Project Status
+
+    The operator is under active development. The `perses.dev/v1alpha2` API is **unstable** and may change frequently. We encourage usage for testing and development, but suggest caution in mission-critical environments.
+
+    ### Documentation
+
+    * [User Guide](https://perses.dev/perses-operator/docs/user-guide/)
+    * [API Reference](https://perses.dev/perses-operator/docs/api/)
+    * [Example Configurations](https://github.com/perses/perses-operator/tree/main/config/samples/v1alpha2)
   displayName: Perses Operator
   icon:
   - base64data: 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
@@ -511,7 +574,13 @@ spec:
   - metrics
   - dashboards
   links:
-  - name: Perses Operator
+  - name: User Guide
+    url: https://perses.dev/perses-operator/docs/user-guide/
+  - name: API Reference
+    url: https://perses.dev/perses-operator/docs/api/
+  - name: Source Code
+    url: https://github.com/perses/perses-operator
+  - name: Perses Project
     url: https://perses.dev
   maintainers:
   - email: gbernal@redhat.com
