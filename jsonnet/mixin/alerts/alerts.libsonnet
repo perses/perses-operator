@@ -35,8 +35,8 @@
           {
             alert: 'PersesOperatorReconcileErrors',
             expr: |||
-              sum by (%(groupLabels)s) (rate(perses_operator_reconcile_errors_total{%(persesOperatorSelector)s}[5m]))
-              /
+              sum by (%(groupLabels)s, reason) (rate(perses_operator_reconcile_errors_total{%(persesOperatorSelector)s}[5m]))
+              / on(%(groupLabels)s) group_left()
               (sum by (%(groupLabels)s) (rate(perses_operator_reconcile_operations_total{%(persesOperatorSelector)s}[5m])) > 0)
               > 0.1
             ||| % $._config,
@@ -46,7 +46,7 @@
             },
             annotations: {
               summary: 'Errors while reconciling objects.',
-              description: '{{ $value | humanizePercentage }} of reconciling operations failed for {{ $labels.controller }} controller in {{ $labels.namespace }} namespace.',
+              description: '{{ $value | humanizePercentage }} of reconciling operations failed for {{ $labels.controller }} controller in {{ $labels.namespace }} namespace (reason: {{ $labels.reason }}).',
             },
           },
           {
@@ -61,6 +61,20 @@
             annotations: {
               summary: 'Last controller reconciliation failed',
               description: 'Controller in {{ $labels.namespace }} namespace fails to reconcile {{ printf "%.0f" $value }} objects.',
+            },
+          },
+          {
+            alert: 'PersesOperatorValidationFailures',
+            expr: |||
+              sum by (%(groupLabels)s) (increase(perses_operator_reconcile_errors_total{reason="ValidationFailed",%(persesOperatorSelector)s}[15m])) > 0
+            ||| % $._config,
+            'for': '5m',
+            labels: {
+              severity: 'warning',
+            },
+            annotations: {
+              summary: 'Resources failing server-side validation.',
+              description: '{{ $labels.controller }} controller in {{ $labels.namespace }} namespace has resources failing Perses server-side validation. Check resource status conditions for details.',
             },
           },
           {

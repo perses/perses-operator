@@ -105,6 +105,8 @@ jobs:
         run: make bundle-check
       - name: check jsonnet changes
         run: make jsonnet-check
+      - name: test alerting rules
+        run: make test-alerts
       - name: check installer manifest is up-to-date
         run: make installer-check
       - name: check generated manifests are up-to-date

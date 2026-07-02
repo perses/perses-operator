@@ -79,6 +79,30 @@ const (
 
 type ConditionStatusReason string
 
+// ReasonError wraps an error with a ConditionStatusReason so callers can
+// extract the specific failure reason for metrics and logging.
+type ReasonError struct {
+	Err    error
+	Reason ConditionStatusReason
+}
+
+func (e *ReasonError) Error() string { return e.Err.Error() }
+func (e *ReasonError) Unwrap() error { return e.Err }
+
+func NewReasonError(err error, reason ConditionStatusReason) *ReasonError {
+	return &ReasonError{Err: err, Reason: reason}
+}
+
+// ExtractReason returns the ConditionStatusReason from an error if it wraps
+// a ReasonError, otherwise returns the provided fallback.
+func ExtractReason(err error, fallback ConditionStatusReason) ConditionStatusReason {
+	var re *ReasonError
+	if errors.As(err, &re) {
+		return re.Reason
+	}
+	return fallback
+}
+
 const (
 	// Failure to be used when unable to locate any perses backends
 	ReasonMissingPerses        ConditionStatusReason = "PersesMissing"

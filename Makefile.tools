@@ -74,6 +74,9 @@ GOLANGCI_LINT_KAL = $(LOCALBIN)/golangci-lint-kube-api-linter
 SHFMT = $(LOCALBIN)/shfmt
 SHFMT_VERSION = v3.13.1
 
+PROMTOOL = $(LOCALBIN)/promtool
+PROMTOOL_VERSION = 3.12.0
+
 SHELLCHECK = $(LOCALBIN)/shellcheck
 SHELLCHECK_VERSION = v0.11.0
 
@@ -233,6 +236,16 @@ $(SHFMT) shfmt: $(LOCALBIN) ## Install shfmt locally if necessary.
 		GOBIN=$(LOCALBIN) go install mvdan.cc/sh/v3/cmd/shfmt@$(SHFMT_VERSION) ;\
 	}
 
+.PHONY: promtool
+$(PROMTOOL) promtool: $(LOCALBIN) ## Install promtool locally if necessary.
+	@{ \
+		set -ex ;\
+		[[ -f $(PROMTOOL) ]] && exit 0 ;\
+		OS=$$(go env GOOS) && ARCH=$$(go env GOARCH) && \
+		curl -sSL https://github.com/prometheus/prometheus/releases/download/v$(PROMTOOL_VERSION)/prometheus-$(PROMTOOL_VERSION).$${OS}-$${ARCH}.tar.gz \
+			| tar xz -C $(LOCALBIN) --strip-components=1 prometheus-$(PROMTOOL_VERSION).$${OS}-$${ARCH}/promtool ;\
+	}
+
 .PHONY: shellcheck
 $(SHELLCHECK) shellcheck: $(LOCALBIN) ## Install shellcheck locally if necessary.
 	@{ \
@@ -261,6 +274,7 @@ build-tools: $(KUSTOMIZE) \
 		$(OPM) \
 		$(KUTTL) \
 		$(MDOX) \
+		$(PROMTOOL) \
 		$(SHFMT) \
 		$(SHELLCHECK)
 
@@ -287,6 +301,7 @@ validate-tools: build-tools ## Validate that all tools are installed and working
 	@echo -n "  opm: " && $(OPM) version 2>&1 | head -n 1
 	@echo -n "  kuttl: " && $(KUTTL) version 2>&1 | head -n 1
 	@echo -n "  mdox: " && $(MDOX) --version 2>&1 | head -n 1
+	@echo -n "  promtool: " && $(PROMTOOL) --version 2>&1 | head -n 1
 	@echo -n "  shfmt: " && $(SHFMT) --version 2>&1 | head -n 1
 	@echo -n "  shellcheck: " && $(SHELLCHECK) --version 2>&1 | grep '^version:' || echo "installed"
 	@echo "✅ All tools validated successfully!"
