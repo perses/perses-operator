@@ -124,7 +124,8 @@ func (r *PersesGlobalDatasourceReconciler) Reconcile(ctx context.Context, req ct
 	// Track metrics
 	if r.Metrics != nil {
 		if reconcileErr != nil {
-			r.Metrics.ReconcileErrors("persesglobaldatasource", "reconciliation_failed").Inc()
+			reason := string(common.ExtractReason(reconcileErr, "reconciliation_failed"))
+			r.Metrics.ReconcileErrors("persesglobaldatasource", reason).Inc()
 			r.Metrics.SetFailedResources(objKey, "globaldatasource", 1)
 		} else {
 			r.Metrics.SetSyncedResources(objKey, "globaldatasource", 1)
@@ -221,7 +222,10 @@ func (r *PersesGlobalDatasourceReconciler) setStatusToDegraded(
 		return result, err
 	}
 
-	return degradedResult, degradedError
+	if degradedError != nil {
+		return degradedResult, common.NewReasonError(degradedError, degradedReason)
+	}
+	return degradedResult, nil
 }
 
 // findGlobalDatasourcesForPerses returns reconcile requests for all PersesGlobalDatasources
