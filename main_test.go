@@ -25,18 +25,28 @@ func TestBuildMetricsServerOptions_SecureEnabled(t *testing.T) {
 		func(c *tls.Config) { c.NextProtos = []string{"http/1.1"} },
 	}
 
-	opts := buildMetricsServerOptions(":8443", true, tlsOpts)
+	opts := buildMetricsServerOptions(":8443", true, "/tmp/certs", tlsOpts)
 
 	assert.Equal(t, ":8443", opts.BindAddress)
 	assert.True(t, opts.SecureServing)
 	assert.NotNil(t, opts.FilterProvider, "FilterProvider should be set when secure metrics is enabled")
+	assert.Equal(t, "/tmp/certs", opts.CertDir, "CertDir should be set when secure metrics is enabled and certDir is provided")
 	assert.Len(t, opts.TLSOpts, 1)
 }
 
+func TestBuildMetricsServerOptions_SecureEnabledNoCertDir(t *testing.T) {
+	opts := buildMetricsServerOptions(":8443", true, "", nil)
+
+	assert.True(t, opts.SecureServing)
+	assert.NotNil(t, opts.FilterProvider)
+	assert.Empty(t, opts.CertDir, "CertDir should not be set when certDir is empty")
+}
+
 func TestBuildMetricsServerOptions_SecureDisabled(t *testing.T) {
-	opts := buildMetricsServerOptions(":8080", false, nil)
+	opts := buildMetricsServerOptions(":8080", false, "/tmp/certs", nil)
 
 	assert.Equal(t, ":8080", opts.BindAddress)
 	assert.False(t, opts.SecureServing)
 	assert.Nil(t, opts.FilterProvider, "FilterProvider should not be set when secure metrics is disabled")
+	assert.Empty(t, opts.CertDir, "CertDir should not be set when secure metrics is disabled")
 }

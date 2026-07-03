@@ -105,3 +105,36 @@ replacements:
     options:
       delimiter: .
       index: 1
+# Inject metrics Service name/namespace into Certificate dnsNames
+- source:
+    kind: Service
+    version: v1
+    name: controller-manager-metrics-service
+    fieldPath: metadata.name
+  targets:
+  - select:
+      kind: Certificate
+      group: cert-manager.io
+      version: v1
+    fieldPaths:
+    - spec.dnsNames.2
+    - spec.dnsNames.3
+    options:
+      delimiter: .
+      index: 0
+- source:
+    kind: Service
+    version: v1
+    name: controller-manager-metrics-service
+    fieldPath: metadata.namespace
+  targets:
+  - select:
+      kind: Certificate
+      group: cert-manager.io
+      version: v1
+    fieldPaths:
+    - spec.dnsNames.2
+    - spec.dnsNames.3
+    options:
+      delimiter: .
+      index: 1

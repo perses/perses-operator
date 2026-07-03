@@ -28,6 +28,8 @@ spec:
   dnsNames:
     - SERVICE_NAME.SERVICE_NAMESPACE.svc
     - SERVICE_NAME.SERVICE_NAMESPACE.svc.cluster.local
+    - METRICS_SERVICE_NAME.METRICS_SERVICE_NAMESPACE.svc
+    - METRICS_SERVICE_NAME.METRICS_SERVICE_NAMESPACE.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: selfsigned-issuer

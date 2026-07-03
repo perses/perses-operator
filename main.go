@@ -194,7 +194,7 @@ func main() {
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:  scheme,
-		Metrics: buildMetricsServerOptions(metricsAddr, secureMetrics, []func(*tls.Config){tlsConfigFunc}),
+		Metrics: buildMetricsServerOptions(metricsAddr, secureMetrics, certDir, []func(*tls.Config){tlsConfigFunc}),
 		WebhookServer: webhook.NewServer(webhook.Options{
 			Port:    webhookPort,
 			CertDir: certDir,
@@ -330,7 +330,7 @@ func main() {
 	}
 }
 
-func buildMetricsServerOptions(bindAddress string, secureMetrics bool, tlsOpts []func(*tls.Config)) server.Options {
+func buildMetricsServerOptions(bindAddress string, secureMetrics bool, certDir string, tlsOpts []func(*tls.Config)) server.Options {
 	metricsServerOptions := server.Options{
 		BindAddress:   bindAddress,
 		SecureServing: secureMetrics,
@@ -339,6 +339,9 @@ func buildMetricsServerOptions(bindAddress string, secureMetrics bool, tlsOpts [
 
 	if secureMetrics {
 		metricsServerOptions.FilterProvider = filters.WithAuthenticationAndAuthorization
+		if certDir != "" {
+			metricsServerOptions.CertDir = certDir
+		}
 	}
 
 	return metricsServerOptions
