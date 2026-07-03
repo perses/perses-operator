@@ -2,6 +2,36 @@
 
 The Perses Operator exposes Prometheus metrics for monitoring operator health and performance.
 
+## Authentication and Authorization
+
+The metrics endpoint uses controller-runtime's built-in `SecureServing` with
+`filters.WithAuthenticationAndAuthorization` to protect the `/metrics` endpoint.
+This replaces the previous kube-rbac-proxy sidecar approach.
+
+When `--metrics-secure=true` (the default), every request to `/metrics` is
+authenticated via Kubernetes **TokenReview** and authorized via
+**SubjectAccessReview**. Clients must present a valid bearer token for a
+service account that has `get` permission on the `/metrics` non-resource URL
+(granted by the `metrics-reader` ClusterRole).
+
+This approach differs from kube-rbac-proxy's optional mutual TLS (mTLS) client
+certificate authentication. Instead of client certificates, callers
+authenticate with bearer tokens, which is the standard mechanism recommended by
+Kubebuilder since v4.1.0 (see the [Kubebuilder Metrics reference](https://book.kubebuilder.io/reference/metrics.html)
+and the [design doc](https://github.com/kubernetes-sigs/kubebuilder/blob/master/designs/discontinue_usage_of_kube_rbac_proxy.md)).
+
+## TLS Certificates
+
+When secure metrics is enabled, the metrics server reuses the same TLS
+certificates as the webhook server. These certificates are provisioned by
+cert-manager and mounted at the path specified by `--webhook-cert-dir`
+(default `/tmp/k8s-webhook-server/serving-certs`). The cert-manager
+Certificate includes DNS names for both the webhook and metrics services,
+allowing a single certificate to serve both endpoints.
+
+To use HTTP instead of HTTPS (not recommended for production), set
+`--metrics-secure=false` and `--metrics-bind-address=:8080`.
+
 ## Accessing Metrics
 
 Metrics are exposed on port `8443` over HTTPS at the `/metrics` endpoint with authentication and authorization enabled:
