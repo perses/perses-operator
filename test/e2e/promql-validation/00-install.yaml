@@ -1,0 +1,54 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  # Apply the ValidatingWebhookConfiguration to enable PromQL admission validation
+  - script: |
+      cat <<'EOF' | kubectl apply --server-side -f -
+      apiVersion: admissionregistration.k8s.io/v1
+      kind: ValidatingWebhookConfiguration
+      metadata:
+        name: perses-operator-validating-webhook-configuration
+        annotations:
+          cert-manager.io/inject-ca-from: perses-operator-system/perses-operator-serving-cert
+      webhooks:
+        - admissionReviewVersions:
+            - v1
+          clientConfig:
+            service:
+              name: perses-operator-webhook-service
+              namespace: perses-operator-system
+              path: /validate-perses-dev-v1alpha1-persesdashboard
+          failurePolicy: Fail
+          name: vpersesdashboard.kb.io
+          rules:
+            - apiGroups:
+                - perses.dev
+              apiVersions:
+                - v1alpha1
+                - v1alpha2
+              operations:
+                - CREATE
+                - UPDATE
+              resources:
+                - persesdashboards
+          sideEffects: None
+      EOF
+  # Patch the operator deployment to enable PromQL validation in enforce mode
+  - script: |
+      kubectl patch deployment perses-operator-controller-manager -n perses-operator-system --type=json \
+        -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--promql-validation-mode=enforce"}]'
+      kubectl rollout status deployment/perses-operator-controller-manager -n perses-operator-system --timeout=120s
+  # Wait for cert-manager to inject the CA bundle into the ValidatingWebhookConfiguration
+  - script: |
+      echo "Waiting for cert-manager to inject caBundle..."
+      for i in $(seq 1 60); do
+        CA=$(kubectl get validatingwebhookconfiguration perses-operator-validating-webhook-configuration \
+          -o jsonpath='{.webhooks[0].clientConfig.caBundle}' 2>/dev/null)
+        if [ -n "$CA" ]; then
+          echo "PASS: caBundle injected after ${i}s"
+          exit 0
+        fi
+        sleep 1
+      done
+      echo "FAIL: caBundle not injected after 60s"
+      exit 1

@@ -1,0 +1,4 @@
+apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  name: promql-variable-dashboard

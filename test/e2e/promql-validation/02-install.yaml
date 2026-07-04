@@ -1,0 +1,49 @@
+apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  name: promql-variable-dashboard
+spec:
+  config:
+    display:
+      name: Dashboard With Variables
+    duration: 5m
+    variables:
+      - kind: ListVariable
+        spec:
+          name: job
+          allowMultiple: false
+          allowAllValue: false
+          plugin:
+            kind: PrometheusLabelValuesVariable
+            spec:
+              labelName: job
+    panels:
+      varPanel:
+        kind: Panel
+        spec:
+          display:
+            name: Variable Panel
+          plugin:
+            kind: TimeSeriesChart
+            spec: {}
+          queries:
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: up{job="$job"}
+    layouts:
+      - kind: Grid
+        spec:
+          display:
+            title: Row 1
+            collapse:
+              open: true
+          items:
+            - x: 0
+              "y": 0
+              width: 24
+              height: 6
+              content:
+                "$ref": "#/spec/panels/varPanel"

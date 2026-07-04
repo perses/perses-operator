@@ -1,0 +1,37 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 180
+commands:
+  - script: |
+      kubectl rollout status deployment/perses-operator-controller-manager -n perses-operator-system --timeout=120s
+      # Verify the webhook is actually reachable by doing a dry-run
+      for i in $(seq 1 30); do
+        OUTPUT=$(kubectl apply --dry-run=server -f - <<'EOF' 2>&1
+      apiVersion: perses.dev/v1alpha2
+      kind: PersesDashboard
+      metadata:
+        name: webhook-probe
+        namespace: default
+      spec:
+        config:
+          display:
+            name: Probe
+          duration: 5m
+          panels: {}
+          layouts: []
+      EOF
+      )
+        if echo "$OUTPUT" | grep -q "webhook-probe"; then
+          echo "PASS: webhook is reachable"
+          exit 0
+        fi
+        if echo "$OUTPUT" | grep -q "context deadline exceeded"; then
+          echo "Webhook not ready yet, retrying ($i/30)..."
+          sleep 2
+          continue
+        fi
+        echo "PASS: webhook responded"
+        exit 0
+      done
+      echo "FAIL: webhook not reachable after retries"
+      exit 1

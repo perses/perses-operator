@@ -1,0 +1,46 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  # Write the invalid dashboard YAML to a temp file (avoids heredoc escaping issues)
+  - script: |
+      cat > /tmp/kuttl-promql-invalid-dashboard.yaml <<'EOF'
+      apiVersion: perses.dev/v1alpha2
+      kind: PersesDashboard
+      metadata:
+        name: promql-invalid-dashboard
+      spec:
+        config:
+          display:
+            name: Invalid PromQL Dashboard
+          duration: 5m
+          panels:
+            brokenPanel:
+              kind: Panel
+              spec:
+                display:
+                  name: Broken Panel
+                plugin:
+                  kind: TimeSeriesChart
+                  spec: {}
+                queries:
+                  - kind: TimeSeriesQuery
+                    spec:
+                      plugin:
+                        kind: PrometheusTimeSeriesQuery
+                        spec:
+                          query: "rate(up[)"
+          layouts:
+            - kind: Grid
+              spec:
+                display:
+                  title: Row 1
+                  collapse:
+                    open: true
+                items:
+                  - x: 0
+                    "y": 0
+                    width: 24
+                    height: 6
+                    content:
+                      "$ref": "#/spec/panels/brokenPanel"
+      EOF

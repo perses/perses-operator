@@ -1,0 +1,21 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 30
+commands:
+  # Attempt to create a dashboard with invalid PromQL — should be rejected by the webhook
+  - script: |
+      OUTPUT=$(kubectl apply -n $NAMESPACE -f /tmp/kuttl-promql-invalid-dashboard.yaml 2>&1)
+      if [ $? -eq 0 ]; then
+        echo "FAIL: should have been rejected but was accepted"
+        exit 1
+      fi
+      echo "$OUTPUT" | grep -q "invalid PromQL" && echo "PASS: webhook rejected invalid PromQL" && exit 0
+      echo "FAIL: unexpected rejection message: $OUTPUT"
+      exit 1
+  # Verify the invalid dashboard was NOT created
+  - script: |
+      if kubectl get persesdashboard promql-invalid-dashboard -n $NAMESPACE 2>/dev/null; then
+        echo "FAIL: invalid dashboard should not exist"
+        exit 1
+      fi
+      echo "PASS: invalid dashboard does not exist"
