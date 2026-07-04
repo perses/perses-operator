@@ -11,6 +11,7 @@ This documentation provides information on how to use the Perses Operator custom
 - [Examples](#examples)
 - [Project Management](#project-management)
 - [Tags](#tags)
+- [PromQL Validation](#promql-validation)
 - [Cache and Watch Filtering](#cache-and-watch-filtering)
 - [Troubleshooting](#troubleshooting)
 
@@ -283,6 +284,102 @@ The operator parses the annotation, normalizes tags to lowercase, and populates 
 The same annotation works on `PersesDatasource` and `PersesGlobalDatasource` resources.
 
 Tag values must follow Perses tag validation rules: lowercase letters, numbers, spaces, hyphens, and underscores only, with a maximum of 50 characters per tag and 20 tags total.
+
+## PromQL Validation
+
+The operator includes an optional validating admission webhook that checks PromQL syntax in `PersesDashboard` resources before they are persisted. This catches invalid queries at apply time, similar to how prometheus-operator validates `PrometheusRule` expressions.
+
+**This feature is opt-in and disabled by default.** Enabling it requires two steps:
+
+1. Deploy the `ValidatingWebhookConfiguration` (tells the API server to call the webhook)
+2. Set `--promql-validation-mode=enforce` (or `warn`) on the operator
+
+### Enabling PromQL validation
+
+Deploy using the provided kustomize overlay which includes the webhook configuration:
+
+```bash
+kustomize build config/overlays/promql-validation | kubectl apply --server-side -f -
+```
+
+Then patch the operator deployment to enable enforcement:
+
+```bash
+kubectl patch deployment perses-operator-controller-manager -n perses-operator-system --type=json \
+  -p='[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--promql-validation-mode=enforce"}]'
+```
+
+Alternatively, if you manage your own kustomize overlay, add `--promql-validation-mode=enforce` to the manager container args directly.
+
+### What is validated
+
+The webhook inspects:
+
+- **Panel queries** with `plugin.kind: PrometheusTimeSeriesQuery` — validates the `spec.query` field
+- **Variables** with `plugin.kind: PrometheusPromQLVariable` — validates the `spec.expr` field
+
+Non-Prometheus query types (TraceQL, LogQL, etc.) are ignored and always pass through.
+
+### Variable references
+
+PromQL expressions containing Perses variable references (`$variable` or `${variable}`) are **skipped** because they cannot be parsed without substitution. For example:
+
+```promql
+rate(http_requests_total{job="$job"}[5m])
+```
+
+This expression would fail the PromQL parser due to `$job`, so the webhook allows it through without validation.
+
+### Validation modes
+
+The `--promql-validation-mode` flag controls how validation errors are handled:
+
+| Mode                 | Behavior                                                                                |
+|----------------------|-----------------------------------------------------------------------------------------|
+| `disabled` (default) | Skips PromQL validation entirely                                                        |
+| `enforce`            | Rejects the dashboard with an error describing the invalid expression                   |
+| `warn`               | Allows the dashboard through but returns admission warnings visible in `kubectl` output |
+
+Use `enforce` for strict validation. Use `warn` when the bundled PromQL parser may lag behind what your Prometheus server supports, or when custom functions/extensions are in use.
+
+### Example: rejected dashboard
+
+```yaml
+apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  name: broken-dashboard
+spec:
+  config:
+    display:
+      name: Broken Dashboard
+    duration: 5m
+    panels:
+      errorPanel:
+        kind: Panel
+        spec:
+          display:
+            name: Error Rate
+          plugin:
+            kind: TimeSeriesChart
+            spec: {}
+          queries:
+            - kind: TimeSeriesQuery
+              spec:
+                plugin:
+                  kind: PrometheusTimeSeriesQuery
+                  spec:
+                    query: "rate(up[)"
+```
+
+Applying this in `enforce` mode produces:
+
+```
+Error from server: error when creating "dashboard.yaml": admission webhook
+"vpersesdashboard.kb.io" denied the request: dashboard "broken-dashboard" has
+invalid PromQL expressions:
+panel "errorPanel" query index 0: invalid PromQL expression "rate(up[)": ...
+```
 
 ## Secrets
 

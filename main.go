@@ -108,7 +108,7 @@ func main() {
 			"Watches for changes and restarts the operator. Requires an OpenShift cluster.")
 	flag.BoolVar(&tlsConfigureOperands, common.TLSConfigureOperandsFlag, false,
 		"Propagate TLS settings to managed Perses pods. Without this flag, TLS only applies to the operator itself.")
-	flag.StringVar(&promqlValidationMode, "promql-validation-mode", "enforce",
+	flag.StringVar(&promqlValidationMode, "promql-validation-mode", "disabled",
 		"How to handle invalid PromQL in dashboards: enforce (reject), warn (allow with warning), disabled (skip validation).")
 	opts := zap.Options{
 		Development: true,

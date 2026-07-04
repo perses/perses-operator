@@ -1,0 +1,35 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: validating-webhook-configuration
+  labels:
+    app.kubernetes.io/name: validatingwebhookconfiguration
+    app.kubernetes.io/instance: validating-webhook-configuration
+    app.kubernetes.io/component: webhook
+    app.kubernetes.io/created-by: perses-operator
+    app.kubernetes.io/part-of: perses-operator
+    app.kubernetes.io/managed-by: kustomize
+  annotations:
+    cert-manager.io/inject-ca-from: CERTIFICATE_NAMESPACE/CERTIFICATE_NAME
+webhooks:
+  - admissionReviewVersions:
+      - v1
+    clientConfig:
+      service:
+        name: webhook-service
+        namespace: system
+        path: /validate-perses-dev-v1alpha1-persesdashboard
+    failurePolicy: Fail
+    matchPolicy: Equivalent
+    name: vpersesdashboard.kb.io
+    rules:
+      - apiGroups:
+          - perses.dev
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - persesdashboards
+    sideEffects: None

@@ -1,6 +1,9 @@
 apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
+  # Pre-cleanup: remove any stale webhook config from a previous failed run
+  - script: |
+      kubectl delete validatingwebhookconfiguration perses-operator-validating-webhook-configuration --ignore-not-found
   # Apply the ValidatingWebhookConfiguration to enable PromQL admission validation
   - script: |
       cat <<'EOF' | kubectl apply --server-side -f -
@@ -19,13 +22,13 @@ commands:
               namespace: perses-operator-system
               path: /validate-perses-dev-v1alpha1-persesdashboard
           failurePolicy: Fail
+          matchPolicy: Equivalent
           name: vpersesdashboard.kb.io
           rules:
             - apiGroups:
                 - perses.dev
               apiVersions:
                 - v1alpha1
-                - v1alpha2
               operations:
                 - CREATE
                 - UPDATE

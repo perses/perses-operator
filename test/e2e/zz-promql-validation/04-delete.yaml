@@ -1,0 +1,17 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+delete:
+  - apiVersion: perses.dev/v1alpha2
+    kind: PersesDashboard
+    metadata:
+      name: promql-valid-dashboard
+  - apiVersion: perses.dev/v1alpha2
+    kind: PersesDashboard
+    metadata:
+      name: promql-variable-dashboard
+commands:
+  # Remove the ValidatingWebhookConfiguration and restore the operator
+  - script: |
+      kubectl delete validatingwebhookconfiguration perses-operator-validating-webhook-configuration --ignore-not-found
+      kubectl patch deployment perses-operator-controller-manager -n perses-operator-system --type=json \
+        -p='[{"op":"remove","path":"/spec/template/spec/containers/0/args/-"}]' 2>/dev/null || true

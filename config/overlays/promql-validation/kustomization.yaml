@@ -1,0 +1,45 @@
+# This overlay adds the PromQL validating admission webhook on top of the default deployment.
+# Use this when you want the operator to validate PromQL expressions in PersesDashboard resources
+# at admission time.
+#
+# Usage:
+#   kustomize build config/overlays/promql-validation | kubectl apply --server-side -f -
+#
+# You must also set --promql-validation-mode=enforce (or warn) on the operator deployment.
+resources:
+  - ../../default
+  - validatingwebhookconfiguration.yaml
+
+patches:
+  - path: webhookcainjection_patch.yaml
+
+replacements:
+  # Inject cert-manager Certificate namespace/name into ValidatingWebhookConfiguration CA annotation
+  - source:
+      kind: Certificate
+      group: cert-manager.io
+      version: v1
+      name: serving-cert
+      fieldPath: metadata.namespace
+    targets:
+      - select:
+          kind: ValidatingWebhookConfiguration
+        fieldPaths:
+          - metadata.annotations.[cert-manager.io/inject-ca-from]
+        options:
+          delimiter: /
+          index: 0
+  - source:
+      kind: Certificate
+      group: cert-manager.io
+      version: v1
+      name: serving-cert
+      fieldPath: metadata.name
+    targets:
+      - select:
+          kind: ValidatingWebhookConfiguration
+        fieldPaths:
+          - metadata.annotations.[cert-manager.io/inject-ca-from]
+        options:
+          delimiter: /
+          index: 1
