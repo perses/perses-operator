@@ -28,7 +28,7 @@ patches:
 # Protect the /metrics endpoint by putting it behind auth.
 # If you want your controller-manager to expose the /metrics
 # endpoint w/o any authn/z, please comment the following line.
-- path: manager_auth_proxy_patch.yaml
+- path: manager_metrics_patch.yaml
 
 
 
@@ -102,6 +102,39 @@ replacements:
     fieldPaths:
     - spec.dnsNames.0
     - spec.dnsNames.1
+    options:
+      delimiter: .
+      index: 1
+# Inject metrics Service name/namespace into Certificate dnsNames
+- source:
+    kind: Service
+    version: v1
+    name: controller-manager-metrics-service
+    fieldPath: metadata.name
+  targets:
+  - select:
+      kind: Certificate
+      group: cert-manager.io
+      version: v1
+    fieldPaths:
+    - spec.dnsNames.2
+    - spec.dnsNames.3
+    options:
+      delimiter: .
+      index: 0
+- source:
+    kind: Service
+    version: v1
+    name: controller-manager-metrics-service
+    fieldPath: metadata.namespace
+  targets:
+  - select:
+      kind: Certificate
+      group: cert-manager.io
+      version: v1
+    fieldPaths:
+    - spec.dnsNames.2
+    - spec.dnsNames.3
     options:
       delimiter: .
       index: 1
