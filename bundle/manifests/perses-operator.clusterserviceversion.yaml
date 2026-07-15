@@ -1992,7 +1992,7 @@ metadata:
     capabilities: Basic Install
     categories: Monitoring
     containerImage: docker.io/persesdev/perses-operator:v0.4.0
-    createdAt: "2026-06-16T13:44:56Z"
+    createdAt: "2026-07-24T14:39:05Z"
     description: Kubernetes operator for deploying and managing Perses observability
       dashboards, instances, and datasources as custom resources.
     operators.operatorframework.io/builder: operator-sdk-v1.42.2

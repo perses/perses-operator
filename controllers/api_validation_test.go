@@ -133,7 +133,7 @@ var _ = Describe("API Validation", func() {
 			By("Creating a Perses resource with empty OAuth tokenURL")
 			perses := &persesv1alpha2.Perses{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "invalid-oauth-no-url",
+					Name:      "invalid-oauth-no-token-url",
 					Namespace: persesNamespace,
 				},
 				Spec: persesv1alpha2.PersesSpec{
@@ -142,10 +142,11 @@ var _ = Describe("API Validation", func() {
 						OAuth: &persesv1alpha2.OAuth{
 							SecretSource: persesv1alpha2.SecretSource{
 								Type:      persesv1alpha2.SecretSourceTypeSecret,
-								Name:      ptr.To("oauth-secret"),
+								Name:      ptr.To("perses-config"),
 								Namespace: ptr.To("default"),
 							},
-							TokenURL: "", // Invalid: required
+							ClientIDPath:     ptr.To("OPERATOR_CLIENT_ID"),
+							ClientSecretPath: ptr.To("OPERATOR_CLIENT_SECRET"),
 						},
 					},
 				},
@@ -170,10 +171,12 @@ var _ = Describe("API Validation", func() {
 						OAuth: &persesv1alpha2.OAuth{
 							SecretSource: persesv1alpha2.SecretSource{
 								Type:      persesv1alpha2.SecretSourceTypeSecret,
-								Name:      ptr.To("oauth-secret"),
+								Name:      ptr.To("perses-config"),
 								Namespace: ptr.To("default"),
 							},
-							TokenURL: "https://auth.example.com/token",
+							ClientIDPath:     ptr.To("OPERATOR_CLIENT_ID"),
+							ClientSecretPath: ptr.To("OPERATOR_CLIENT_SECRET"),
+							TokenURL:         "http://perses.perses-system.svc:8080/api/auth/providers/oidc/my-provider/token",
 						},
 					},
 				},
