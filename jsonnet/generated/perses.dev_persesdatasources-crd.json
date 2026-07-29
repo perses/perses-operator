@@ -274,11 +274,11 @@
                             "description": "Metadata is an optional field that contains additional information such as version and registry of the plugin.",
                             "properties": {
                               "registry": {
-                                "description": "Registry is optional. If not provided, it means the default registry: \"perses.dev\".",
+                                "description": "Registry is optional. If not provided, it means the default registry is: \"perses.dev\".",
                                 "type": "string"
                               },
                               "version": {
-                                "description": "Version is optional. If not provided, it means the latest version available in the Perses instance.",
+                                "description": "Version is optional. If not provided, it means the latest version available in the Perses instance.\nVersion needs to follow the semantic versioning format (e.g., \"1.0.0\" or \"v1.0.0\")",
                                 "type": "string"
                               }
                             },
@@ -676,11 +676,11 @@
                             "description": "Metadata is an optional field that contains additional information such as version and registry of the plugin.",
                             "properties": {
                               "registry": {
-                                "description": "Registry is optional. If not provided, it means the default registry: \"perses.dev\".",
+                                "description": "Registry is optional. If not provided, it means the default registry is: \"perses.dev\".",
                                 "type": "string"
                               },
                               "version": {
-                                "description": "Version is optional. If not provided, it means the latest version available in the Perses instance.",
+                                "description": "Version is optional. If not provided, it means the latest version available in the Perses instance.\nVersion needs to follow the semantic versioning format (e.g., \"1.0.0\" or \"v1.0.0\")",
                                 "type": "string"
                               }
                             },
