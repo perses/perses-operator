@@ -24,8 +24,9 @@ import (
 	"github.com/perses/common/set"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
-	persescommon "github.com/perses/perses/pkg/model/api/v1/common"
-	persesdashboard "github.com/perses/perses/pkg/model/api/v1/dashboard"
+	speccommon "github.com/perses/spec/go/common"
+	specdashboard "github.com/perses/spec/go/dashboard"
+	specplugin "github.com/perses/spec/go/plugin"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -110,20 +111,20 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 						Name: DashboardName,
 					},
 				},
-				Spec: persesv1.DashboardSpec{
-					Display: &persescommon.Display{
+				Spec: specdashboard.Spec{
+					Display: &speccommon.Display{
 						Name: DashboardName,
 					},
 					Duration: "5m",
-					Layouts:  []persesdashboard.Layout{},
-					Panels: map[string]*persesv1.Panel{
+					Layouts:  []specdashboard.Layout{},
+					Panels: map[string]*specdashboard.Panel{
 						"panel1": {
 							Kind: "Panel",
-							Spec: persesv1.PanelSpec{
-								Display: &persesv1.PanelDisplay{
+							Spec: specdashboard.PanelSpec{
+								Display: &specdashboard.PanelDisplay{
 									Name: "test-panel",
 								},
-								Plugin: persescommon.Plugin{
+								Plugin: specplugin.Plugin{
 									Kind: "PrometheusPlugin",
 									Spec: map[string]any{},
 								},
@@ -151,7 +152,7 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 					},
 					Spec: persesv1alpha2.PersesDashboardSpec{
 						Config: persesv1alpha2.Dashboard{
-							DashboardSpec: newDashboard.Spec,
+							Spec: newDashboard.Spec,
 						},
 					},
 				}
@@ -272,7 +273,7 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 					},
 					Spec: persesv1alpha2.PersesDashboardSpec{
 						Config: persesv1alpha2.Dashboard{
-							DashboardSpec: newDashboard.Spec,
+							Spec: newDashboard.Spec,
 						},
 					},
 				}
@@ -311,8 +312,8 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 				if err := k8sClient.Get(ctx, dashboardNamespaceName, dashboard); err != nil {
 					return err
 				}
-				dashboard.Spec.Config.DashboardSpec.Duration = "10m"
-				dashboard.Spec.Config.DashboardSpec.Display = &persescommon.Display{Name: "Updated Dashboard"}
+				dashboard.Spec.Config.Spec.Duration = "10m"
+				dashboard.Spec.Config.Spec.Display = &speccommon.Display{Name: "Updated Dashboard"}
 				return k8sClient.Update(ctx, dashboard)
 			}, time.Second*10, time.Millisecond*250).Should(Succeed())
 
@@ -340,18 +341,18 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 						Name: DashboardName,
 					},
 				},
-				Spec: persesv1.DashboardSpec{
-					Display:  &persescommon.Display{Name: "Updated Dashboard"},
+				Spec: specdashboard.Spec{
+					Display:  &speccommon.Display{Name: "Updated Dashboard"},
 					Duration: "10m",
-					Layouts:  []persesdashboard.Layout{},
-					Panels: map[string]*persesv1.Panel{
+					Layouts:  []specdashboard.Layout{},
+					Panels: map[string]*specdashboard.Panel{
 						"panel1": {
 							Kind: "Panel",
-							Spec: persesv1.PanelSpec{
-								Display: &persesv1.PanelDisplay{
+							Spec: specdashboard.PanelSpec{
+								Display: &specdashboard.PanelDisplay{
 									Name: "test-panel",
 								},
-								Plugin: persescommon.Plugin{
+								Plugin: specplugin.Plugin{
 									Kind: "PrometheusPlugin",
 									Spec: map[string]any{},
 								},
@@ -403,7 +404,7 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 					},
 					Spec: persesv1alpha2.PersesDashboardSpec{
 						Config: persesv1alpha2.Dashboard{
-							DashboardSpec: newDashboard.Spec,
+							Spec: newDashboard.Spec,
 						},
 					},
 				}
@@ -520,7 +521,7 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 					},
 					Spec: persesv1alpha2.PersesDashboardSpec{
 						Config: persesv1alpha2.Dashboard{
-							DashboardSpec: newDashboard.Spec,
+							Spec: newDashboard.Spec,
 						},
 					},
 				}
@@ -571,7 +572,7 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 					},
 					Spec: persesv1alpha2.PersesDashboardSpec{
 						Config: persesv1alpha2.Dashboard{
-							DashboardSpec: newDashboard.Spec,
+							Spec: newDashboard.Spec,
 						},
 					},
 				}
@@ -753,20 +754,20 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 						Name: SelectorDashboardName,
 					},
 				},
-				Spec: persesv1.DashboardSpec{
-					Display: &persescommon.Display{
+				Spec: specdashboard.Spec{
+					Display: &speccommon.Display{
 						Name: SelectorDashboardName,
 					},
 					Duration: "5m",
-					Layouts:  []persesdashboard.Layout{},
-					Panels: map[string]*persesv1.Panel{
+					Layouts:  []specdashboard.Layout{},
+					Panels: map[string]*specdashboard.Panel{
 						"panel1": {
 							Kind: "Panel",
-							Spec: persesv1.PanelSpec{
-								Display: &persesv1.PanelDisplay{
+							Spec: specdashboard.PanelSpec{
+								Display: &specdashboard.PanelDisplay{
 									Name: "test-panel",
 								},
-								Plugin: persescommon.Plugin{
+								Plugin: specplugin.Plugin{
 									Kind: "PrometheusPlugin",
 									Spec: map[string]any{},
 								},
@@ -791,7 +792,7 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 				},
 				Spec: persesv1alpha2.PersesDashboardSpec{
 					Config: persesv1alpha2.Dashboard{
-						DashboardSpec: selectorDashboard.Spec,
+						Spec: selectorDashboard.Spec,
 					},
 					InstanceSelector: &metav1.LabelSelector{
 						MatchLabels: map[string]string{
@@ -873,7 +874,7 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 				},
 				Spec: persesv1alpha2.PersesDashboardSpec{
 					Config: persesv1alpha2.Dashboard{
-						DashboardSpec: selectorDashboard.Spec,
+						Spec: selectorDashboard.Spec,
 					},
 					// No InstanceSelector - should match all instances
 				},
@@ -1000,20 +1001,20 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 				},
 				Spec: persesv1alpha2.PersesDashboardSpec{
 					Config: persesv1alpha2.Dashboard{
-						DashboardSpec: persesv1.DashboardSpec{
-							Display: &persescommon.Display{
+						Spec: specdashboard.Spec{
+							Display: &speccommon.Display{
 								Name: TagsDashboardName,
 							},
 							Duration: "5m",
-							Layouts:  []persesdashboard.Layout{},
-							Panels: map[string]*persesv1.Panel{
+							Layouts:  []specdashboard.Layout{},
+							Panels: map[string]*specdashboard.Panel{
 								"panel1": {
 									Kind: "Panel",
-									Spec: persesv1.PanelSpec{
-										Display: &persesv1.PanelDisplay{
+									Spec: specdashboard.PanelSpec{
+										Display: &specdashboard.PanelDisplay{
 											Name: "test-panel",
 										},
-										Plugin: persescommon.Plugin{
+										Plugin: specplugin.Plugin{
 											Kind: "PrometheusPlugin",
 											Spec: map[string]any{},
 										},
@@ -1041,7 +1042,7 @@ var _ = Describe("Dashboard controller", Ordered, func() {
 						Tags: set.New("oncall", "high_severity", "production"),
 					},
 				},
-				Spec: dashboard.Spec.Config.DashboardSpec,
+				Spec: dashboard.Spec.Config.Spec,
 			}
 
 			mockPersesClient, validateServer := internal.NewMockClientWithValidation()

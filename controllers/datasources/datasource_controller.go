@@ -133,7 +133,7 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 				Tags: persescommon.ParseTags(datasource.Annotations),
 			},
 		},
-		Spec: datasource.Spec.Config.DatasourceSpec,
+		Spec: datasource.Spec.Config.Spec,
 	}
 
 	existing, err := persesClient.Datasource(datasource.Namespace).Get(datasource.Name)

@@ -102,7 +102,7 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalDatasource(ctx contex
 			Name: globaldatasource.Name,
 			Tags: persescommon.ParseTags(globaldatasource.Annotations),
 		},
-		Spec: globaldatasource.Spec.Config.DatasourceSpec,
+		Spec: globaldatasource.Spec.Config.Spec,
 	}
 
 	existing, err := persesClient.GlobalDatasource().Get(globaldatasource.Name)

@@ -22,8 +22,8 @@ import (
 	v1 "github.com/perses/perses/pkg/client/api/v1"
 	clientConfig "github.com/perses/perses/pkg/client/config"
 	"github.com/perses/perses/pkg/client/perseshttp"
-	"github.com/perses/perses/pkg/model/api/v1/common"
 	modelv1 "github.com/perses/perses/pkg/model/api/v1"
+	speccommon "github.com/perses/spec/go/common"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -63,7 +63,7 @@ func newMockClientWithValidateServer(validateErr string) (*MockClient, *httptest
 		w.WriteHeader(http.StatusNotFound)
 	}))
 
-	parsedURL, err := common.ParseURL(server.URL)
+	parsedURL, err := speccommon.ParseURL(server.URL)
 	if err != nil {
 		server.Close()
 		panic(fmt.Sprintf("MockValidateServer: failed to parse test server URL: %v", err))

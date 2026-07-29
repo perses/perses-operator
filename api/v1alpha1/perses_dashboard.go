@@ -17,11 +17,11 @@ import (
 	"fmt"
 
 	"github.com/brunoga/deep"
-	persesv1 "github.com/perses/perses/pkg/model/api/v1"
+	dashboardSpec "github.com/perses/spec/go/dashboard"
 )
 
 type Dashboard struct {
-	persesv1.DashboardSpec `json:",inline"`
+	dashboardSpec.Spec `json:",inline"`
 }
 
 func (in *Dashboard) DeepCopyInto(out *Dashboard) {

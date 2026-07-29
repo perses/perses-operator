@@ -130,7 +130,7 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 				Tags: common.ParseTags(dashboard.Annotations),
 			},
 		},
-		Spec: dashboard.Spec.Config.DashboardSpec,
+		Spec: dashboard.Spec.Config.Spec,
 	}
 
 	existing, err := persesClient.Dashboard(dashboard.Namespace).Get(dashboard.Name)

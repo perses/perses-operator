@@ -22,7 +22,9 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
-	persescommon "github.com/perses/perses/pkg/model/api/v1/common"
+	speccommon "github.com/perses/spec/go/common"
+	specdatasource "github.com/perses/spec/go/datasource"
+	specplugin "github.com/perses/spec/go/plugin"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -115,12 +117,12 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 				Metadata: persesv1.Metadata{
 					Name: GlobalDatasourceName,
 				},
-				Spec: persesv1.DatasourceSpec{
-					Display: &persescommon.Display{
+				Spec: specdatasource.Spec{
+					Display: &speccommon.Display{
 						Name: GlobalDatasourceName,
 					},
 					Default: true,
-					Plugin: persescommon.Plugin{
+					Plugin: specplugin.Plugin{
 						Kind: "Prometheus",
 						Spec: map[string]any{},
 					},
@@ -145,7 +147,7 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 					},
 					Spec: persesv1alpha2.DatasourceSpec{
 						Config: persesv1alpha2.Datasource{
-							DatasourceSpec: newGlobalDatasource.Spec,
+							Spec: newGlobalDatasource.Spec,
 						},
 					},
 				}
@@ -270,7 +272,7 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 					},
 					Spec: persesv1alpha2.DatasourceSpec{
 						Config: persesv1alpha2.Datasource{
-							DatasourceSpec: newGlobalDatasource.Spec,
+							Spec: newGlobalDatasource.Spec,
 						},
 					},
 				}
@@ -390,7 +392,7 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 					},
 					Spec: persesv1alpha2.DatasourceSpec{
 						Config: persesv1alpha2.Datasource{
-							DatasourceSpec: newGlobalDatasource.Spec,
+							Spec: newGlobalDatasource.Spec,
 						},
 					},
 				}
@@ -440,7 +442,7 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 					},
 					Spec: persesv1alpha2.DatasourceSpec{
 						Config: persesv1alpha2.Datasource{
-							DatasourceSpec: newGlobalDatasource.Spec,
+							Spec: newGlobalDatasource.Spec,
 						},
 					},
 				}

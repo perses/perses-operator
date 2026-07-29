@@ -19,9 +19,10 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	persesv1 "github.com/perses/perses/pkg/model/api/v1"
-	persescommon "github.com/perses/perses/pkg/model/api/v1/common"
-	persesdashboard "github.com/perses/perses/pkg/model/api/v1/dashboard"
+	speccommon "github.com/perses/spec/go/common"
+	specdashboard "github.com/perses/spec/go/dashboard"
+	specdatasource "github.com/perses/spec/go/datasource"
+	specplugin "github.com/perses/spec/go/plugin"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
@@ -856,13 +857,13 @@ var _ = Describe("PersesDashboard API Validation", func() {
 				},
 				Spec: persesv1alpha2.PersesDashboardSpec{
 					Config: persesv1alpha2.Dashboard{
-						DashboardSpec: persesv1.DashboardSpec{
-							Display: &persescommon.Display{
+						Spec: specdashboard.Spec{
+							Display: &speccommon.Display{
 								Name: "valid-dashboard",
 							},
 							Duration: "5m",
-							Layouts:  []persesdashboard.Layout{},
-							Panels:   map[string]*persesv1.Panel{},
+							Layouts:  []specdashboard.Layout{},
+							Panels:   map[string]*specdashboard.Panel{},
 						},
 					},
 				},
@@ -893,11 +894,11 @@ var _ = Describe("PersesDatasource API Validation", func() {
 				},
 				Spec: persesv1alpha2.DatasourceSpec{
 					Config: persesv1alpha2.Datasource{
-						DatasourceSpec: persesv1.DatasourceSpec{
-							Display: &persescommon.Display{
+						Spec: specdatasource.Spec{
+							Display: &speccommon.Display{
 								Name: "valid-datasource",
 							},
-							Plugin: persescommon.Plugin{
+							Plugin: specplugin.Plugin{
 								Kind: "PrometheusDatasource",
 								Spec: map[string]interface{}{},
 							},

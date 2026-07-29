@@ -26,8 +26,8 @@ import (
 
 	v1 "github.com/perses/perses/pkg/client/api/v1"
 	clientConfig "github.com/perses/perses/pkg/client/config"
-	"github.com/perses/perses/pkg/model/api/v1/common"
 	"github.com/perses/perses/pkg/model/api/v1/secret"
+	speccommon "github.com/perses/spec/go/common"
 
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 )
@@ -193,7 +193,7 @@ func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, client 
 		}
 		urlStr = fmt.Sprintf("%s://%s.%s.svc.cluster.local:%d%s", httpProtocol, perses.Name, perses.Namespace, containerPort, perses.Spec.Config.APIPrefix)
 	}
-	parsedURL, err := common.ParseURL(urlStr)
+	parsedURL, err := speccommon.ParseURL(urlStr)
 	if err != nil {
 		return nil, err
 	}
