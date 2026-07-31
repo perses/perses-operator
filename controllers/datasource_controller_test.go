@@ -23,7 +23,9 @@ import (
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesconfig "github.com/perses/perses/pkg/model/api/config"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
-	persescommon "github.com/perses/perses/pkg/model/api/v1/common"
+	speccommon "github.com/perses/spec/go/common"
+	specdatasource "github.com/perses/spec/go/datasource"
+	specplugin "github.com/perses/spec/go/plugin"
 	"github.com/stretchr/testify/mock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -140,12 +142,12 @@ var _ = Describe("Datasource controller", Ordered, func() {
 						Name: DatasourceName,
 					},
 				},
-				Spec: persesv1.DatasourceSpec{
-					Display: &persescommon.Display{
+				Spec: specdatasource.Spec{
+					Display: &speccommon.Display{
 						Name: DatasourceName,
 					},
 					Default: true,
-					Plugin: persescommon.Plugin{
+					Plugin: specplugin.Plugin{
 						Kind: "Prometheus",
 						Spec: map[string]any{},
 					},
@@ -171,7 +173,7 @@ var _ = Describe("Datasource controller", Ordered, func() {
 					},
 					Spec: persesv1alpha2.DatasourceSpec{
 						Config: persesv1alpha2.Datasource{
-							DatasourceSpec: newDatasource.Spec,
+							Spec: newDatasource.Spec,
 						},
 					},
 				}
@@ -296,7 +298,7 @@ var _ = Describe("Datasource controller", Ordered, func() {
 					},
 					Spec: persesv1alpha2.DatasourceSpec{
 						Config: persesv1alpha2.Datasource{
-							DatasourceSpec: newDatasource.Spec,
+							Spec: newDatasource.Spec,
 						},
 					},
 				}
@@ -417,7 +419,7 @@ var _ = Describe("Datasource controller", Ordered, func() {
 					},
 					Spec: persesv1alpha2.DatasourceSpec{
 						Config: persesv1alpha2.Datasource{
-							DatasourceSpec: newDatasource.Spec,
+							Spec: newDatasource.Spec,
 						},
 					},
 				}
@@ -468,7 +470,7 @@ var _ = Describe("Datasource controller", Ordered, func() {
 					},
 					Spec: persesv1alpha2.DatasourceSpec{
 						Config: persesv1alpha2.Datasource{
-							DatasourceSpec: newDatasource.Spec,
+							Spec: newDatasource.Spec,
 						},
 					},
 				}
@@ -638,12 +640,12 @@ var _ = Describe("Datasource controller", Ordered, func() {
 						Name: DatasourceName,
 					},
 				},
-				Spec: persesv1.DatasourceSpec{
-					Display: &persescommon.Display{
+				Spec: specdatasource.Spec{
+					Display: &speccommon.Display{
 						Name: DatasourceName,
 					},
 					Default: true,
-					Plugin: persescommon.Plugin{
+					Plugin: specplugin.Plugin{
 						Kind: "Prometheus",
 						Spec: map[string]any{},
 					},
@@ -669,7 +671,7 @@ var _ = Describe("Datasource controller", Ordered, func() {
 					},
 					Spec: persesv1alpha2.DatasourceSpec{
 						Config: persesv1alpha2.Datasource{
-							DatasourceSpec: newDatasource.Spec,
+							Spec: newDatasource.Spec,
 						},
 					},
 				}
@@ -794,7 +796,7 @@ var _ = Describe("Datasource controller", Ordered, func() {
 					},
 					Spec: persesv1alpha2.DatasourceSpec{
 						Config: persesv1alpha2.Datasource{
-							DatasourceSpec: newDatasource.Spec,
+							Spec: newDatasource.Spec,
 						},
 					},
 				}
@@ -987,12 +989,12 @@ var _ = Describe("Datasource controller", Ordered, func() {
 				},
 				Spec: persesv1alpha2.DatasourceSpec{
 					Config: persesv1alpha2.Datasource{
-						DatasourceSpec: persesv1.DatasourceSpec{
-							Display: &persescommon.Display{
+						Spec: specdatasource.Spec{
+							Display: &speccommon.Display{
 								Name: DatasourceName,
 							},
 							Default: true,
-							Plugin: persescommon.Plugin{
+							Plugin: specplugin.Plugin{
 								Kind: "Prometheus",
 								Spec: map[string]any{},
 							},

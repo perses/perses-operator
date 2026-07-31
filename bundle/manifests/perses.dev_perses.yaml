@@ -1219,8 +1219,9 @@ spec:
                               if server does not support TLS
                             type: boolean
                           allow_native_passwords:
-                            description: Allows the native password authentication
-                              method
+                            description: |-
+                              Allows the native password authentication method.
+                              When unset, the driver default (true) is used.
                             type: boolean
                           allow_old_passwords:
                             description: Allows the old insecure password method
@@ -1228,8 +1229,9 @@ spec:
                           case_sensitive:
                             type: boolean
                           check_conn_liveness:
-                            description: Check connections for liveness before using
-                              them
+                            description: |-
+                              Check connections for liveness before using them.
+                              When unset, the driver default (true) is used.
                             type: boolean
                           client_found_rows:
                             description: Return number of matching rows instead of
@@ -1241,6 +1243,21 @@ spec:
                           columns_with_alias:
                             description: Prepend table alias to column names
                             type: boolean
+                          conn_max_idle_time:
+                            description: |-
+                              ConnMaxIdleTime is the maximum amount of time a connection may be idle
+                              before it is closed. Defaults to 1 minute.
+                            format: duration
+                            pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                            type: string
+                          conn_max_lifetime:
+                            description: |-
+                              ConnMaxLifetime is the maximum amount of time a connection may be reused.
+                              It should be kept shorter than the server's wait_timeout to avoid reusing
+                              connections that the server has already closed. Defaults to 3 minutes.
+                            format: duration
+                            pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                            type: string
                           db_name:
                             description: Database name
                             type: string
@@ -1252,6 +1269,16 @@ spec:
                             type: object
                           max_allowed_packet:
                             description: Max packet size allowed
+                            type: integer
+                          max_idle_conns:
+                            description: |-
+                              MaxIdleConns is the maximum number of connections in the idle connection
+                              pool. A value <= 0 keeps the Go default (2).
+                            type: integer
+                          max_open_conns:
+                            description: |-
+                              MaxOpenConns is the maximum number of open connections to the database.
+                              A value <= 0 means unlimited (the Go default).
                             type: integer
                           multi_statements:
                             description: Allow multiple statements in one query
@@ -1328,10 +1355,8 @@ spec:
                         - allow_all_files
                         - allow_cleartext_passwords
                         - allow_fallback_to_plaintext
-                        - allow_native_passwords
                         - allow_old_passwords
                         - case_sensitive
-                        - check_conn_liveness
                         - client_found_rows
                         - columns_with_alias
                         - db_name
@@ -1665,6 +1690,10 @@ spec:
                         description: When it is true, Perses won't serve the frontend
                           anymore, and any other config set here will be ignored
                         type: boolean
+                      enable_keyboard_shortcuts:
+                        description: EnableKeyboardShortcuts enables keyboard shortcuts
+                          in the UI. Defaults to true when omitted.
+                        type: boolean
                       explorer:
                         description: |-
                           Explorer is activating the different kind of explorer supported.
@@ -1693,7 +1722,7 @@ spec:
                           type: object
                         type: array
                       information:
-                        description: Information contains markdown content to be display
+                        description: Information contains Markdown content to be display
                           on the home page
                         type: string
                       time_range:
@@ -1741,10 +1770,28 @@ spec:
                         items:
                           type: string
                         type: array
+                      disabled:
+                        description: |-
+                          Disabled is a list of plugin deactivated. Leave empty if you want to activate all plugins found in the `path` directory.
+                          If not empty, the plugins whose name is in this list will be deactivated.
+                          The name can be the name of the plugin or the name of the module. For example, you can put `Prometheus` to disable the Prometheus module that contains query, variables and datasource plugin.
+                          Use either Enabled or Disabled. Both can not be used at the same time.
+                        items:
+                          type: string
+                        type: array
                       enable_dev:
                         description: DevEnvironment is the configuration to use when
                           developing a plugin
                         type: boolean
+                      enabled:
+                        description: |-
+                          Enabled is a list of plugin activated. Leave empty if you want to activate all plugins found in the `path` directory.
+                          If not empty, only the plugins whose name is in this list will be activated.
+                          The name can be the name of the plugin or the name of the module. For example, you can put `Prometheus` to enable the Prometheus module that contains query, variables and datasource plugin.
+                          Use either Enabled or Disabled. Both can not be used at the same time.
+                        items:
+                          type: string
+                        type: array
                       path:
                         description: Path is the path to the directory containing
                           the runtime plugins
@@ -4151,8 +4198,9 @@ spec:
                               if server does not support TLS
                             type: boolean
                           allow_native_passwords:
-                            description: Allows the native password authentication
-                              method
+                            description: |-
+                              Allows the native password authentication method.
+                              When unset, the driver default (true) is used.
                             type: boolean
                           allow_old_passwords:
                             description: Allows the old insecure password method
@@ -4160,8 +4208,9 @@ spec:
                           case_sensitive:
                             type: boolean
                           check_conn_liveness:
-                            description: Check connections for liveness before using
-                              them
+                            description: |-
+                              Check connections for liveness before using them.
+                              When unset, the driver default (true) is used.
                             type: boolean
                           client_found_rows:
                             description: Return number of matching rows instead of
@@ -4173,6 +4222,21 @@ spec:
                           columns_with_alias:
                             description: Prepend table alias to column names
                             type: boolean
+                          conn_max_idle_time:
+                            description: |-
+                              ConnMaxIdleTime is the maximum amount of time a connection may be idle
+                              before it is closed. Defaults to 1 minute.
+                            format: duration
+                            pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                            type: string
+                          conn_max_lifetime:
+                            description: |-
+                              ConnMaxLifetime is the maximum amount of time a connection may be reused.
+                              It should be kept shorter than the server's wait_timeout to avoid reusing
+                              connections that the server has already closed. Defaults to 3 minutes.
+                            format: duration
+                            pattern: ^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$
+                            type: string
                           db_name:
                             description: Database name
                             type: string
@@ -4184,6 +4248,16 @@ spec:
                             type: object
                           max_allowed_packet:
                             description: Max packet size allowed
+                            type: integer
+                          max_idle_conns:
+                            description: |-
+                              MaxIdleConns is the maximum number of connections in the idle connection
+                              pool. A value <= 0 keeps the Go default (2).
+                            type: integer
+                          max_open_conns:
+                            description: |-
+                              MaxOpenConns is the maximum number of open connections to the database.
+                              A value <= 0 means unlimited (the Go default).
                             type: integer
                           multi_statements:
                             description: Allow multiple statements in one query
@@ -4260,10 +4334,8 @@ spec:
                         - allow_all_files
                         - allow_cleartext_passwords
                         - allow_fallback_to_plaintext
-                        - allow_native_passwords
                         - allow_old_passwords
                         - case_sensitive
-                        - check_conn_liveness
                         - client_found_rows
                         - columns_with_alias
                         - db_name
@@ -4597,6 +4669,10 @@ spec:
                         description: When it is true, Perses won't serve the frontend
                           anymore, and any other config set here will be ignored
                         type: boolean
+                      enable_keyboard_shortcuts:
+                        description: EnableKeyboardShortcuts enables keyboard shortcuts
+                          in the UI. Defaults to true when omitted.
+                        type: boolean
                       explorer:
                         description: |-
                           Explorer is activating the different kind of explorer supported.
@@ -4625,7 +4701,7 @@ spec:
                           type: object
                         type: array
                       information:
-                        description: Information contains markdown content to be display
+                        description: Information contains Markdown content to be display
                           on the home page
                         type: string
                       time_range:
@@ -4673,10 +4749,28 @@ spec:
                         items:
                           type: string
                         type: array
+                      disabled:
+                        description: |-
+                          Disabled is a list of plugin deactivated. Leave empty if you want to activate all plugins found in the `path` directory.
+                          If not empty, the plugins whose name is in this list will be deactivated.
+                          The name can be the name of the plugin or the name of the module. For example, you can put `Prometheus` to disable the Prometheus module that contains query, variables and datasource plugin.
+                          Use either Enabled or Disabled. Both can not be used at the same time.
+                        items:
+                          type: string
+                        type: array
                       enable_dev:
                         description: DevEnvironment is the configuration to use when
                           developing a plugin
                         type: boolean
+                      enabled:
+                        description: |-
+                          Enabled is a list of plugin activated. Leave empty if you want to activate all plugins found in the `path` directory.
+                          If not empty, only the plugins whose name is in this list will be activated.
+                          The name can be the name of the plugin or the name of the module. For example, you can put `Prometheus` to enable the Prometheus module that contains query, variables and datasource plugin.
+                          Use either Enabled or Disabled. Both can not be used at the same time.
+                        items:
+                          type: string
+                        type: array
                       path:
                         description: Path is the path to the directory containing
                           the runtime plugins

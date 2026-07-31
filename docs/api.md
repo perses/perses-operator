@@ -91,12 +91,14 @@ _Appears in:_
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
 | `display` _[Display](#display)_ |  |  |  |
-| `datasources` _object (keys:string, values:[DatasourceSpec](#datasourcespec))_ | Datasources is an optional list of datasource definition. |  |  |
-| `variables` _Variable array_ |  |  |  |
+| `datasources` _object (keys:string, values:Spec)_ | Datasources is an optional list of datasource definition. |  |  |
+| `variables` _[Variable](#variable) array_ |  |  |  |
+| `annotations` _[AnnotationSpec](#annotationspec) array_ |  |  |  |
 | `panels` _object (keys:string, values:[Panel](#panel))_ |  |  |  |
-| `layouts` _Layout array_ |  |  |  |
+| `layouts` _[Layout](#layout) array_ |  |  |  |
 | `duration` _[DurationString](#durationstring)_ | Duration is the default time range to use when getting data to fill the dashboard |  |  |
 | `refreshInterval` _[DurationString](#durationstring)_ | RefreshInterval is the default refresh interval to use when landing on the dashboard |  |  |
+| `timezone` _string_ | Timezone is the dashboard level timezone |  |  |
 | `links` _[Link](#link) array_ | Links is an optional list of links to display at the dashboard level |  |  |
 
 

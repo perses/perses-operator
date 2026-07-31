@@ -43,6 +43,6 @@ func (dst *PersesDatasource) ConvertFrom(srcRaw conv.Hub) error {
 // Manual conversions
 // Convert_v1alpha2_DatasourceSpec_To_v1alpha1_DatasourceSpec converts a v1alpha2 DatasourceSpec to v1alpha1 DatasourceSpec.
 func Convert_v1alpha2_DatasourceSpec_To_v1alpha1_DatasourceSpec(in *v1alpha2.DatasourceSpec, out *DatasourceSpec, s conversion.Scope) error {
-	out.Config.DatasourceSpec = in.Config.DatasourceSpec
+	out.Config.Spec = in.Config.Spec
 	return nil
 }

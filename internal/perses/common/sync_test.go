@@ -19,7 +19,10 @@ import (
 
 	"github.com/perses/common/set"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
-	persesv1Common "github.com/perses/perses/pkg/model/api/v1/common"
+	speccommon "github.com/perses/spec/go/common"
+	specDashboard "github.com/perses/spec/go/dashboard"
+	specdatasource "github.com/perses/spec/go/datasource"
+	specplugin "github.com/perses/spec/go/plugin"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -33,9 +36,9 @@ func TestDashboardInSync(t *testing.T) {
 					Tags: set.New("tag1", "tag2"),
 				},
 			},
-			Spec: persesv1.DashboardSpec{
+			Spec: specDashboard.Spec{
 				Duration: "1h",
-				Display:  &persesv1Common.Display{Name: "Test"},
+				Display:  &speccommon.Display{Name: "Test"},
 			},
 		}
 	}
@@ -93,9 +96,9 @@ func TestDatasourceInSync(t *testing.T) {
 					Tags: set.New("ds-tag"),
 				},
 			},
-			Spec: persesv1.DatasourceSpec{
+			Spec: specdatasource.Spec{
 				Default: true,
-				Plugin: persesv1Common.Plugin{
+				Plugin: specplugin.Plugin{
 					Kind: "PrometheusDatasource",
 				},
 			},
@@ -136,9 +139,9 @@ func TestGlobalDatasourceInSync(t *testing.T) {
 				Name: "test-gds",
 				Tags: set.New("gds-tag"),
 			},
-			Spec: persesv1.DatasourceSpec{
+			Spec: specdatasource.Spec{
 				Default: true,
-				Plugin: persesv1Common.Plugin{
+				Plugin: specplugin.Plugin{
 					Kind: "PrometheusDatasource",
 				},
 			},
