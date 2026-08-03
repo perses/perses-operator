@@ -1,0 +1,46 @@
+# Step 4: list dashboards on each pod (not via the Service).
+# Strict: the first poll where any replica lists the dashboard, all replicas must.
+# Step timeout is short: Kuttl retries failed asserts, so keep each run fast.
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 15
+commands:
+  - script: |
+      STS=perses-multi-replica
+      DASHBOARD=multi-replica-dashboard
+      URL="/api/v1/projects/${NAMESPACE}/dashboards"
+
+      kubectl port-forward -n "$NAMESPACE" "pod/${STS}-0" 18080:8080 &
+      PF0=$!
+      kubectl port-forward -n "$NAMESPACE" "pod/${STS}-1" 18081:8080 &
+      PF1=$!
+      kubectl port-forward -n "$NAMESPACE" "pod/${STS}-2" 18082:8080 &
+      PF2=$!
+      trap 'kill $PF0 $PF1 $PF2 2>/dev/null' EXIT
+      sleep 2
+
+      HAVE=0
+      for wait in $(seq 1 20); do
+        HAVE=0
+        for PORT in 18080 18081 18082; do
+          if curl -sf --connect-timeout 2 --max-time 3 \
+            "http://localhost:${PORT}${URL}" 2>/dev/null | grep -q "$DASHBOARD"; then
+            HAVE=$((HAVE + 1))
+          fi
+        done
+        if [ "$HAVE" -gt 0 ]; then
+          break
+        fi
+        sleep 1
+      done
+
+      if [ "$HAVE" -eq 0 ]; then
+        echo "FAIL: dashboard never appeared on any replica"
+        exit 1
+      fi
+      if [ "$HAVE" -eq 3 ]; then
+        echo "Dashboard listed on all replicas"
+        exit 0
+      fi
+      echo "FAIL: dashboard on ${HAVE}/3 replicas"
+      exit 1
