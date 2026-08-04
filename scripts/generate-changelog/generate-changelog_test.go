@@ -15,11 +15,14 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/perses/perses/scripts/pkg/changelog"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestGenerateChangelog(t *testing.T) {
@@ -67,6 +70,53 @@ func TestGenerateChangelog(t *testing.T) {
 	for _, test := range testSuite {
 		t.Run(test.title, func(t *testing.T) {
 			assert.Equal(t, test.expected, generateChangelog(test.clog, "0.20.0"))
+		})
+	}
+}
+
+func TestWrite(t *testing.T) {
+	clog := &changelog.Changelog{
+		Features: []string{"add new widget (#10)"},
+		BugFixes: []string{"fix crash on startup (#9)"},
+	}
+
+	now := time.Now()
+	date := now.Format("2006-01-02")
+	newSection := fmt.Sprintf("## 1.1.0 / %s\n\n- [FEATURE] add new widget (#10)\n- [BUGFIX] fix crash on startup (#9)\n", date)
+
+	testSuite := []struct {
+		title           string
+		existingContent string
+		expected        string
+	}{
+		{
+			title:           "changelog without top-level title (operator-style)",
+			existingContent: "## 1.0.0 / 2026-01-01\n\n- [FEATURE] initial release (#1)\n",
+			expected:        fmt.Sprintf("%s\n## 1.0.0 / 2026-01-01\n\n- [FEATURE] initial release (#1)\n", newSection),
+		},
+		{
+			title:           "changelog with top-level title",
+			existingContent: "# Changelog\n\n## 1.0.0 / 2026-01-01\n\n- [FEATURE] initial release (#1)\n",
+			expected:        fmt.Sprintf("# Changelog\n\n%s\n## 1.0.0 / 2026-01-01\n\n- [FEATURE] initial release (#1)\n", newSection),
+		},
+	}
+
+	for _, test := range testSuite {
+		t.Run(test.title, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "CHANGELOG.md")
+			require.NoError(t, os.WriteFile(path, []byte(test.existingContent), 0600))
+
+			origDir, err := os.Getwd()
+			require.NoError(t, err)
+			require.NoError(t, os.Chdir(dir))
+			t.Cleanup(func() { _ = os.Chdir(origDir) })
+
+			Write(clog, "1.1.0")
+
+			result, err := os.ReadFile(path)
+			require.NoError(t, err)
+			assert.Equal(t, test.expected, string(result))
 		})
 	}
 }
