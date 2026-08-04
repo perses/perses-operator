@@ -108,7 +108,7 @@ metadata:
       ]
     capabilities: Basic Install
     categories: Monitoring
-    containerImage: docker.io/persesdev/perses-operator:v0.4.0
+    containerImage: docker.io/persesdev/perses-operator:v0.5.0
     description: Kubernetes operator for deploying and managing Perses observability
       dashboards, instances, and datasources as custom resources.
     repository: https://github.com/perses/perses-operator
@@ -528,7 +528,7 @@ spec:
               containers:
               - args:
                 - --leader-elect
-                image: docker.io/persesdev/perses-operator:v0.4.0
+                image: docker.io/persesdev/perses-operator:v0.5.0
                 imagePullPolicy: Always
                 livenessProbe:
                   httpGet:
