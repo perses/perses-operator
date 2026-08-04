@@ -1,3 +1,5 @@
+# Changelog
+
 ## 0.4.0 / 2026-04-29
 
 - [FEATURE] watch TLS profiles and apply it to operands (#381)
