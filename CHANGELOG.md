@@ -2,50 +2,23 @@
 
 ## 0.5.0 / 2026-08-04
 
-- [FEATURE] update perses dependency to v0.54.0
-- [FEATURE] validate only on change, distinguish 4xx from 5xx, prevent orphaned secrets
-- [FEATURE] Add e2e test for reconcile-time validation
-- [FEATURE] Fix integration test panics and address review feedback
-- [FEATURE] Add tests for reconcile-time validation failure handling
-- [FEATURE] Add reconcile-time validation using Perses validate API
-- [FEATURE] Add ValidationFailed reason and RESTClient support to mock
-- [ENHANCEMENT] Add promtool to managed tools and run alert tests in CI
-- [ENHANCEMENT] Add promtool tests for alert rules with reason label
-- [ENHANCEMENT] Add unit tests for ReasonError, ExtractReason, and IsClientError
-- [ENHANCEMENT] Add validation failure alert and document reason label values
-- [ENHANCEMENT] Add ReasonError type to propagate failure reasons through error chains
-- [ENHANCEMENT] use only metadata to watch for resources to optimize memory consumption
-- [ENHANCEMENT] remove spec and managed fields from cache payload
-- [ENHANCEMENT] update resource status only when changed
-- [ENHANCEMENT] cache perses clients and cleanup metrics when resources are deleted
-- [ENHANCEMENT] remove unnecessary finalizers in favor of existing owner refereces
-- [BUGFIX] escape reserved words in CEL validation expressions
-- [DOC] : enrich CSV description and links
-- [DOC] add datasource documentation for OpenShift
-- [DOC] : document OperatorHub workflow image alignment and version_replaced
-- [DOC] : document OperatorHub publish workflow and bundle-check
-
-[//]: <UNKNOWN ENTRIES. Release shepherd, please review the following list and categorize them or remove them>
-
-- [UNKNOWN] Add PeterYurkovich as maintainer 🎉
-- [UNKNOWN] add Jeremy to MAINTAINERS.md
-- [UNKNOWN] build(deps): Bump the k8s-io group across 1 directory with 4 updates
-- [UNKNOWN] [DOCS]: Regenerate api docs
-- [UNKNOWN] build(deps): Bump actions/setup-go from 6 to 7
-- [UNKNOWN] build(deps): Bump github.com/prometheus/client_golang
-- [UNKNOWN] build(deps): Bump github.com/perses/common from 0.31.1 to 0.31.2
-- [UNKNOWN] build(deps): Bump docker/setup-qemu-action from 3 to 4
-- [UNKNOWN] build(deps): Bump github.com/onsi/gomega from 1.42.0 to 1.42.1
-- [UNKNOWN] build(deps): Bump docker/setup-buildx-action from 3 to 4
-- [UNKNOWN] build(deps): Bump actions/setup-go from 5 to 6
-- [UNKNOWN] build(deps): Bump github.com/perses/common from 0.31.0 to 0.31.1
-- [UNKNOWN] build(deps): Bump actions/checkout from 6 to 7
-- [UNKNOWN] build(deps): Bump github.com/onsi/ginkgo/v2 from 2.31.0 to 2.32.0
-- [UNKNOWN] docs: remove Go report card badge
-- [UNKNOWN] [ENHANCEMENT Use specific reason labels in reconciliation error metrics
-- [UNKNOWN] build(deps): Bump github.com/perses/common from 0.30.2 to 0.31.0
-- [UNKNOWN] build(deps): Bump perses/github-actions from 0.11.0 to 0.12.0
-- [UNKNOWN] build(deps): Bump docker/login-action from 3 to 4
+- [FEATURE] Update perses dependency to v0.54.0 (#439)
+- [FEATURE] Add reconcile-time validation using Perses validate API (#426)
+- [ENHANCEMENT] Use specific reason labels in reconciliation error metrics (#428)
+- [ENHANCEMENT] Add ReasonError type to propagate failure reasons through error chains (#428)
+- [ENHANCEMENT] Add validation failure alert and document reason label values (#428)
+- [ENHANCEMENT] Add promtool to managed tools and run alert tests in CI (#428)
+- [ENHANCEMENT] Use only metadata to watch for resources to optimize memory consumption (#416)
+- [ENHANCEMENT] Remove spec and managed fields from cache payload (#414)
+- [ENHANCEMENT] Update resource status only when changed (#414)
+- [ENHANCEMENT] Cache perses clients and cleanup metrics when resources are deleted (#414)
+- [ENHANCEMENT] Remove unnecessary finalizers in favor of existing owner references (#400)
+- [BUGFIX] Escape reserved words in CEL validation expressions (#402)
+- [DOC] Enrich CSV description and links (#415)
+- [DOC] Add datasource documentation for OpenShift (#422)
+- [DOC] Document OperatorHub workflow image alignment and version_replaced (#407)
+- [DOC] Document OperatorHub publish workflow and bundle-check (#408)
+- [DOC] Remove Go report card badge (#429)
 
 ## 0.4.0 / 2026-04-29
 
