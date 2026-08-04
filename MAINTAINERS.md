@@ -7,3 +7,4 @@ For project governance, see the [Perses Governance](https://github.com/perses/pe
 | Gabriel Bernal   | [@jgbernalp](https://github.com/jgbernalp)     | Red Hat                   |
 | Jayapriya Pai    | [@slashpai](https://github.com/slashpai)       | Red Hat                   |
 | Douglass Kirkley | [@dougkirkley](https://github.com/dougkirkley) | Enlighten, an HII Company |
+| Jeremy Rickards  | [@rickardsjp](https://github.com/rickardsjp)   | SAP                       |
