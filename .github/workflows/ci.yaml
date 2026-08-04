@@ -86,4 +86,4 @@ jobs:
           CATALOG_IMG=docker.io/persesdev/perses-operator-catalog:v$(cat VERSION) make catalog-build catalog-push
           CATALOG_IMG=quay.io/persesdev/perses-operator-catalog:v$(cat VERSION) make catalog-build catalog-push
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.BOT_TOKEN }}
