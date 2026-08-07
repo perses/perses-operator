@@ -203,13 +203,11 @@ jobs:
           git push -f --set-upstream origin "${branch}"
 
           existing_pr="$(
-            gh pr list \
-              --repo "${target_repo}" \
-              --head "${head_branch}" \
-              --base main \
-              --state open \
-              --json url \
-              --jq '.[0].url // empty'
+            gh api -X GET "/repos/${target_repo}/pulls" \
+              -f state=open \
+              -f base=main \
+              -f "head=${head_branch}" \
+              --jq '.[0].html_url // empty'
           )"
 
           if [ -n "${existing_pr}" ]; then
