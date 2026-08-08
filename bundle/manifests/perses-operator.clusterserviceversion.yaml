@@ -1991,8 +1991,8 @@ metadata:
       ]
     capabilities: Basic Install
     categories: Monitoring
-    containerImage: docker.io/persesdev/perses-operator:v0.4.0
-    createdAt: "2026-07-24T14:39:05Z"
+    containerImage: docker.io/persesdev/perses-operator:v0.5.0
+    createdAt: "2026-08-04T11:45:58Z"
     description: Kubernetes operator for deploying and managing Perses observability
       dashboards, instances, and datasources as custom resources.
     operators.operatorframework.io/builder: operator-sdk-v1.42.2
@@ -2001,7 +2001,7 @@ metadata:
   labels:
     operatorframework.io/arch.amd64: supported
     operatorframework.io/arch.arm64: supported
-  name: perses-operator.v0.4.0
+  name: perses-operator.v0.5.0
   namespace: operators
 spec:
   apiservicedefinitions: {}
@@ -2480,7 +2480,7 @@ spec:
                 - --health-probe-bind-address=:8081
                 - --metrics-bind-address=127.0.0.1:8082
                 - --leader-elect
-                image: docker.io/persesdev/perses-operator:v0.4.0
+                image: docker.io/persesdev/perses-operator:v0.5.0
                 imagePullPolicy: Always
                 livenessProbe:
                   httpGet:
@@ -2616,8 +2616,8 @@ spec:
   provider:
     name: Perses
     url: perses.dev
-  replaces: perses-operator.v0.3.2
-  version: 0.4.0
+  replaces: perses-operator.v0.4.0
+  version: 0.5.0
   webhookdefinitions:
   - admissionReviewVersions:
     - v1

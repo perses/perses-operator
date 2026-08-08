@@ -1,3 +1,25 @@
+# Changelog
+
+## 0.5.0 / 2026-08-04
+
+- [FEATURE] Update perses dependency to v0.54.0 (#439)
+- [FEATURE] Add reconcile-time validation using Perses validate API (#426)
+- [ENHANCEMENT] Use specific reason labels in reconciliation error metrics (#428)
+- [ENHANCEMENT] Add ReasonError type to propagate failure reasons through error chains (#428)
+- [ENHANCEMENT] Add validation failure alert and document reason label values (#428)
+- [ENHANCEMENT] Add promtool to managed tools and run alert tests in CI (#428)
+- [ENHANCEMENT] Use only metadata to watch for resources to optimize memory consumption (#416)
+- [ENHANCEMENT] Remove spec and managed fields from cache payload (#414)
+- [ENHANCEMENT] Update resource status only when changed (#414)
+- [ENHANCEMENT] Cache perses clients and cleanup metrics when resources are deleted (#414)
+- [ENHANCEMENT] Remove unnecessary finalizers in favor of existing owner references (#400)
+- [BUGFIX] Escape reserved words in CEL validation expressions (#402)
+- [DOC] Enrich CSV description and links (#415)
+- [DOC] Add datasource documentation for OpenShift (#422)
+- [DOC] Document OperatorHub workflow image alignment and version_replaced (#407)
+- [DOC] Document OperatorHub publish workflow and bundle-check (#408)
+- [DOC] Remove Go report card badge (#429)
+
 ## 0.4.0 / 2026-04-29
 
 - [FEATURE] watch TLS profiles and apply it to operands (#381)
