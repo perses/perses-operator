@@ -204,7 +204,6 @@ var _ = Describe("Perses controller", func() {
 					}
 					if found.Spec.Template.Spec.Containers[0].Resources.Requests.Memory().String() != "128Mi" {
 						return fmt.Errorf("The resources requests in the StatefulSet is not the one defined in the custom resource")
-
 					}
 				}
 
@@ -224,9 +223,11 @@ var _ = Describe("Perses controller", func() {
 				if availableCond == nil {
 					return fmt.Errorf("Available condition not found on the perses instance")
 				}
-				expectedAvailable := metav1.Condition{Type: common.TypeAvailablePerses,
+				expectedAvailable := metav1.Condition{
+					Type:   common.TypeAvailablePerses,
 					Status: metav1.ConditionTrue, Reason: "Reconciled",
-					Message: fmt.Sprintf("Perses (%s) created successfully", persesWithStatus.Name)}
+					Message: fmt.Sprintf("Perses (%s) created successfully", persesWithStatus.Name),
+				}
 				if availableCond.Message != expectedAvailable.Message || availableCond.Reason != expectedAvailable.Reason || availableCond.Status != expectedAvailable.Status || availableCond.Type != expectedAvailable.Type {
 					return fmt.Errorf("The Available status condition is not as expected. Expected %v but received %v", expectedAvailable, *availableCond)
 				}
@@ -235,9 +236,11 @@ var _ = Describe("Perses controller", func() {
 				if degradedCond == nil {
 					return fmt.Errorf("Degraded condition not found on the perses instance")
 				}
-				expectedDegraded := metav1.Condition{Type: common.TypeDegradedPerses,
+				expectedDegraded := metav1.Condition{
+					Type:   common.TypeDegradedPerses,
 					Status: metav1.ConditionFalse, Reason: "Reconciled",
-					Message: fmt.Sprintf("Perses (%s) reconciled successfully", persesWithStatus.Name)}
+					Message: fmt.Sprintf("Perses (%s) reconciled successfully", persesWithStatus.Name),
+				}
 				if degradedCond.Message != expectedDegraded.Message || degradedCond.Reason != expectedDegraded.Reason || degradedCond.Status != expectedDegraded.Status || degradedCond.Type != expectedDegraded.Type {
 					return fmt.Errorf("The Degraded status condition is not as expected. Expected %v but received %v", expectedDegraded, *degradedCond)
 				}
@@ -270,7 +273,6 @@ var _ = Describe("Perses controller", func() {
 				found := &corev1.ConfigMap{}
 				return k8sClient.Get(ctx, configMapNamespaceName, found)
 			}, time.Minute, time.Second).Should(Succeed())
-
 		})
 
 		It("should successfully reconcile a custom resource for Perses with storage", func() {
@@ -366,9 +368,11 @@ var _ = Describe("Perses controller", func() {
 			Eventually(func() error {
 				if len(perses.Status.Conditions) != 0 {
 					latestStatusCondition := perses.Status.Conditions[len(perses.Status.Conditions)-1]
-					expectedLatestStatusCondition := metav1.Condition{Type: common.TypeAvailablePerses,
+					expectedLatestStatusCondition := metav1.Condition{
+						Type:   common.TypeAvailablePerses,
 						Status: metav1.ConditionTrue, Reason: "Reconciling",
-						Message: fmt.Sprintf("StatefulSet for custom resource (%s) created successfully", perses.Name)}
+						Message: fmt.Sprintf("StatefulSet for custom resource (%s) created successfully", perses.Name),
+					}
 					if latestStatusCondition != expectedLatestStatusCondition {
 						return fmt.Errorf("The latest status condition added to the perses instance is not as expected")
 					}
@@ -401,7 +405,6 @@ var _ = Describe("Perses controller", func() {
 				found := &corev1.ConfigMap{}
 				return k8sClient.Get(ctx, configMapNamespaceName, found)
 			}, time.Minute, time.Second).Should(Succeed())
-
 		})
 
 		It("should successfully reconcile a custom resource for Perses with provisioning secrets", func() {
@@ -1220,6 +1223,105 @@ var _ = Describe("Perses controller", func() {
 					if strings.Contains(arg, "web.tls-cipher-suites") {
 						return fmt.Errorf("unexpected --web.tls-cipher-suites arg found: %s", arg)
 					}
+				}
+				return nil
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Deleting the custom resource")
+			persesToDelete := &persesv1alpha2.Perses{}
+			Expect(k8sClient.Get(ctx, typeNamespaceName, persesToDelete)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, persesToDelete)).To(Succeed())
+		})
+
+		It("should reconcile a Perses with OAuth client authentication", func() {
+			const oauthName = "test-perses-oauth"
+			typeNamespaceName := types.NamespacedName{Name: oauthName, Namespace: persesNamespace}
+			configMapNamespaceName := types.NamespacedName{Name: common.GetConfigName(oauthName), Namespace: persesNamespace}
+			secretName := "perses-config"
+
+			By("Creating the OAuth credentials Secret")
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      secretName,
+					Namespace: persesNamespace,
+				},
+				Data: map[string][]byte{
+					"OPERATOR_CLIENT_ID":     []byte("perses-operator"),
+					"OPERATOR_CLIENT_SECRET": []byte("some-random-operator-client-secret"),
+				},
+			}
+			Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+
+			By("Creating a Perses CR with OAuth client authentication")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      oauthName,
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					Image: ptr.To(persesImage),
+					Client: &persesv1alpha2.Client{
+						OAuth: &persesv1alpha2.OAuth{
+							SecretSource: persesv1alpha2.SecretSource{
+								Type:      persesv1alpha2.SecretSourceTypeSecret,
+								Name:      ptr.To(secretName),
+								Namespace: ptr.To(persesNamespace),
+							},
+							ClientIDPath:     ptr.To("OPERATOR_CLIENT_ID"),
+							ClientSecretPath: ptr.To("OPERATOR_CLIENT_SECRET"),
+							TokenURL:         "http://perses.perses-system.svc:8080/api/auth/providers/oidc/oidc-provider/token",
+						},
+					},
+					Config: persesv1alpha2.PersesConfig{
+						Config: persesconfig.Config{
+							Database: persesconfig.Database{
+								File: &persesconfig.File{
+									Folder: "/perses",
+								},
+							},
+						},
+					},
+					ContainerPort: ptr.To(int32(8080)),
+				},
+			}
+			Expect(k8sClient.Create(ctx, perses)).To(Succeed())
+
+			persesReconciler := &persescontroller.PersesReconciler{
+				Client:    k8sClient,
+				APIReader: k8sClient,
+				Scheme:    k8sClient.Scheme(),
+			}
+
+			By("Reconciling and checking the StatefulSet is created")
+			Eventually(func() error {
+				_, err := persesReconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespaceName,
+				})
+				if err != nil {
+					return err
+				}
+				found := &appsv1.StatefulSet{}
+				return k8sClient.Get(ctx, typeNamespaceName, found)
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Checking the ConfigMap is created")
+			Eventually(func() error {
+				found := &corev1.ConfigMap{}
+				return k8sClient.Get(ctx, configMapNamespaceName, found)
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Checking the Perses status conditions")
+			Eventually(func() error {
+				found := &persesv1alpha2.Perses{}
+				if err := k8sClient.Get(ctx, typeNamespaceName, found); err != nil {
+					return err
+				}
+				cond := apimeta.FindStatusCondition(found.Status.Conditions, "Available")
+				if cond == nil {
+					return fmt.Errorf("no Available condition found")
+				}
+				if cond.Status != metav1.ConditionTrue {
+					return fmt.Errorf("Available condition is %s, expected True", cond.Status)
 				}
 				return nil
 			}, time.Minute, time.Second).Should(Succeed())

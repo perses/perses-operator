@@ -111,6 +111,22 @@ func configFingerprint(perses persesv1alpha2.Perses) string {
 	fmt.Fprintf(&b, "tls=%v,", isTLSEnabled(&perses))
 	fmt.Fprintf(&b, "k8sAuth=%v,", isKubernetesAuthEnabled(&perses))
 	fmt.Fprintf(&b, "clientTLS=%v,", isClientTLSEnabled(&perses))
+	if isClientOAuthEnabled(&perses) {
+		oauth := perses.Spec.Client.OAuth
+		oauthName := ""
+		if oauth.Name != nil {
+			oauthName = *oauth.Name
+		}
+		oauthNS := ""
+		if oauth.Namespace != nil {
+			oauthNS = *oauth.Namespace
+		}
+		clientIDPath := ""
+		if oauth.ClientIDPath != nil {
+			clientIDPath = *oauth.ClientIDPath
+		}
+		fmt.Fprintf(&b, "oauth=type:%s,name:%s,ns:%s,tokenURL:%s,idPath:%s,", oauth.Type, oauthName, oauthNS, oauth.TokenURL, clientIDPath)
+	}
 	serverURLFlag := flag.Lookup(PersesServerURLFlag)
 	if serverURLFlag != nil {
 		fmt.Fprintf(&b, "serverURL=%s,", serverURLFlag.Value.String())
@@ -178,7 +194,7 @@ func (f *PersesClientFactoryWithConfig) CreateClient(ctx context.Context, client
 func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, client client.Reader, perses persesv1alpha2.Perses) (v1.ClientInterface, error) {
 	var urlStr string
 
-	var httpProtocol = "http"
+	httpProtocol := "http"
 	if isTLSEnabled(&perses) {
 		httpProtocol = "https"
 	}
@@ -232,7 +248,6 @@ func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, client 
 			switch tls.CaCert.Type {
 			case persesv1alpha2.SecretSourceTypeSecret, persesv1alpha2.SecretSourceTypeConfigMap:
 				caData, _, err := GetTLSCertData(ctx, client, perses.Namespace, perses.Name, tls.CaCert)
-
 				if err != nil {
 					return nil, err
 				}
@@ -247,7 +262,6 @@ func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, client 
 			switch tls.UserCert.Type {
 			case persesv1alpha2.SecretSourceTypeSecret, persesv1alpha2.SecretSourceTypeConfigMap:
 				cert, key, err := GetTLSCertData(ctx, client, perses.Namespace, perses.Name, tls.UserCert)
-
 				if err != nil {
 					return nil, err
 				}
@@ -260,6 +274,33 @@ func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, client 
 		}
 
 		config.TLSConfig = tlsConfig
+	}
+
+	// OAuth 2.0 client_credentials: the token URL points at Perses's own native
+	// provider token endpoint (e.g. <perses-url>/api/auth/providers/oidc/<slug>/token).
+	// Perses exchanges these credentials with the external identity provider, syncs
+	// the user, and issues its own token. The underlying REST client fetches and
+	// auto-refreshes that token, so tokens are always minted by Perses itself.
+	if isClientOAuthEnabled(&perses) {
+		oauthCfg := perses.Spec.Client.OAuth
+
+		clientID, clientSecret, err := GetOAuthData(ctx, client, perses.Namespace, perses.Name, oauthCfg)
+		if err != nil {
+			return nil, err
+		}
+
+		authStyle := 0
+		if oauthCfg.AuthStyle != nil {
+			authStyle = int(*oauthCfg.AuthStyle)
+		}
+
+		config.OAuth = &secret.OAuth{
+			ClientID:     clientID,
+			ClientSecret: clientSecret,
+			TokenURL:     oauthCfg.TokenURL,
+			Scopes:       oauthCfg.Scopes,
+			AuthStyle:    authStyle,
+		}
 	}
 
 	restClient, err := clientConfig.NewRESTClient(config)

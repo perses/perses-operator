@@ -1,0 +1,170 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: perses-config
+  namespace: perses-system
+type: Opaque
+stringData:
+  # Credentials for the human-facing OIDC provider configured on the Perses server.
+  CLIENT_ID: perses
+  CLIENT_SECRET: some-random-client-secret
+  # Credentials the operator uses for the OAuth 2.0 client_credentials flow. These must be
+  # valid for the client_credentials grant at your identity provider. They can be the same
+  # OIDC application as above or a dedicated service account client. Perses exchanges them
+  # with the IdP, reads the resulting user info, and issues its own Perses token.
+  OPERATOR_CLIENT_ID: perses-operator
+  OPERATOR_CLIENT_SECRET: some-random-operator-client-secret
+  # The encryption key is used by the Perses server to sign its own tokens.
+  ENCRYPTION_KEY: some-random-encryption-key
+  OPERATOR_ROLE_PROV.yaml: |
+    kind: "GlobalRole"
+    metadata:
+      name: perses-operator
+    spec:
+      permissions:
+        - actions:
+            - create
+            - read
+            - update
+            - delete
+          scopes:
+            - Dashboard
+            - Datasource
+            - GlobalDatasource
+            - EphemeralDashboard
+            - Project
+            - Role
+            - GlobalRole
+            - RoleBinding
+            - GlobalRoleBinding
+            - Secret
+            - GlobalSecret
+            - User
+            - Variable
+            - GlobalVariable
+  # Has to bind to the user name equaling the oauth client-id
+  OPERATOR_ROLE_BINDING_PROV.yaml: |
+    kind: "GlobalRoleBinding"
+    metadata:
+      name: perses-operator
+    spec:
+      role: perses-operator
+      subjects:
+        - kind: User
+          name: perses-operator
+  # When a browser client sends a query against a clickhouse database via the Perses proxy
+  # it fails since Perses uses the Authorization header from the browser with the Perses token
+  # and forwards it to Clickhouse which does not know the token. The following secret can be
+  # referenced in a datasource to make unauthenticated requests to Clickhouse with the default
+  # user. the base64 value translates to `default:`.
+  CLICKHOUSE_AUTH_SEC.yaml: |
+    kind: GlobalSecret
+    metadata:
+      name: no-auth-dummy
+    spec:
+      authorization:
+        type: Basic
+        credentials: ZGVmYXVsdDo=
+---
+# Perses instance configured with:
+#   - OIDC (Authorization Code + PKCE) for human users
+#   - OAuth 2.0 client_credentials for the operator's own API access (spec.client.oauth)
+#
+# The operator obtains a token via the client_credentials flow against Perses's *own* native
+# provider token endpoint (tokenURL below). Perses forwards the credentials to the external
+# identity provider, syncs the user, and issues its own Perses token, which the operator's
+# REST client then uses (and refreshes automatically).
+apiVersion: perses.dev/v1alpha2
+kind: Perses
+metadata:
+  labels:
+    app.kubernetes.io/instance: perses
+  name: perses
+  namespace: perses-system
+spec:
+  client:
+    oauth:
+      type: secret
+      name: perses-config
+      namespace: perses-system
+      clientIDPath: OPERATOR_CLIENT_ID
+      clientSecretPath: OPERATOR_CLIENT_SECRET
+      # Perses's native provider token endpoint for the configured OIDC provider slug.
+      # Format: <perses-url>/api/auth/providers/<oidc|oauth>/<slug_id>/token
+      tokenURL: http://perses.perses-system.svc.cluster.local:8080/api/auth/providers/oidc/oidc-provider/token
+  config:
+    database:
+      file:
+        extension: yaml
+        folder: /perses
+    provisioning:
+      folders:
+        - /etc/perses/provisioning/secrets
+    security:
+      authentication:
+        disable_sign_up: false
+        providers:
+          enable_native: false
+          oidc:
+            - client_id: will-be-set-via-env
+              client_secret_file: /etc/perses-override/secrets/CLIENT_SECRET
+              disable_pkce: false
+              discovery_url: http://address-to-oidc-provider.com/.well-known/openid-configuration
+              http:
+                timeout: 15s
+                tls_config:
+                  insecureSkipVerify: false
+              issuer: https://sso.10-100-1-20.sslip.io/
+              logout:
+                enabled: true
+              name: Your OIDC Provider
+              redirect_uri: https://perses.10-100-1-20.sslip.io/api/auth/providers/oidc/oidc-provider/callback
+              scopes:
+                - openid
+                - profile
+                - email
+              slug_id: oidc-provider
+      authorization:
+        provider:
+          native:
+            enable: true
+            guest_permissions:
+              - actions:
+                  - read
+                scopes:
+                  - "*"
+      cookie:
+        secure: true
+      enable_auth: true
+      encryption_key_file: /etc/perses-override/secrets/ENCRYPTION_KEY
+      readonly: false
+  env:
+    - name: PERSES_SECURITY_AUTHENTICATION_PROVIDERS_OIDC_0_CLIENT_ID
+      valueFrom:
+        secretKeyRef:
+          name: perses-config
+          key: CLIENT_ID
+  provisioning:
+    secretRefs:
+      - key: OPERATOR_USER_PROV.yaml
+        name: perses-config
+      - key: OPERATOR_ROLE_PROV.yaml
+        name: perses-config
+      - key: OPERATOR_ROLE_BINDING_PROV.yaml
+        name: perses-config
+      - key: CLICKHOUSE_AUTH_SEC.yaml
+        name: perses-config
+  volumeMounts:
+    - mountPath: /etc/perses-override/secrets
+      name: secrets-volume
+      readOnly: true
+  volumes:
+    - name: secrets-volume
+      secret:
+        items:
+          - key: CLIENT_SECRET
+            path: CLIENT_SECRET
+          - key: ENCRYPTION_KEY
+            path: ENCRYPTION_KEY
+        secretName: perses-config

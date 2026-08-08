@@ -88,14 +88,13 @@ func (r *PersesDashboardReconciler) reconcileDashboardInAllInstances(ctx context
 
 func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, perses persesv1alpha2.Perses, dashboard *persesv1alpha2.PersesDashboard) (*ctrl.Result, common.ConditionStatusReason, error) {
 	persesClient, err := r.ClientFactory.CreateClient(ctx, r.APIReader, perses)
-
 	if err != nil {
 		dlog.WithError(err).Error("Failed to create perses rest client")
 		return subreconciler.RequeueWithErrorAndReason(err, common.ReasonConnectionFailed)
 	}
 
+	dlog.Debugf("Perses client obtained, calling Project().Get(%s)", dashboard.Namespace)
 	_, err = persesClient.Project().Get(dashboard.Namespace)
-
 	if err != nil {
 		if errors.Is(err, perseshttp.RequestNotFoundError) {
 			_, err := persesClient.Project().Create(&persesv1.Project{
@@ -109,7 +108,6 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 					},
 				},
 			})
-
 			if err != nil {
 				dlog.WithError(err).Errorf("Failed to create perses project: %s", dashboard.Namespace)
 				return subreconciler.RequeueWithErrorAndReason(err, common.ReasonBackendError)
@@ -206,14 +204,12 @@ func (r *PersesDashboardReconciler) deleteDashboardInAllInstances(ctx context.Co
 
 func (r *PersesDashboardReconciler) deleteDashboard(ctx context.Context, perses persesv1alpha2.Perses, dashboardNamespace string, dashboardName string) (*ctrl.Result, error) {
 	persesClient, err := r.ClientFactory.CreateClient(ctx, r.APIReader, perses)
-
 	if err != nil {
 		dlog.WithError(err).Error("Failed to create perses rest client")
 		return subreconciler.RequeueWithError(err)
 	}
 
 	_, err = persesClient.Project().Get(dashboardNamespace)
-
 	if err != nil {
 		dlog.WithError(err).Errorf("project error: %s", dashboardNamespace)
 
@@ -221,7 +217,6 @@ func (r *PersesDashboardReconciler) deleteDashboard(ctx context.Context, perses 
 	}
 
 	err = persesClient.Dashboard(dashboardNamespace).Delete(dashboardName)
-
 	// Ignore NotFound — the resource may have already been deleted from Perses directly.
 	// Any other error means the delete failed and should be retried.
 	if err != nil {

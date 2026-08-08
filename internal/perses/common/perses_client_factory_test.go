@@ -14,16 +14,27 @@
 package common
 
 import (
+	"context"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 )
+
+func newScheme() *runtime.Scheme {
+	s := runtime.NewScheme()
+	_ = corev1.AddToScheme(s)
+	return s
+}
 
 func TestConfigFingerprint(t *testing.T) {
 	base := persesv1alpha2.Perses{
@@ -210,4 +221,108 @@ func TestClientCacheConcurrency(t *testing.T) {
 	wg.Wait()
 
 	assert.NotNil(t, factory.cache)
+}
+
+func TestConfigFingerprintOAuth(t *testing.T) {
+	base := persesv1alpha2.Perses{
+		ObjectMeta: metav1.ObjectMeta{Name: "perses-1", Namespace: "default", Generation: 1},
+		Spec:       persesv1alpha2.PersesSpec{},
+	}
+
+	fpNoOAuth := configFingerprint(base)
+
+	withOAuth := base.DeepCopy()
+	withOAuth.Spec.Client = &persesv1alpha2.Client{
+		OAuth: &persesv1alpha2.OAuth{
+			SecretSource: persesv1alpha2.SecretSource{
+				Type: persesv1alpha2.SecretSourceTypeSecret,
+				Name: ptr.To("perses-config"),
+			},
+			ClientIDPath:     ptr.To("OPERATOR_CLIENT_ID"),
+			ClientSecretPath: ptr.To("OPERATOR_CLIENT_SECRET"),
+			TokenURL:         "http://perses.perses-system.svc:8080/api/auth/providers/oidc/oidc-provider/token",
+		},
+	}
+	fpWithOAuth := configFingerprint(*withOAuth)
+	assert.NotEqual(t, fpNoOAuth, fpWithOAuth, "Adding OAuth should change fingerprint")
+	assert.Equal(t, fpWithOAuth, configFingerprint(*withOAuth), "Same OAuth config should produce same fingerprint")
+
+	differentToken := withOAuth.DeepCopy()
+	differentToken.Spec.Client.OAuth.TokenURL = "http://perses.perses-system.svc:8080/api/auth/providers/oidc/other/token"
+	assert.NotEqual(t, fpWithOAuth, configFingerprint(*differentToken), "Different tokenURL should change fingerprint")
+
+	differentIDPath := withOAuth.DeepCopy()
+	differentIDPath.Spec.Client.OAuth.ClientIDPath = ptr.To("DIFFERENT_ID")
+	assert.NotEqual(t, fpWithOAuth, configFingerprint(*differentIDPath), "Different clientIDPath should change fingerprint")
+}
+
+func TestBuildClientWithOAuth(t *testing.T) {
+	ctx := context.Background()
+
+	k8sSecret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "perses-config", Namespace: "perses-system"},
+		Data: map[string][]byte{
+			"OPERATOR_CLIENT_ID":     []byte("perses-operator"),
+			"OPERATOR_CLIENT_SECRET": []byte("super-secret"),
+		},
+	}
+	reader := fake.NewClientBuilder().WithScheme(newScheme()).WithObjects(k8sSecret).Build()
+
+	perses := persesv1alpha2.Perses{
+		ObjectMeta: metav1.ObjectMeta{Name: "perses", Namespace: "perses-system", Generation: 1},
+		Spec: persesv1alpha2.PersesSpec{
+			ContainerPort: ptr.To(int32(8080)),
+			Client: &persesv1alpha2.Client{
+				OAuth: &persesv1alpha2.OAuth{
+					SecretSource: persesv1alpha2.SecretSource{
+						Type:      persesv1alpha2.SecretSourceTypeSecret,
+						Name:      ptr.To("perses-config"),
+						Namespace: ptr.To("perses-system"),
+					},
+					ClientIDPath:     ptr.To("OPERATOR_CLIENT_ID"),
+					ClientSecretPath: ptr.To("OPERATOR_CLIENT_SECRET"),
+					TokenURL:         "http://perses.perses-system.svc.cluster.local:8080/api/auth/providers/oidc/oidc-provider/token",
+				},
+			},
+		},
+	}
+
+	factory := NewWithConfig()
+	client, err := factory.buildClient(ctx, reader, perses)
+	require.NoError(t, err)
+	require.NotNil(t, client)
+
+	// NewRESTClient wires OAuth into an http client that fetches/refreshes the
+	// Perses-issued token lazily, so the REST client and its http client exist.
+	rest := client.RESTClient()
+	require.NotNil(t, rest)
+	assert.NotNil(t, rest.Client)
+}
+
+func TestBuildClientOAuthMissingSecret(t *testing.T) {
+	ctx := context.Background()
+	reader := fake.NewClientBuilder().WithScheme(newScheme()).Build()
+
+	perses := persesv1alpha2.Perses{
+		ObjectMeta: metav1.ObjectMeta{Name: "perses", Namespace: "perses-system", Generation: 1},
+		Spec: persesv1alpha2.PersesSpec{
+			ContainerPort: ptr.To(int32(8080)),
+			Client: &persesv1alpha2.Client{
+				OAuth: &persesv1alpha2.OAuth{
+					SecretSource: persesv1alpha2.SecretSource{
+						Type:      persesv1alpha2.SecretSourceTypeSecret,
+						Name:      ptr.To("does-not-exist"),
+						Namespace: ptr.To("perses-system"),
+					},
+					ClientIDPath:     ptr.To("OPERATOR_CLIENT_ID"),
+					ClientSecretPath: ptr.To("OPERATOR_CLIENT_SECRET"),
+					TokenURL:         "http://perses.perses-system.svc:8080/api/auth/providers/oidc/oidc-provider/token",
+				},
+			},
+		},
+	}
+
+	factory := NewWithConfig()
+	_, err := factory.buildClient(ctx, reader, perses)
+	require.Error(t, err)
 }
