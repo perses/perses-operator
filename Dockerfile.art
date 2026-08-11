@@ -1,0 +1,41 @@
+FROM registry.ci.openshift.org/ocp/builder:rhel-9-golang-1.26-openshift-5.0 AS builder
+
+USER root
+
+RUN dnf install -y --setopt=tsflags=nodocs mailcap && \
+    dnf clean all && \
+    rm -rf /var/cache/dnf
+
+WORKDIR /app
+
+COPY . .
+
+ENV CGO_ENABLED=1
+ENV GOEXPERIMENT=strictfipsruntime
+
+RUN make bin BUILD_OPTS="-tags strictfipsruntime"
+
+FROM registry.ci.openshift.org/ocp/5.0:base-rhel9
+
+LABEL maintainer="Observability UI team <team-observability-ui@redhat.com>"
+
+USER nobody
+
+COPY --from=builder --chown=nobody:nobody /app/bin/manager  /bin/manager
+COPY --from=builder --chown=nobody:nobody /app/LICENSE      /LICENSE
+COPY --from=builder --chown=nobody:nobody /etc/mime.types   /etc/mime.types
+
+EXPOSE     8080
+ENTRYPOINT [ "/bin/manager" ]
+
+ARG VERSION=v0.4.0
+LABEL version="${VERSION}" \
+    release="${VERSION}" \
+    vendor="Red Hat, Inc." \
+    url="https://github.com/rhobs/perses-operator" \
+    summary="Perses Operator for Cluster Observability Operator" \
+    io.openshift.tags="openshift,observability-ui,perses-operator" \
+    io.k8s.display-name="Perses Operator for Cluster Observability Operator" \
+    io.k8s.description="Perses Operator for Cluster Observability Operator" \
+    maintainer="Observability UI Team <team-observability-ui@redhat.com>" \
+    description="Perses Operator for Cluster Observability Operator"
