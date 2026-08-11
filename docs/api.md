@@ -60,7 +60,7 @@ _Appears in:_
 
 
 
-
+Client defines how the client should authenticate
 
 
 
@@ -419,6 +419,8 @@ _Appears in:_
 | `provisioning` _[Provisioning](#provisioning)_ | provisioning configuration for provisioning secrets |  | Optional: \{\} <br /> |
 | `volumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#volume-v1-core) array_ | volumes allows configuration of additional volumes on the Deployment or StatefulSet definitions.<br />Volumes specified here will be appended to other operator-managed volumes. |  | MaxItems: 20 <br />Optional: \{\} <br /> |
 | `volumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#volumemount-v1-core) array_ | volumeMounts allows configuration of additional VolumeMounts on the Deployment or StatefulSet definitions.<br />VolumeMounts specified here will be appended to other operator-managed volume mounts. |  | MaxItems: 20 <br />Optional: \{\} <br /> |
+| `env` _[EnvVar](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#envvar-v1-core) array_ | env allows setting environment variables on the Perses container using the standard<br />Kubernetes EnvVar shape: each entry has a name plus either a literal value or a<br />valueFrom source (secretKeyRef, configMapKeyRef, fieldRef, resourceFieldRef).<br />Variables are merged on top of the operator-generated config file at startup using<br />the PERSES_ env prefix (e.g. PERSES_SECURITY_AUTHENTICATION_PROVIDERS_OIDC_0_CLIENT_ID).<br />Environment variables always override values from the config file.<br />corev1.EnvVar is the canonical Kubernetes env-var type |  | MaxItems: 50 <br />Optional: \{\} <br /> |
+| `envFrom` _[EnvFromSource](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#envfromsource-v1-core) array_ | envFrom allows bulk-populating environment variables from Kubernetes Secrets or ConfigMaps.<br />All keys in the referenced object become environment variable names. Combined with the<br />PERSES_ prefix convention, this allows overriding multiple config values from a single Secret.<br />corev1.EnvFromSource is the canonical Kubernetes envFrom type |  | MaxItems: 50 <br />Optional: \{\} <br /> |
 
 
 #### PersesStatus

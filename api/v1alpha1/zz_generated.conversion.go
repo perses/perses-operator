@@ -1046,6 +1046,8 @@ func autoConvert_v1alpha2_PersesSpec_To_v1alpha1_PersesSpec(in *v1alpha2.PersesS
 	// WARNING: in.Provisioning requires manual conversion: does not exist in peer-type
 	// WARNING: in.Volumes requires manual conversion: does not exist in peer-type
 	// WARNING: in.VolumeMounts requires manual conversion: does not exist in peer-type
+	// WARNING: in.Env requires manual conversion: does not exist in peer-type
+	// WARNING: in.EnvFrom requires manual conversion: does not exist in peer-type
 	return nil
 }
 
