@@ -231,6 +231,10 @@ func (r *PersesReconciler) createPersesStatefulSet(
 		sts.Spec.Template.Spec.ServiceAccountName = *perses.Spec.ServiceAccountName
 	}
 
+	if perses.Spec.PriorityClassName != nil && *perses.Spec.PriorityClassName != "" {
+		sts.Spec.Template.Spec.PriorityClassName = *perses.Spec.PriorityClassName
+	}
+
 	// Set the ownerRef for the StatefulSet
 	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
 	if err := ctrl.SetControllerReference(perses, sts, r.Scheme); err != nil {

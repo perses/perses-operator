@@ -6217,6 +6217,11 @@ spec:
                         type: string
                     type: object
                 type: object
+              priorityClassName:
+                description: priorityClassName assigns the pods to a PriorityClass,
+                  influencing scheduling and preemption
+                minLength: 1
+                type: string
               provisioning:
                 description: provisioning configuration for provisioning secrets
                 properties:
