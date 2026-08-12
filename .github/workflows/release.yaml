@@ -42,7 +42,7 @@ jobs:
           }
 
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           # NOTE: we need to fetch the whole history to be able to generate the changelog
           fetch-depth: 0
