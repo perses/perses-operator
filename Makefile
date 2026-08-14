@@ -472,6 +472,12 @@ bundle-check: bundle
 .PHONY: jsonnet-check
 jsonnet-check: manifests
 	git diff --exit-code jsonnet/generated jsonnet/examples
+	@if [ -n "$$(git ls-files --others --exclude-standard jsonnet/generated jsonnet/examples)" ]; then \
+		echo "ERROR: untracked files found in jsonnet/generated or jsonnet/examples:"; \
+		git ls-files --others --exclude-standard jsonnet/generated jsonnet/examples; \
+		echo "Please commit the new generated files."; \
+		exit 1; \
+	fi
 
 .PHONY: bundle-build
 bundle-build: generate bundle ## Build the bundle image.
