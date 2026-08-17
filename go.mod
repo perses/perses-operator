@@ -13,7 +13,7 @@ require (
 	github.com/perses/perses v0.54.0
 	github.com/prometheus/client_golang v1.24.1
 	github.com/sirupsen/logrus v1.9.4
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.0
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.36.3
 	k8s.io/apimachinery v0.36.3
@@ -125,7 +125,7 @@ require (
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	github.com/wk8/go-ordered-map/v2 v2.1.8 // indirect
