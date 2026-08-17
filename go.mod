@@ -12,7 +12,7 @@ require (
 	github.com/perses/common v0.31.2
 	github.com/perses/perses v0.54.0
 	github.com/prometheus/client_golang v1.24.1
-	github.com/sirupsen/logrus v1.9.4
+	github.com/sirupsen/logrus v1.10.0
 	github.com/stretchr/testify v1.11.1
 	gopkg.in/yaml.v2 v2.4.0
 	k8s.io/api v0.36.3
