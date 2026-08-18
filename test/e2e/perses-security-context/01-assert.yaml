@@ -1,0 +1,43 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+commands:
+  # Verify the container security context has readOnlyRootFilesystem
+  - script: |
+      READONLY=$(kubectl get statefulset perses-secctx-test -n $NAMESPACE -o jsonpath='{.spec.template.spec.containers[0].securityContext.readOnlyRootFilesystem}')
+      [ "$READONLY" = "true" ] || {
+        echo "FAIL: readOnlyRootFilesystem should be true, got: $READONLY"
+        exit 1
+      }
+      echo "Verified: readOnlyRootFilesystem is true"
+  # Verify the container security context has runAsNonRoot
+  - script: |
+      NONROOT=$(kubectl get statefulset perses-secctx-test -n $NAMESPACE -o jsonpath='{.spec.template.spec.containers[0].securityContext.runAsNonRoot}')
+      [ "$NONROOT" = "true" ] || {
+        echo "FAIL: runAsNonRoot should be true, got: $NONROOT"
+        exit 1
+      }
+      echo "Verified: runAsNonRoot is true"
+  # Verify allowPrivilegeEscalation is false
+  - script: |
+      PRIVESC=$(kubectl get statefulset perses-secctx-test -n $NAMESPACE -o jsonpath='{.spec.template.spec.containers[0].securityContext.allowPrivilegeEscalation}')
+      [ "$PRIVESC" = "false" ] || {
+        echo "FAIL: allowPrivilegeEscalation should be false, got: $PRIVESC"
+        exit 1
+      }
+      echo "Verified: allowPrivilegeEscalation is false"
+  # Verify capabilities drop ALL
+  - script: |
+      DROP=$(kubectl get statefulset perses-secctx-test -n $NAMESPACE -o jsonpath='{.spec.template.spec.containers[0].securityContext.capabilities.drop[0]}')
+      [ "$DROP" = "ALL" ] || {
+        echo "FAIL: capabilities.drop should contain ALL, got: $DROP"
+        exit 1
+      }
+      echo "Verified: capabilities drop ALL"
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: perses-secctx-test
+status:
+  readyReplicas: 1

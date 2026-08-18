@@ -1,0 +1,26 @@
+apiVersion: perses.dev/v1alpha2
+kind: Perses
+metadata:
+  name: perses-secctx-test
+  labels:
+    app.kubernetes.io/instance: perses-secctx-test
+spec:
+  metadata:
+    labels:
+      instance: perses-secctx-test
+  config:
+    database:
+      file:
+        folder: "/perses"
+        extension: "yaml"
+  containerPort: 8080
+  containerSecurityContext:
+    runAsNonRoot: true
+    readOnlyRootFilesystem: true
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+  resources:
+    requests:
+      memory: 128Mi

@@ -98,6 +98,11 @@ type PersesSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	PodSecurityContext *corev1.PodSecurityContext `json:"podSecurityContext,omitempty"`
+	// containerSecurityContext holds security attributes for the Perses container
+	// If not specified, defaults to runAsUser: 65534 (nobody) and drops all capabilities
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	ContainerSecurityContext *corev1.SecurityContext `json:"containerSecurityContext,omitempty"`
 	// logLevel defines the log level for Perses
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +kubebuilder:validation:Enum=panic;fatal;error;warning;info;debug;trace

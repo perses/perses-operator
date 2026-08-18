@@ -1332,6 +1332,231 @@ var _ = Describe("Perses controller", func() {
 			Expect(k8sClient.Delete(ctx, persesToDelete)).To(Succeed())
 		})
 
+		It("should apply default container security context to StatefulSet when none specified", func() {
+			const PersesDefaultSecCtxName = "test-perses-default-sec-ctx"
+			typeNamespaceName := types.NamespacedName{Name: PersesDefaultSecCtxName, Namespace: persesNamespace}
+
+			By("Creating a Perses CR without containerSecurityContext")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      PersesDefaultSecCtxName,
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					Image: ptr.To(persesImage),
+					Config: persesv1alpha2.PersesConfig{
+						Config: persesconfig.Config{
+							Database: persesconfig.Database{
+								File: &persesconfig.File{
+									Folder: "/etc/perses/storage",
+								},
+							},
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, perses)).To(Succeed())
+
+			persesReconciler := &persescontroller.PersesReconciler{
+				Client:    k8sClient,
+				APIReader: k8sClient,
+				Scheme:    k8sClient.Scheme(),
+			}
+
+			By("Reconciling the custom resource")
+			Eventually(func() error {
+				_, err := persesReconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespaceName,
+				})
+				return err
+			}, time.Second*10, time.Millisecond*250).Should(Succeed())
+
+			By("Checking that the StatefulSet has the default container security context")
+			Eventually(func() error {
+				found := &appsv1.StatefulSet{}
+				if err := k8sClient.Get(ctx, typeNamespaceName, found); err != nil {
+					return err
+				}
+				sc := found.Spec.Template.Spec.Containers[0].SecurityContext
+				if sc == nil {
+					return fmt.Errorf("container security context is nil")
+				}
+				if sc.AllowPrivilegeEscalation == nil || *sc.AllowPrivilegeEscalation != false {
+					return fmt.Errorf("AllowPrivilegeEscalation should be false")
+				}
+				if sc.Capabilities == nil || len(sc.Capabilities.Drop) != 1 || sc.Capabilities.Drop[0] != "ALL" {
+					return fmt.Errorf("Capabilities.Drop should be [ALL]")
+				}
+				return nil
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Deleting the custom resource")
+			persesToDelete := &persesv1alpha2.Perses{}
+			Expect(k8sClient.Get(ctx, typeNamespaceName, persesToDelete)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, persesToDelete)).To(Succeed())
+		})
+
+		It("should apply custom container security context to StatefulSet", func() {
+			const PersesCustomSecCtxName = "test-perses-custom-sec-ctx"
+			typeNamespaceName := types.NamespacedName{Name: PersesCustomSecCtxName, Namespace: persesNamespace}
+
+			By("Creating a Perses CR with a custom containerSecurityContext")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      PersesCustomSecCtxName,
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					Image: ptr.To(persesImage),
+					Config: persesv1alpha2.PersesConfig{
+						Config: persesconfig.Config{
+							Database: persesconfig.Database{
+								File: &persesconfig.File{
+									Folder: "/etc/perses/storage",
+								},
+							},
+						},
+					},
+					ContainerSecurityContext: &corev1.SecurityContext{
+						RunAsUser:                ptr.To(int64(1000)),
+						RunAsNonRoot:             ptr.To(true),
+						ReadOnlyRootFilesystem:   ptr.To(true),
+						AllowPrivilegeEscalation: ptr.To(false),
+						Capabilities: &corev1.Capabilities{
+							Drop: []corev1.Capability{"ALL"},
+							Add:  []corev1.Capability{"NET_BIND_SERVICE"},
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, perses)).To(Succeed())
+
+			persesReconciler := &persescontroller.PersesReconciler{
+				Client:    k8sClient,
+				APIReader: k8sClient,
+				Scheme:    k8sClient.Scheme(),
+			}
+
+			By("Reconciling the custom resource")
+			Eventually(func() error {
+				_, err := persesReconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespaceName,
+				})
+				return err
+			}, time.Second*10, time.Millisecond*250).Should(Succeed())
+
+			By("Checking that the StatefulSet has the custom container security context")
+			Eventually(func() error {
+				found := &appsv1.StatefulSet{}
+				if err := k8sClient.Get(ctx, typeNamespaceName, found); err != nil {
+					return err
+				}
+				sc := found.Spec.Template.Spec.Containers[0].SecurityContext
+				if sc == nil {
+					return fmt.Errorf("container security context is nil")
+				}
+				if sc.RunAsUser == nil || *sc.RunAsUser != 1000 {
+					return fmt.Errorf("RunAsUser should be 1000, got %v", sc.RunAsUser)
+				}
+				if sc.RunAsNonRoot == nil || *sc.RunAsNonRoot != true {
+					return fmt.Errorf("RunAsNonRoot should be true")
+				}
+				if sc.ReadOnlyRootFilesystem == nil || *sc.ReadOnlyRootFilesystem != true {
+					return fmt.Errorf("ReadOnlyRootFilesystem should be true")
+				}
+				if sc.AllowPrivilegeEscalation == nil || *sc.AllowPrivilegeEscalation != false {
+					return fmt.Errorf("AllowPrivilegeEscalation should be false")
+				}
+				if sc.Capabilities == nil || len(sc.Capabilities.Drop) != 1 || sc.Capabilities.Drop[0] != "ALL" {
+					return fmt.Errorf("Capabilities.Drop should be [ALL]")
+				}
+				if len(sc.Capabilities.Add) != 1 || sc.Capabilities.Add[0] != "NET_BIND_SERVICE" {
+					return fmt.Errorf("Capabilities.Add should be [NET_BIND_SERVICE]")
+				}
+				return nil
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Deleting the custom resource")
+			persesToDelete := &persesv1alpha2.Perses{}
+			Expect(k8sClient.Get(ctx, typeNamespaceName, persesToDelete)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, persesToDelete)).To(Succeed())
+		})
+
+		It("should apply custom container security context to Deployment", func() {
+			const PersesDeploySecCtxName = "test-perses-deploy-sec-ctx"
+			typeNamespaceName := types.NamespacedName{Name: PersesDeploySecCtxName, Namespace: persesNamespace}
+
+			By("Creating a Perses CR with emptyDir storage and custom containerSecurityContext")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      PersesDeploySecCtxName,
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					Image: ptr.To(persesImage),
+					Config: persesv1alpha2.PersesConfig{
+						Config: persesconfig.Config{
+							Database: persesconfig.Database{
+								File: &persesconfig.File{
+									Folder: "/etc/perses/storage",
+								},
+							},
+						},
+					},
+					Storage: &persesv1alpha2.StorageConfiguration{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+					ContainerSecurityContext: &corev1.SecurityContext{
+						RunAsUser:              ptr.To(int64(65534)),
+						RunAsNonRoot:           ptr.To(true),
+						ReadOnlyRootFilesystem: ptr.To(true),
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, perses)).To(Succeed())
+
+			persesReconciler := &persescontroller.PersesReconciler{
+				Client:    k8sClient,
+				APIReader: k8sClient,
+				Scheme:    k8sClient.Scheme(),
+			}
+
+			By("Reconciling the custom resource")
+			Eventually(func() error {
+				_, err := persesReconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespaceName,
+				})
+				return err
+			}, time.Second*10, time.Millisecond*250).Should(Succeed())
+
+			By("Checking that the Deployment has the custom container security context")
+			Eventually(func() error {
+				found := &appsv1.Deployment{}
+				if err := k8sClient.Get(ctx, typeNamespaceName, found); err != nil {
+					return err
+				}
+				sc := found.Spec.Template.Spec.Containers[0].SecurityContext
+				if sc == nil {
+					return fmt.Errorf("container security context is nil")
+				}
+				if sc.RunAsUser == nil || *sc.RunAsUser != 65534 {
+					return fmt.Errorf("RunAsUser should be 65534, got %v", sc.RunAsUser)
+				}
+				if sc.RunAsNonRoot == nil || *sc.RunAsNonRoot != true {
+					return fmt.Errorf("RunAsNonRoot should be true")
+				}
+				if sc.ReadOnlyRootFilesystem == nil || *sc.ReadOnlyRootFilesystem != true {
+					return fmt.Errorf("ReadOnlyRootFilesystem should be true")
+				}
+				return nil
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Deleting the custom resource")
+			persesToDelete := &persesv1alpha2.Perses{}
+			Expect(k8sClient.Get(ctx, typeNamespaceName, persesToDelete)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, persesToDelete)).To(Succeed())
+		})
+
 		It("should set Degraded status when volumeMounts exist but no volumes defined", func() {
 			const noVolName = "test-perses-mount-no-vol"
 			typeNamespaceName := types.NamespacedName{Name: noVolName, Namespace: persesNamespace}
