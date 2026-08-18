@@ -414,6 +414,7 @@ _Appears in:_
 | `storage` _[StorageConfiguration](#storageconfiguration)_ | storage configuration used by the StatefulSet |  | Optional: \{\} <br /> |
 | `serviceAccountName` _string_ | serviceAccountName is the name of the ServiceAccount to use for the Perses deployment or statefulset |  | Optional: \{\} <br /> |
 | `podSecurityContext` _[PodSecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#podsecuritycontext-v1-core)_ | podSecurityContext holds pod-level security attributes and common container settings<br />If not specified, defaults to fsGroup: 65534 to ensure proper volume permissions for the nobody user |  | Optional: \{\} <br /> |
+| `containerSecurityContext` _[SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#securitycontext-v1-core)_ | containerSecurityContext holds security attributes for the Perses container<br />If not specified, defaults to runAsUser: 65534 (nobody) and drops all capabilities |  | Optional: \{\} <br /> |
 | `logLevel` _string_ | logLevel defines the log level for Perses |  | Enum: [panic fatal error warning info debug trace] <br />Optional: \{\} <br /> |
 | `logMethodTrace` _boolean_ | logMethodTrace when true, includes the calling method as a field in the log<br />It can be useful to see immediately where the log comes from |  | Optional: \{\} <br /> |
 | `provisioning` _[Provisioning](#provisioning)_ | provisioning configuration for provisioning secrets |  | Optional: \{\} <br /> |

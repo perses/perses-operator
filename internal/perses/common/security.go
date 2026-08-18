@@ -38,3 +38,22 @@ func GetPodSecurityContext(perses *v1alpha2.Perses) *corev1.PodSecurityContext {
 		},
 	}
 }
+
+func GetContainerSecurityContext(perses *v1alpha2.Perses) *corev1.SecurityContext {
+
+	// if user specified a custom security context, use it
+	if perses.Spec.ContainerSecurityContext != nil {
+		return perses.Spec.ContainerSecurityContext
+	}
+
+	// Return default security context
+	// runAsUser 65534 is the "nobody" user, matching the fsGroup
+	return &corev1.SecurityContext{
+		AllowPrivilegeEscalation: &[]bool{false}[0],
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{
+				"ALL",
+			},
+		},
+	}
+}

@@ -3,3 +3,6 @@ timeout: '1m'
 cache:
   type: 'sqlite'
   jitter: '1h'
+validators:
+  - regex: '(^http[s]?:\/\/)(www\.)?cloud-native\.slack\.com'
+    type: 'ignore'

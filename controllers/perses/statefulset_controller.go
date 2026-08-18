@@ -167,14 +167,7 @@ func (r *PersesReconciler) createPersesStatefulSet(
 						Image:           image,
 						Name:            "perses",
 						ImagePullPolicy: corev1.PullIfNotPresent,
-						SecurityContext: &corev1.SecurityContext{
-							AllowPrivilegeEscalation: &[]bool{false}[0],
-							Capabilities: &corev1.Capabilities{
-								Drop: []corev1.Capability{
-									"ALL",
-								},
-							},
-						},
+						SecurityContext: common.GetContainerSecurityContext(perses),
 						Ports: []corev1.ContainerPort{{
 							ContainerPort: func() int32 {
 								if perses.Spec.ContainerPort != nil {
