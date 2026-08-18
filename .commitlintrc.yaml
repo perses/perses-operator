@@ -1,0 +1,25 @@
+parserPreset:
+  parserOpts:
+    headerPattern: '^\[(FEATURE|ENHANCEMENT|BUGFIX|BREAKINGCHANGE|DOC|IGNORE)\]\s(.+)$'
+    headerCorrespondence:
+      - type
+      - subject
+
+rules:
+  type-case:
+    - 0
+  type-enum:
+    - 2
+    - always
+    - - FEATURE
+      - ENHANCEMENT
+      - BUGFIX
+      - BREAKINGCHANGE
+      - DOC
+      - IGNORE
+  type-empty:
+    - 2
+    - never
+  subject-empty:
+    - 2
+    - never
