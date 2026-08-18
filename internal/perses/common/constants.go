@@ -161,6 +161,13 @@ func isKubernetesAuthEnabled(perses *v1alpha2.Perses) bool {
 		*perses.Spec.Client.KubernetesAuth.Enable
 }
 
+// isClientOAuthEnabled checks if OAuth authentication is configured for the Perses client
+func isClientOAuthEnabled(perses *v1alpha2.Perses) bool {
+	return perses != nil &&
+		perses.Spec.Client != nil &&
+		perses.Spec.Client.OAuth != nil
+}
+
 // PersesBecameAvailable returns true when a Perses instance transitions
 // to Available status, indicating its API is ready to accept requests.
 func PersesBecameAvailable(oldObj, newObj client.Object) bool {

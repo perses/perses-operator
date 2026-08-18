@@ -186,6 +186,8 @@ func (r *PersesReconciler) createPersesStatefulSet(
 						}},
 						VolumeMounts:   common.GetVolumeMounts(perses),
 						Args:           common.GetPersesArgs(perses, r.Config.TLSMinVersion, r.Config.TLSCipherSuites, r.Config.TLSConfigureOperands),
+						Env:            perses.Spec.Env,
+						EnvFrom:        perses.Spec.EnvFrom,
 						LivenessProbe:  livenessProbe,
 						ReadinessProbe: readinessProbe,
 					}},

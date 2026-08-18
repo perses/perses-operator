@@ -133,7 +133,7 @@ var _ = Describe("API Validation", func() {
 			By("Creating a Perses resource with empty OAuth tokenURL")
 			perses := &persesv1alpha2.Perses{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "invalid-oauth-no-url",
+					Name:      "invalid-oauth-no-token-url",
 					Namespace: persesNamespace,
 				},
 				Spec: persesv1alpha2.PersesSpec{
@@ -142,10 +142,11 @@ var _ = Describe("API Validation", func() {
 						OAuth: &persesv1alpha2.OAuth{
 							SecretSource: persesv1alpha2.SecretSource{
 								Type:      persesv1alpha2.SecretSourceTypeSecret,
-								Name:      ptr.To("oauth-secret"),
+								Name:      ptr.To("perses-config"),
 								Namespace: ptr.To("default"),
 							},
-							TokenURL: "", // Invalid: required
+							ClientIDPath:     ptr.To("OPERATOR_CLIENT_ID"),
+							ClientSecretPath: ptr.To("OPERATOR_CLIENT_SECRET"),
 						},
 					},
 				},
@@ -170,10 +171,157 @@ var _ = Describe("API Validation", func() {
 						OAuth: &persesv1alpha2.OAuth{
 							SecretSource: persesv1alpha2.SecretSource{
 								Type:      persesv1alpha2.SecretSourceTypeSecret,
-								Name:      ptr.To("oauth-secret"),
+								Name:      ptr.To("perses-config"),
 								Namespace: ptr.To("default"),
 							},
-							TokenURL: "https://auth.example.com/token",
+							ClientIDPath:     ptr.To("OPERATOR_CLIENT_ID"),
+							ClientSecretPath: ptr.To("OPERATOR_CLIENT_SECRET"),
+							TokenURL:         "http://perses.perses-system.svc:8080/api/auth/providers/oidc/my-provider/token",
+						},
+					},
+				},
+			}
+
+			By("Expecting the creation to succeed")
+			err := k8sClient.Create(ctx, perses)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Cleaning up the created resource")
+			Eventually(func() error {
+				return k8sClient.Delete(ctx, perses)
+			}, time.Minute, time.Second).Should(Succeed())
+		})
+	})
+
+	Context("Client auth mutual exclusivity validation", func() {
+		ctx := context.Background()
+
+		It("should reject kubernetesAuth enabled with OAuth", func() {
+			By("Creating a Perses resource with both kubernetesAuth.enable and OAuth")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "invalid-k8s-and-oauth",
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					ContainerPort: ptr.To(int32(8080)),
+					Client: &persesv1alpha2.Client{
+						KubernetesAuth: &persesv1alpha2.KubernetesAuth{
+							Enable: ptr.To(true),
+						},
+						OAuth: &persesv1alpha2.OAuth{
+							SecretSource: persesv1alpha2.SecretSource{
+								Type:      persesv1alpha2.SecretSourceTypeSecret,
+								Name:      ptr.To("perses-config"),
+								Namespace: ptr.To("default"),
+							},
+							ClientIDPath:     ptr.To("OPERATOR_CLIENT_ID"),
+							ClientSecretPath: ptr.To("OPERATOR_CLIENT_SECRET"),
+							TokenURL:         "http://perses.perses-system.svc:8080/token",
+						},
+					},
+				},
+			}
+
+			By("Expecting the creation to fail with validation error")
+			err := k8sClient.Create(ctx, perses)
+			Expect(err).To(HaveOccurred())
+			Expect(errors.IsInvalid(err)).To(BeTrue())
+			Expect(err.Error()).To(ContainSubstring("mutually exclusive"))
+		})
+
+		It("should reject kubernetesAuth enabled with basicAuth", func() {
+			By("Creating a Perses resource with both kubernetesAuth.enable and BasicAuth")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "invalid-k8s-and-basic",
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					ContainerPort: ptr.To(int32(8080)),
+					Client: &persesv1alpha2.Client{
+						KubernetesAuth: &persesv1alpha2.KubernetesAuth{
+							Enable: ptr.To(true),
+						},
+						BasicAuth: &persesv1alpha2.BasicAuth{
+							SecretSource: persesv1alpha2.SecretSource{
+								Type:      persesv1alpha2.SecretSourceTypeSecret,
+								Name:      ptr.To("basic-auth"),
+								Namespace: ptr.To("default"),
+							},
+							Username:     "admin",
+							PasswordPath: "password",
+						},
+					},
+				},
+			}
+
+			By("Expecting the creation to fail with validation error")
+			err := k8sClient.Create(ctx, perses)
+			Expect(err).To(HaveOccurred())
+			Expect(errors.IsInvalid(err)).To(BeTrue())
+			Expect(err.Error()).To(ContainSubstring("mutually exclusive"))
+		})
+
+		It("should accept kubernetesAuth disabled with OAuth", func() {
+			By("Creating a Perses resource with kubernetesAuth.enable=false and OAuth")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "valid-k8s-disabled-with-oauth",
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					ContainerPort: ptr.To(int32(8080)),
+					Client: &persesv1alpha2.Client{
+						KubernetesAuth: &persesv1alpha2.KubernetesAuth{
+							Enable: ptr.To(false),
+						},
+						OAuth: &persesv1alpha2.OAuth{
+							SecretSource: persesv1alpha2.SecretSource{
+								Type:      persesv1alpha2.SecretSourceTypeSecret,
+								Name:      ptr.To("perses-config"),
+								Namespace: ptr.To("default"),
+							},
+							ClientIDPath:     ptr.To("OPERATOR_CLIENT_ID"),
+							ClientSecretPath: ptr.To("OPERATOR_CLIENT_SECRET"),
+							TokenURL:         "http://perses.perses-system.svc:8080/token",
+						},
+					},
+				},
+			}
+
+			By("Expecting the creation to succeed")
+			err := k8sClient.Create(ctx, perses)
+			Expect(err).To(Not(HaveOccurred()))
+
+			By("Cleaning up the created resource")
+			Eventually(func() error {
+				return k8sClient.Delete(ctx, perses)
+			}, time.Minute, time.Second).Should(Succeed())
+		})
+
+		It("should accept kubernetesAuth with nil enable and OAuth", func() {
+			By("Creating a Perses resource with kubernetesAuth (enable not set) and OAuth")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "valid-k8s-nil-with-oauth",
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					ContainerPort: ptr.To(int32(8080)),
+					Client: &persesv1alpha2.Client{
+						KubernetesAuth: &persesv1alpha2.KubernetesAuth{
+							Enable: nil,
+						},
+						OAuth: &persesv1alpha2.OAuth{
+							SecretSource: persesv1alpha2.SecretSource{
+								Type:      persesv1alpha2.SecretSourceTypeSecret,
+								Name:      ptr.To("perses-config"),
+								Namespace: ptr.To("default"),
+							},
+							ClientIDPath:     ptr.To("OPERATOR_CLIENT_ID"),
+							ClientSecretPath: ptr.To("OPERATOR_CLIENT_SECRET"),
+							TokenURL:         "http://perses.perses-system.svc:8080/token",
 						},
 					},
 				},

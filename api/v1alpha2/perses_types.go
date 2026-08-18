@@ -130,6 +130,28 @@ type PersesSpec struct {
 	// +kubebuilder:validation:MaxItems=20
 	// +kubebuilder:validation:XValidation:rule="self.all(m, !m.mountPath.startsWith('/etc/perses/config') && !m.mountPath.startsWith('/etc/perses/plugins') && !m.mountPath.startsWith('/etc/perses/provisioning') && !(m.mountPath in ['/etc/perses', '/perses', '/ca', '/tls']))",message="volumeMount mountPath must not conflict with or shadow operator-reserved paths under /etc/perses/config, /etc/perses/plugins, /etc/perses/provisioning, or /etc/perses, /perses, /ca, /tls"
 	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
+	// env allows setting environment variables on the Perses container using the standard
+	// Kubernetes EnvVar shape: each entry has a name plus either a literal value or a
+	// valueFrom source (secretKeyRef, configMapKeyRef, fieldRef, resourceFieldRef).
+	// Variables are merged on top of the operator-generated config file at startup using
+	// the PERSES_ env prefix (e.g. PERSES_SECURITY_AUTHENTICATION_PROVIDERS_OIDC_0_CLIENT_ID).
+	// Environment variables always override values from the config file.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	// +listType=map
+	// +listMapKey=name
+	// +kubebuilder:validation:MaxItems=50
+	// corev1.EnvVar is the canonical Kubernetes env-var type
+	Env []corev1.EnvVar `json:"env,omitempty"`
+	// envFrom allows bulk-populating environment variables from Kubernetes Secrets or ConfigMaps.
+	// All keys in the referenced object become environment variable names. Combined with the
+	// PERSES_ prefix convention, this allows overriding multiple config values from a single Secret.
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +optional
+	// +listType=atomic
+	// +kubebuilder:validation:MaxItems=50
+	// corev1.EnvFromSource is the canonical Kubernetes envFrom type
+	EnvFrom []corev1.EnvFromSource `json:"envFrom,omitempty"`
 }
 
 // Metadata to add to deployed pods
@@ -155,6 +177,10 @@ type PersesService struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
+// Client defines how the client should authenticate
+// +kubebuilder:validation:XValidation:rule="!(has(self.kubernetesAuth) && has(self.kubernetesAuth.enable) && self.kubernetesAuth.enable == true && has(self.oauth))",message="kubernetesAuth and oauth are mutually exclusive; both cannot be enabled simultaneously"
+// +kubebuilder:validation:XValidation:rule="!(has(self.kubernetesAuth) && has(self.kubernetesAuth.enable) && self.kubernetesAuth.enable == true && has(self.basicAuth))",message="kubernetesAuth and basicAuth are mutually exclusive; both cannot be enabled simultaneously"
+// +kubebuilder:validation:XValidation:rule="!(has(self.basicAuth) && has(self.oauth))",message="oauth and basicAuth are mutually exclusive; both cannot be enabled simultaneously"
 type Client struct {
 	// basicAuth provides username/password authentication configuration for the Perses client
 	// +optional

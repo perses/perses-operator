@@ -111,6 +111,22 @@ func configFingerprint(perses persesv1alpha2.Perses) string {
 	fmt.Fprintf(&b, "tls=%v,", isTLSEnabled(&perses))
 	fmt.Fprintf(&b, "k8sAuth=%v,", isKubernetesAuthEnabled(&perses))
 	fmt.Fprintf(&b, "clientTLS=%v,", isClientTLSEnabled(&perses))
+	if isClientOAuthEnabled(&perses) {
+		oauth := perses.Spec.Client.OAuth
+		oauthName := ""
+		if oauth.Name != nil {
+			oauthName = *oauth.Name
+		}
+		oauthNS := ""
+		if oauth.Namespace != nil {
+			oauthNS = *oauth.Namespace
+		}
+		clientIDPath := ""
+		if oauth.ClientIDPath != nil {
+			clientIDPath = *oauth.ClientIDPath
+		}
+		fmt.Fprintf(&b, "oauth=type:%s,name:%s,ns:%s,tokenURL:%s,idPath:%s,", oauth.Type, oauthName, oauthNS, oauth.TokenURL, clientIDPath)
+	}
 	serverURLFlag := flag.Lookup(PersesServerURLFlag)
 	if serverURLFlag != nil {
 		fmt.Fprintf(&b, "serverURL=%s,", serverURLFlag.Value.String())
@@ -178,7 +194,7 @@ func (f *PersesClientFactoryWithConfig) CreateClient(ctx context.Context, client
 func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, client client.Reader, perses persesv1alpha2.Perses) (v1.ClientInterface, error) {
 	var urlStr string
 
-	var httpProtocol = "http"
+	httpProtocol := "http"
 	if isTLSEnabled(&perses) {
 		httpProtocol = "https"
 	}
@@ -200,6 +216,10 @@ func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, client 
 
 	config := clientConfig.RestConfigClient{
 		URL: parsedURL,
+	}
+
+	if isKubernetesAuthEnabled(&perses) && isClientOAuthEnabled(&perses) {
+		return nil, fmt.Errorf("kubernetesAuth and oauth are mutually exclusive; cannot configure both for Perses %s/%s", perses.Namespace, perses.Name)
 	}
 
 	if isKubernetesAuthEnabled(&perses) {
@@ -232,7 +252,6 @@ func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, client 
 			switch tls.CaCert.Type {
 			case persesv1alpha2.SecretSourceTypeSecret, persesv1alpha2.SecretSourceTypeConfigMap:
 				caData, _, err := GetTLSCertData(ctx, client, perses.Namespace, perses.Name, tls.CaCert)
-
 				if err != nil {
 					return nil, err
 				}
@@ -247,7 +266,6 @@ func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, client 
 			switch tls.UserCert.Type {
 			case persesv1alpha2.SecretSourceTypeSecret, persesv1alpha2.SecretSourceTypeConfigMap:
 				cert, key, err := GetTLSCertData(ctx, client, perses.Namespace, perses.Name, tls.UserCert)
-
 				if err != nil {
 					return nil, err
 				}
@@ -260,6 +278,54 @@ func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, client 
 		}
 
 		config.TLSConfig = tlsConfig
+	}
+
+	// OAuth 2.0 client_credentials: the token URL points at Perses's own native
+	// provider token endpoint (e.g. <perses-url>/api/auth/providers/oidc/<slug>/token).
+	// Perses exchanges these credentials with the external identity provider, syncs
+	// the user, and issues its own token. The underlying REST client fetches and
+	// auto-refreshes that token, so tokens are always minted by Perses itself.
+	if isClientOAuthEnabled(&perses) {
+		oauthCfg := perses.Spec.Client.OAuth
+
+		authStyle := 0
+		if oauthCfg.AuthStyle != nil {
+			authStyle = int(*oauthCfg.AuthStyle)
+		}
+
+		oauthConfig := &secret.OAuth{
+			TokenURL:       oauthCfg.TokenURL,
+			Scopes:         oauthCfg.Scopes,
+			AuthStyle:      authStyle,
+			EndpointParams: oauthCfg.EndpointParams,
+		}
+
+		switch oauthCfg.Type {
+		case persesv1alpha2.SecretSourceTypeSecret, persesv1alpha2.SecretSourceTypeConfigMap:
+			clientID, clientSecret, err := GetOAuthData(ctx, client, perses.Namespace, perses.Name, oauthCfg)
+			if err != nil {
+				return nil, err
+			}
+			oauthConfig.ClientID = clientID
+			oauthConfig.ClientSecret = clientSecret
+		case persesv1alpha2.SecretSourceTypeFile:
+			if oauthCfg.ClientIDPath == nil {
+				return nil, fmt.Errorf("clientIDPath is required when OAuth type is file for Perses %s/%s", perses.Namespace, perses.Name)
+			}
+			clientIDBytes, err := os.ReadFile(*oauthCfg.ClientIDPath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to read OAuth client ID file %s for Perses %s/%s: %w", *oauthCfg.ClientIDPath, perses.Namespace, perses.Name, err)
+			}
+			oauthConfig.ClientID = string(clientIDBytes)
+			if oauthCfg.ClientSecretPath == nil {
+				return nil, fmt.Errorf("clientSecretPath is required when OAuth type is file for Perses %s/%s", perses.Namespace, perses.Name)
+			}
+			oauthConfig.ClientSecretFile = *oauthCfg.ClientSecretPath
+		default:
+			return nil, fmt.Errorf("unsupported OAuth source type %q for Perses %s/%s", oauthCfg.Type, perses.Namespace, perses.Name)
+		}
+
+		config.OAuth = oauthConfig
 	}
 
 	restClient, err := clientConfig.NewRESTClient(config)
