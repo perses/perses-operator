@@ -65,6 +65,11 @@ type PersesSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
 	Affinity *corev1.Affinity `json:"affinity,omitempty"`
+	// priorityClassName assigns the pods to a PriorityClass, influencing scheduling and preemption
+	// +operator-sdk:csv:customresourcedefinitions:type=spec
+	// +kubebuilder:validation:MinLength=1
+	// +optional
+	PriorityClassName *string `json:"priorityClassName,omitempty"`
 	// image specifies the container image that should be used for the Perses deployment
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional

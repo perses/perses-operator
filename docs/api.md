@@ -406,6 +406,7 @@ _Appears in:_
 | `nodeSelector` _object (keys:string, values:string)_ | nodeSelector constrains pods to nodes with matching labels |  | Optional: \{\} <br /> |
 | `tolerations` _[Toleration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#toleration-v1-core) array_ | tolerations allow pods to schedule onto nodes with matching taints |  | Optional: \{\} <br /> |
 | `affinity` _[Affinity](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#affinity-v1-core)_ | affinity specifies the pod's scheduling constraints |  | Optional: \{\} <br /> |
+| `priorityClassName` _string_ | priorityClassName assigns the pods to a PriorityClass, influencing scheduling and preemption |  | MinLength: 1 <br />Optional: \{\} <br /> |
 | `image` _string_ | image specifies the container image that should be used for the Perses deployment |  | Optional: \{\} <br /> |
 | `service` _[PersesService](#persesservice)_ | service specifies the service configuration for the Perses instance |  | Optional: \{\} <br /> |
 | `livenessProbe` _[Probe](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.36/#probe-v1-core)_ | livenessProbe specifies the liveness probe configuration for the Perses container |  | Optional: \{\} <br /> |

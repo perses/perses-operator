@@ -73,6 +73,7 @@ var _ = Describe("Perses controller", func() {
 							},
 						},
 						ServiceAccountName: ptr.To("perses-service-account"),
+						PriorityClassName:  ptr.To("system-cluster-critical"),
 						Replicas:           &replicas,
 						Resources: &corev1.ResourceRequirements{
 							Requests: corev1.ResourceList{
@@ -191,6 +192,9 @@ var _ = Describe("Perses controller", func() {
 					}
 					if found.Spec.Template.Spec.ServiceAccountName != "perses-service-account" {
 						return fmt.Errorf("The service account used in the StatefulSet is not the one defined in the custom resource")
+					}
+					if found.Spec.Template.Spec.PriorityClassName != "system-cluster-critical" {
+						return fmt.Errorf("The priority class name used in the StatefulSet is not the one defined in the custom resource")
 					}
 					if value, ok := found.ObjectMeta.Annotations["testing"]; ok {
 						if value != "true" {
@@ -1091,6 +1095,64 @@ var _ = Describe("Perses controller", func() {
 				}
 				if !slices.Contains(args, "--web.tls-cipher-suites=TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384") {
 					return fmt.Errorf("missing --web.tls-cipher-suites arg in %v", args)
+				}
+				return nil
+			}, time.Minute, time.Second).Should(Succeed())
+
+			By("Deleting the custom resource")
+			persesToDelete := &persesv1alpha2.Perses{}
+			Expect(k8sClient.Get(ctx, typeNamespaceName, persesToDelete)).To(Succeed())
+			Expect(k8sClient.Delete(ctx, persesToDelete)).To(Succeed())
+		})
+
+		It("should set priorityClassName on the Deployment when configured", func() {
+			const PersesPriorityDeployName = "perses-priority-deployment"
+			typeNamespaceName := types.NamespacedName{Name: PersesPriorityDeployName, Namespace: persesNamespace}
+
+			By("Creating a Perses CR with emptyDir storage (triggers Deployment) and a priorityClassName")
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      PersesPriorityDeployName,
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					Image:             ptr.To(persesImage),
+					PriorityClassName: ptr.To("system-cluster-critical"),
+					Config: persesv1alpha2.PersesConfig{
+						Config: persesconfig.Config{
+							Database: persesconfig.Database{
+								File: &persesconfig.File{
+									Folder: "/etc/perses/storage",
+								},
+							},
+						},
+					},
+					Storage: &persesv1alpha2.StorageConfiguration{
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, perses)).To(Succeed())
+
+			persesReconciler := &persescontroller.PersesReconciler{
+				Client:    k8sClient,
+				APIReader: k8sClient,
+				Scheme:    k8sClient.Scheme(),
+			}
+
+			By("Reconciling and checking that the Deployment has the priorityClassName")
+			Eventually(func() error {
+				if _, err := persesReconciler.Reconcile(ctx, reconcile.Request{
+					NamespacedName: typeNamespaceName,
+				}); err != nil {
+					return err
+				}
+				found := &appsv1.Deployment{}
+				if err := k8sClient.Get(ctx, typeNamespaceName, found); err != nil {
+					return err
+				}
+				if found.Spec.Template.Spec.PriorityClassName != "system-cluster-critical" {
+					return fmt.Errorf("the priority class name used in the Deployment is not the one defined in the custom resource")
 				}
 				return nil
 			}, time.Minute, time.Second).Should(Succeed())

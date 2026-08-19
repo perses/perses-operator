@@ -44,7 +44,7 @@ func (dst *Perses) ConvertFrom(srcRaw conv.Hub) error {
 // Convert_v1alpha2_PersesSpec_To_v1alpha1_PersesSpec converts a PersesSpec from v1alpha2 to v1alpha1.
 func Convert_v1alpha2_PersesSpec_To_v1alpha1_PersesSpec(in *v1alpha2.PersesSpec, out *PersesSpec, s conversion.Scope) error {
 	// NOTE: The following v1alpha2 fields are not supported in v1alpha1 and will be dropped during conversion:
-	// PodSecurityContext, LogLevel, LogMethodTrace, Provisioning, Volumes, VolumeMounts, Env, EnvFrom
+	// PodSecurityContext, LogLevel, LogMethodTrace, Provisioning, Volumes, VolumeMounts, Env, EnvFrom, PriorityClassName
 	return autoConvert_v1alpha2_PersesSpec_To_v1alpha1_PersesSpec(in, out, s)
 }
 

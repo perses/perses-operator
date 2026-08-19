@@ -1005,6 +1005,7 @@ func autoConvert_v1alpha2_PersesSpec_To_v1alpha1_PersesSpec(in *v1alpha2.PersesS
 	out.NodeSelector = in.NodeSelector
 	out.Tolerations = in.Tolerations
 	out.Affinity = in.Affinity
+	// WARNING: in.PriorityClassName requires manual conversion: does not exist in peer-type
 	if err := v1.Convert_Pointer_string_To_string(&in.Image, &out.Image, s); err != nil {
 		return err
 	}
