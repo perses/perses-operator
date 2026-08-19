@@ -372,6 +372,16 @@ func (f *PersesClientFactoryWithConfig) CreateClientsForAllPods(ctx context.Cont
 		return nil, err
 	}
 
+	// Pods are dialed by IP, but the server cert is issued for the Service DNS
+	// name. Pin ServerName so the cert is verified against the Service FQDN
+	// rather than the pod IP.
+	if isTLSEnabled(&perses) {
+		if baseConfig.TLSConfig == nil {
+			baseConfig.TLSConfig = &secret.TLSConfig{}
+		}
+		baseConfig.TLSConfig.ServerName = fmt.Sprintf("%s.%s.svc.cluster.local", perses.Name, perses.Namespace)
+	}
+
 	podList := &corev1.PodList{}
 	err = k8sClient.List(ctx, podList,
 		client.InNamespace(perses.Namespace),
