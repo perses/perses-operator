@@ -126,9 +126,9 @@ func (r *PersesDatasourceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if reconcileErr != nil {
 			reason := string(common.ExtractReason(reconcileErr, "reconciliation_failed"))
 			r.Metrics.ReconcileErrors("persesdatasource", reason).Inc()
-			r.Metrics.SetFailedResources(objKey, "datasource", 1)
+			r.Metrics.SetFailedResources(objKey, "datasource", req.Namespace, 1)
 		} else {
-			r.Metrics.SetSyncedResources(objKey, "datasource", 1)
+			r.Metrics.SetSyncedResources(objKey, "datasource", req.Namespace, 1)
 		}
 	}
 

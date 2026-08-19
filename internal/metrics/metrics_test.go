@@ -212,9 +212,9 @@ func TestManagedResourcesCollector(t *testing.T) {
 	reg.MustRegister(m)
 
 	// Set synced and failed resources
-	m.SetSyncedResources("perses-dev/perses-sample", "perses", 1)
-	m.SetSyncedResources("perses-dev/dashboard-1", "dashboard", 1)
-	m.SetFailedResources("perses-dev/dashboard-2", "dashboard", 1)
+	m.SetSyncedResources("perses-dev/perses-sample", "perses", "perses-dev", 1)
+	m.SetSyncedResources("perses-dev/dashboard-1", "dashboard", "perses-dev", 1)
+	m.SetFailedResources("perses-dev/dashboard-2", "dashboard", "perses-dev", 1)
 
 	// Collect metrics
 	metricCh := make(chan prometheus.Metric, 10)
@@ -239,16 +239,16 @@ func TestSetSyncedAndFailedResources(t *testing.T) {
 	}
 
 	// Set multiple resources
-	m.SetSyncedResources("ns1/resource1", "dashboard", 1)
-	m.SetSyncedResources("ns1/resource2", "dashboard", 1)
-	m.SetFailedResources("ns1/resource3", "dashboard", 1)
+	m.SetSyncedResources("ns1/resource1", "dashboard", "ns1", 1)
+	m.SetSyncedResources("ns1/resource2", "dashboard", "ns1", 1)
+	m.SetFailedResources("ns1/resource3", "dashboard", "ns1", 1)
 
 	// Verify internal state
 	m.mtx.RLock()
 	defer m.mtx.RUnlock()
 
-	syncedKey := resourceKey{resource: "dashboard", state: synced}
-	failedKey := resourceKey{resource: "dashboard", state: failed}
+	syncedKey := resourceKey{resource: "dashboard", state: synced, namespace: "ns1"}
+	failedKey := resourceKey{resource: "dashboard", state: failed, namespace: "ns1"}
 
 	assert.Len(t, m.resources[syncedKey], 2, "Should have 2 synced resources")
 	assert.Len(t, m.resources[failedKey], 1, "Should have 1 failed resource")
@@ -310,10 +310,10 @@ func TestForgetObject(t *testing.T) {
 	}
 
 	// Set synced and failed entries for multiple objects
-	m.SetSyncedResources("ns1/resource1", "dashboard", 1)
-	m.SetSyncedResources("ns1/resource2", "dashboard", 1)
-	m.SetFailedResources("ns1/resource1", "dashboard", 1)
-	m.SetSyncedResources("ns2/resource3", "datasource", 1)
+	m.SetSyncedResources("ns1/resource1", "dashboard", "ns1", 1)
+	m.SetSyncedResources("ns1/resource2", "dashboard", "ns1", 1)
+	m.SetFailedResources("ns1/resource1", "dashboard", "ns1", 1)
+	m.SetSyncedResources("ns2/resource3", "datasource", "ns2", 1)
 
 	// Forget resource1
 	m.ForgetObject("ns1/resource1")
@@ -322,9 +322,9 @@ func TestForgetObject(t *testing.T) {
 	m.mtx.RLock()
 	defer m.mtx.RUnlock()
 
-	syncedDashboard := resourceKey{resource: "dashboard", state: synced}
-	failedDashboard := resourceKey{resource: "dashboard", state: failed}
-	syncedDatasource := resourceKey{resource: "datasource", state: synced}
+	syncedDashboard := resourceKey{resource: "dashboard", state: synced, namespace: "ns1"}
+	failedDashboard := resourceKey{resource: "dashboard", state: failed, namespace: "ns1"}
+	syncedDatasource := resourceKey{resource: "datasource", state: synced, namespace: "ns2"}
 
 	assert.Equal(t, 1, len(m.resources[syncedDashboard]), "Should have 1 synced dashboard after forget")
 	assert.Equal(t, 1, len(m.resources[syncedDatasource]), "Datasource should be unaffected")
@@ -347,9 +347,9 @@ func TestForgetObjectCollectOutput(t *testing.T) {
 	}
 	reg.MustRegister(m)
 
-	m.SetSyncedResources("ns1/resource1", "dashboard", 1)
-	m.SetSyncedResources("ns1/resource2", "dashboard", 1)
-	m.SetFailedResources("ns1/resource3", "dashboard", 1)
+	m.SetSyncedResources("ns1/resource1", "dashboard", "ns1", 1)
+	m.SetSyncedResources("ns1/resource2", "dashboard", "ns1", 1)
+	m.SetFailedResources("ns1/resource3", "dashboard", "ns1", 1)
 
 	// Forget resource1 and resource3
 	m.ForgetObject("ns1/resource1")
@@ -360,7 +360,7 @@ func TestForgetObjectCollectOutput(t *testing.T) {
 	expected := `
 		# HELP perses_operator_managed_resources Number of resources managed by the operator per state (synced/failed)
 		# TYPE perses_operator_managed_resources gauge
-		perses_operator_managed_resources{resource="dashboard",state="synced"} 1
+		perses_operator_managed_resources{resource="dashboard",resource_namespace="ns1",state="synced"} 1
 	`
 	err := testutil.CollectAndCompare(m, strings.NewReader(expected))
 	assert.NoError(t, err)
@@ -375,8 +375,8 @@ func TestForgetObjectConcurrency(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		go func(id int) {
 			key := "test/resource"
-			m.SetSyncedResources(key, "dashboard", id)
-			m.SetFailedResources(key, "datasource", id)
+			m.SetSyncedResources(key, "dashboard", "test", id)
+			m.SetFailedResources(key, "datasource", "test", id)
 			m.ForgetObject(key)
 			done <- true
 		}(i)
@@ -400,8 +400,8 @@ func TestMetricsConcurrency(t *testing.T) {
 	done := make(chan bool)
 	for i := 0; i < 10; i++ {
 		go func(id int) {
-			m.SetSyncedResources("test/resource", "dashboard", id)
-			m.SetFailedResources("test/resource2", "datasource", id)
+			m.SetSyncedResources("test/resource", "dashboard", "test", id)
+			m.SetFailedResources("test/resource2", "datasource", "test", id)
 			done <- true
 		}(i)
 	}

@@ -24,7 +24,7 @@ var (
 	resourcesDesc = prometheus.NewDesc(
 		"perses_operator_managed_resources",
 		"Number of resources managed by the operator per state (synced/failed)",
-		[]string{"resource", "state"},
+		[]string{"resource", "state", "resource_namespace"},
 		nil,
 	)
 )
@@ -47,8 +47,9 @@ type Metrics struct {
 }
 
 type resourceKey struct {
-	resource string
-	state    resourceState
+	resource  string
+	state     resourceState
+	namespace string
 }
 
 type resourceState int
@@ -141,13 +142,15 @@ func (m *Metrics) Ready(controller string) prometheus.Gauge {
 }
 
 // SetSyncedResources sets the number of resources that synced successfully for the given object's key.
-func (m *Metrics) SetSyncedResources(objKey, resource string, v int) {
-	m.setResources(objKey, resourceKey{resource: resource, state: synced}, v)
+// The namespace parameter is the Kubernetes namespace of the resource (empty for cluster-scoped resources).
+func (m *Metrics) SetSyncedResources(objKey, resource, namespace string, v int) {
+	m.setResources(objKey, resourceKey{resource: resource, state: synced, namespace: namespace}, v)
 }
 
 // SetFailedResources sets the number of resources that failed to sync for the given object's key.
-func (m *Metrics) SetFailedResources(objKey, resource string, v int) {
-	m.setResources(objKey, resourceKey{resource: resource, state: failed}, v)
+// The namespace parameter is the Kubernetes namespace of the resource (empty for cluster-scoped resources).
+func (m *Metrics) SetFailedResources(objKey, resource, namespace string, v int) {
+	m.setResources(objKey, resourceKey{resource: resource, state: failed, namespace: namespace}, v)
 }
 
 // ForgetObject removes all resource entries for the given object key.
@@ -196,6 +199,7 @@ func (m *Metrics) Collect(ch chan<- prometheus.Metric) {
 			float64(total),
 			rKey.resource,
 			rKey.state.String(),
+			rKey.namespace,
 		)
 	}
 }
