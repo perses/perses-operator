@@ -126,9 +126,9 @@ func (r *PersesDashboardReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		if reconcileErr != nil {
 			reason := string(common.ExtractReason(reconcileErr, "reconciliation_failed"))
 			r.Metrics.ReconcileErrors("persesdashboard", reason).Inc()
-			r.Metrics.SetFailedResources(objKey, "dashboard", 1)
+			r.Metrics.SetFailedResources(objKey, "dashboard", req.Namespace, 1)
 		} else {
-			r.Metrics.SetSyncedResources(objKey, "dashboard", 1)
+			r.Metrics.SetSyncedResources(objKey, "dashboard", req.Namespace, 1)
 		}
 	}
 

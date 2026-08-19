@@ -64,7 +64,7 @@ func parseMetrics() []Metric {
 			Name:   "perses_operator_managed_resources",
 			Type:   "Gauge",
 			Help:   "Number of resources managed by the operator per state (synced/failed)",
-			Labels: []string{"resource", "state"},
+			Labels: []string{"resource", "state", "resource_namespace"},
 		},
 		{
 			Name:   "perses_operator_reconcile_operations_total",

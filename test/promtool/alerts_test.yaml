@@ -156,7 +156,7 @@ tests:
   # PersesOperatorResourceSyncFailures: fires when failed resources > 0 for 5m
   - interval: 1m
     input_series:
-      - series: 'perses_operator_managed_resources{job="perses-operator",state="failed",namespace="perses-dev",resource="dashboard"}'
+      - series: 'perses_operator_managed_resources{job="perses-operator",state="failed",namespace="perses-dev",resource="dashboard",resource_namespace="perses-dev"}'
         values: "2 2 2 2 2 2 2 2 2 2"
     alert_rule_test:
       - eval_time: 10m
@@ -168,14 +168,15 @@ tests:
               state: failed
               namespace: perses-dev
               resource: dashboard
+              resource_namespace: perses-dev
             exp_annotations:
               summary: "Resources failing to sync by Perses operator"
-              description: "Perses operator in perses-dev namespace has 2 dashboard resources in failed state."
+              description: "Perses operator in perses-dev namespace has 2 dashboard resources in failed state (resource namespace perses-dev)."
 
   # PersesOperatorResourceSyncFailures: does NOT fire when state=synced
   - interval: 1m
     input_series:
-      - series: 'perses_operator_managed_resources{job="perses-operator",state="synced",namespace="perses-dev",resource="dashboard"}'
+      - series: 'perses_operator_managed_resources{job="perses-operator",state="synced",namespace="perses-dev",resource="dashboard",resource_namespace="perses-dev"}'
         values: "5 5 5 5 5 5 5 5 5 5"
     alert_rule_test:
       - eval_time: 10m

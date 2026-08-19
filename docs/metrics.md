@@ -39,6 +39,7 @@ Number of resources managed by the operator per state (synced/failed)
 
 - `resource`
 - `state`
+- `resource_namespace`
 
 
 

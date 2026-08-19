@@ -157,9 +157,9 @@ func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		if reconcileErr != nil {
 			reason := string(common.ExtractReason(reconcileErr, "reconciliation_failed"))
 			r.Metrics.ReconcileErrors("perses", reason).Inc()
-			r.Metrics.SetFailedResources(objKey, "perses", 1)
+			r.Metrics.SetFailedResources(objKey, "perses", req.Namespace, 1)
 		} else {
-			r.Metrics.SetSyncedResources(objKey, "perses", 1)
+			r.Metrics.SetSyncedResources(objKey, "perses", req.Namespace, 1)
 		}
 	}
 

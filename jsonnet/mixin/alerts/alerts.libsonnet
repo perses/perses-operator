@@ -88,7 +88,7 @@
             },
             annotations: {
               summary: 'Resources failing to sync by Perses operator',
-              description: 'Perses operator in {{ $labels.namespace }} namespace has {{ printf "%.0f" $value }} {{ $labels.resource }} resources in failed state.',
+              description: 'Perses operator in {{ $labels.namespace }} namespace has {{ printf "%.0f" $value }} {{ $labels.resource }} resources in failed state (resource namespace {{ $labels.resource_namespace }}).',
             },
           },
         ],
