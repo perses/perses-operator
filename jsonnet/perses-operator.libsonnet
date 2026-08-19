@@ -30,6 +30,7 @@ function(params) {
   '0persesCustomResourceDefinition': import 'generated/perses.dev_perses-crd.json',
   '0persesdashboardsCustomResourceDefinition': import 'generated/perses.dev_persesdashboards-crd.json',
   '0persesdatasourcesCustomResourceDefinition': import 'generated/perses.dev_persesdatasources-crd.json',
+  '0persesglobaldatasourcesCustomResourceDefinition': import 'generated/perses.dev_persesglobaldatasources-crd.json',
 
   local deployment_gen = import 'generated/manager.json',
   local service_account_gen = import 'generated/service_account.json',
@@ -39,6 +40,8 @@ function(params) {
   local persesdashboard_editor_role_gen = import 'generated/persesdashboard_editor_role.json',
   local persesdatasource_viewer_role_gen = import 'generated/persesdatasource_viewer_role.json',
   local persesdatasource_editor_role_gen = import 'generated/persesdatasource_editor_role.json',
+  local persesglobaldatasource_viewer_role_gen = import 'generated/persesglobaldatasource_viewer_role.json',
+  local persesglobaldatasource_editor_role_gen = import 'generated/persesglobaldatasource_editor_role.json',
   local leader_election_role_gen = import 'generated/leader_election_role.json',
   local leader_election_role_binding_gen = import 'generated/leader_election_role_binding.json',
   local role_binding_gen = import 'generated/role_binding.json',
@@ -134,6 +137,26 @@ function(params) {
       labels: po.config.commonLabels {
         'app.kubernetes.io/component': 'rbac',
         'app.kubernetes.io/instance': 'persesdatasource-viewer-role',
+      },
+    },
+  },
+
+  persesGlobalDatasourceEditorRole: persesglobaldatasource_editor_role_gen {
+    metadata+: {
+      name: 'persesglobaldatasource-editor-role',
+      labels: po.config.commonLabels {
+        'app.kubernetes.io/component': 'rbac',
+        'app.kubernetes.io/instance': 'persesglobaldatasource-editor-role',
+      },
+    },
+  },
+
+  persesGlobalDatasourceViewerRole: persesglobaldatasource_viewer_role_gen {
+    metadata+: {
+      name: 'persesglobaldatasource-viewer-role',
+      labels: po.config.commonLabels {
+        'app.kubernetes.io/component': 'rbac',
+        'app.kubernetes.io/instance': 'persesglobaldatasource-viewer-role',
       },
     },
   },
