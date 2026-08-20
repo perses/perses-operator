@@ -15,7 +15,12 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' || github.ref_name != 'main' }}
 
 jobs:
+  changed-files:
+    uses: ./.github/workflows/changed-files.yaml
+
   build:
+    needs: changed-files
+    if: ${{ needs.changed-files.outputs.ci == 'true' }}
     name: "go and github release"
     runs-on: ubuntu-latest
     permissions:
