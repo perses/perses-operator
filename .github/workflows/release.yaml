@@ -81,7 +81,7 @@ jobs:
           git config user.name "${{ env.BOT_USER }}"
           git config user.email "${{ env.BOT_USER }}@users.noreply.github.com"
 
-          branch="chore-version-${TAG}"
+          branch="release/v${TAG}"
           message="[IGNORE] Prepare release ${TAG}"
           head_ref="${branch}"
           target_repo="${{ github.repository }}"
