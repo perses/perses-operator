@@ -23,19 +23,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
       - name: Import environment variables
         run: cat .github/env >> "$GITHUB_ENV"
-      - uses: perses/github-actions@v0.12.0
+      - uses: perses/github-actions@a7d024e4d064be61d47b59bafd514d1465fb2e4d # v0.12.0
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
       - name: Install all tools
         uses: ./.github/tools-cache
       - name: Create kind cluster
-        uses: helm/kind-action@v1.14.0
+        uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1.14.0
         with:
           version: ${{ env.kind-version }}
           cluster_name: kuttl-e2e
