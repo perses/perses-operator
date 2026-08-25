@@ -19,7 +19,7 @@ jobs:
     uses: ./.github/workflows/changed-files.yaml
   gofmt:
     needs: changed-files
-    if: ${{ needs.changed-files.outputs.non-markdown-files }}
+    if: ${{ needs.changed-files.outputs.go == 'true' || needs.changed-files.outputs.shell == 'true' }}
     name: "check code format"
     runs-on: ubuntu-latest
     steps:
@@ -37,7 +37,7 @@ jobs:
         run: make tidy
   test-unit:
     needs: changed-files
-    if: ${{ needs.changed-files.outputs.non-markdown-files }}
+    if: ${{ needs.changed-files.outputs.go == 'true' }}
     name: "unit tests"
     runs-on: ubuntu-latest
     steps:
@@ -53,7 +53,7 @@ jobs:
         run: make test-unit
   test-integration:
     needs: changed-files
-    if: ${{ needs.changed-files.outputs.non-markdown-files }}
+    if: ${{ needs.changed-files.outputs.go == 'true' || needs.changed-files.outputs.manifests == 'true' }}
     name: "integration tests"
     runs-on: ubuntu-latest
     steps:
@@ -69,7 +69,7 @@ jobs:
         run: make test-integration
   lint-api:
     needs: changed-files
-    if: ${{ needs.changed-files.outputs.non-markdown-files }}
+    if: ${{ needs.changed-files.outputs.api == 'true' }}
     name: "kube-api-linter"
     runs-on: ubuntu-latest
     steps:
@@ -85,7 +85,7 @@ jobs:
         run: make lint-api
   lint:
     needs: changed-files
-    if: ${{ needs.changed-files.outputs.non-markdown-files }}
+    if: ${{ needs.changed-files.outputs.go == 'true' || needs.changed-files.outputs.manifests == 'true' || needs.changed-files.outputs.jsonnet == 'true' || needs.changed-files.outputs.shell == 'true' }}
     name: lint
     runs-on: ubuntu-latest
     steps:

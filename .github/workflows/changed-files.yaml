@@ -3,26 +3,198 @@ name: changed-files
 on:
   workflow_call:
     outputs:
-      non-markdown-files:
-        description: "Non-empty if non-markdown files changed"
-        value: ${{ jobs.changed-files.outputs.non-markdown-files }}
+      go:
+        description: "Whether Go source, dependencies, or Go lint configuration changed"
+        value: ${{ jobs.changed-files.outputs.go }}
+      api:
+        description: "Whether API definitions or API docs inputs changed"
+        value: ${{ jobs.changed-files.outputs.api }}
+      manifests:
+        description: "Whether generated manifests, bundle, or manifest inputs changed"
+        value: ${{ jobs.changed-files.outputs.manifests }}
+      jsonnet:
+        description: "Whether jsonnet sources or alerting rule tests changed"
+        value: ${{ jobs.changed-files.outputs.jsonnet }}
+      shell:
+        description: "Whether shell scripts or shell formatting inputs changed"
+        value: ${{ jobs.changed-files.outputs.shell }}
+      e2e:
+        description: "Whether operator runtime, manifests, images, or e2e tests changed"
+        value: ${{ jobs.changed-files.outputs.e2e }}
+      docs:
+        description: "Whether markdown docs or markdown validation inputs changed"
+        value: ${{ jobs.changed-files.outputs.docs }}
+      metrics_docs:
+        description: "Whether metrics code or metrics documentation inputs changed"
+        value: ${{ jobs.changed-files.outputs.metrics_docs }}
+      ci:
+        description: "Whether PR changes require the full build/image CI job"
+        value: ${{ jobs.changed-files.outputs.ci }}
+
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
   changed-files:
     outputs:
-      non-markdown-files: ${{ steps.changed-files.outputs.non-markdown-files }}
+      go: ${{ steps.filter.outputs.go || steps.all.outputs.go }}
+      api: ${{ steps.filter.outputs.api || steps.all.outputs.api }}
+      manifests: ${{ steps.filter.outputs.manifests || steps.all.outputs.manifests }}
+      jsonnet: ${{ steps.filter.outputs.jsonnet || steps.all.outputs.jsonnet }}
+      shell: ${{ steps.filter.outputs.shell || steps.all.outputs.shell }}
+      e2e: ${{ steps.filter.outputs.e2e || steps.all.outputs.e2e }}
+      docs: ${{ steps.filter.outputs.docs || steps.all.outputs.docs }}
+      metrics_docs: ${{ steps.filter.outputs.metrics_docs || steps.all.outputs.metrics_docs }}
+      ci: ${{ steps.filter.outputs.ci || steps.all.outputs.ci }}
     runs-on: ubuntu-latest
     steps:
       - name: checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - name: get changed files
-        id: changed-files
+
+      - name: filter pull request changes
+        if: ${{ github.event_name == 'pull_request' }}
+        id: filter
+        uses: dorny/paths-filter@v4
+        with:
+          filters: |
+            go:
+              - '**/*.go'
+              - 'go.mod'
+              - 'go.sum'
+              - 'Makefile'
+              - 'Makefile.tools'
+              - '.golangci*'
+              - '.github/tools-cache/**'
+              - '.github/workflows/changed-files.yaml'
+              - '.github/workflows/go.yaml'
+
+            api:
+              - 'api/**'
+              - '.custom-gcl.yml'
+              - '.golangci-kube-api-linter.yml'
+              - 'docs/api.md'
+              - 'docs/config/api-docs-config.yaml'
+              - 'go.mod'
+              - 'go.sum'
+              - 'Makefile'
+              - 'Makefile.tools'
+              - '.github/tools-cache/**'
+              - '.github/workflows/changed-files.yaml'
+              - '.github/workflows/docs.yaml'
+
+            manifests:
+              - 'api/**'
+              - 'bundle/**'
+              - 'bundle.yaml'
+              - 'bundle.Dockerfile'
+              - 'config/**'
+              - 'hack/**'
+              - 'jsonnet/**'
+              - 'PROJECT'
+              - 'VERSION'
+              - 'Dockerfile*'
+              - 'Makefile'
+              - 'Makefile.tools'
+              - '.github/tools-cache/**'
+              - '.github/workflows/changed-files.yaml'
+              - '.github/workflows/go.yaml'
+
+            jsonnet:
+              - 'jsonnet/**'
+              - 'test/promtool/**'
+              - 'Makefile'
+              - 'Makefile.tools'
+              - '.github/tools-cache/**'
+              - '.github/workflows/changed-files.yaml'
+              - '.github/workflows/go.yaml'
+
+            shell:
+              - 'scripts/**/*.sh'
+              - 'Makefile'
+              - 'Makefile.tools'
+              - '.github/tools-cache/**'
+              - '.github/workflows/changed-files.yaml'
+              - '.github/workflows/go.yaml'
+
+            e2e:
+              - '**/*.go'
+              - 'api/**'
+              - 'bundle/**'
+              - 'bundle.yaml'
+              - 'bundle.Dockerfile'
+              - 'config/**'
+              - 'controllers/**'
+              - 'internal/**'
+              - 'test/e2e/**'
+              - '.github/env'
+              - 'Dockerfile*'
+              - 'Makefile'
+              - 'Makefile.tools'
+              - '.github/tools-cache/**'
+              - '.github/workflows/changed-files.yaml'
+              - '.github/workflows/e2e.yaml'
+
+            docs:
+              - '**/*.md'
+              - 'docs/**'
+              - '.mdox.validate.yaml'
+              - '.github/actions/mdox-cache/**'
+              - 'Makefile'
+              - 'Makefile.tools'
+              - '.github/tools-cache/**'
+              - '.github/workflows/changed-files.yaml'
+              - '.github/workflows/docs.yaml'
+
+            metrics_docs:
+              - 'internal/metrics/**'
+              - 'scripts/generate-metrics-docs/**'
+              - 'docs/metrics.md'
+              - 'go.mod'
+              - 'go.sum'
+              - 'Makefile'
+              - 'Makefile.tools'
+              - '.github/tools-cache/**'
+              - '.github/workflows/changed-files.yaml'
+              - '.github/workflows/docs.yaml'
+
+            ci:
+              - '**/*.go'
+              - 'api/**'
+              - 'bundle/**'
+              - 'bundle.yaml'
+              - 'bundle.Dockerfile'
+              - 'config/**'
+              - 'controllers/**'
+              - 'internal/**'
+              - 'jsonnet/**'
+              - 'scripts/**'
+              - 'go.mod'
+              - 'go.sum'
+              - 'PROJECT'
+              - 'VERSION'
+              - '.goreleaser*'
+              - 'Dockerfile*'
+              - 'Makefile'
+              - 'Makefile.tools'
+              - '.github/tools-cache/**'
+              - '.github/workflows/changed-files.yaml'
+              - '.github/workflows/ci.yaml'
+
+      - name: enable all filters for non-PR events
+        if: ${{ github.event_name != 'pull_request' }}
+        id: all
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            echo "non-markdown-files=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep -iv '\.md$' | xargs)" >> "$GITHUB_OUTPUT"
-          else
-            # Always run on push and merge_group events
-            echo "non-markdown-files=true" >> "$GITHUB_OUTPUT"
-          fi
+          {
+            echo "go=true"
+            echo "api=true"
+            echo "manifests=true"
+            echo "jsonnet=true"
+            echo "shell=true"
+            echo "e2e=true"
+            echo "docs=true"
+            echo "metrics_docs=true"
+            echo "ci=true"
+          } >> "$GITHUB_OUTPUT"
