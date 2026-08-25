@@ -1,6 +1,6 @@
 parserPreset:
   parserOpts:
-    headerPattern: '^\[(FEATURE|ENHANCEMENT|BUGFIX|BREAKINGCHANGE|DOC|IGNORE)\]\s(.+)$'
+    headerPattern: '^\[(FEATURE|ENHANCEMENT|BUGFIX|BREAKINGCHANGE|DOC|IGNORE)\]:?\s(.+)$'
     headerCorrespondence:
       - type
       - subject
