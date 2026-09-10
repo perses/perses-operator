@@ -21,6 +21,7 @@ import (
 	"github.com/perses/perses-operator/api/v1alpha2"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	logger "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -218,6 +219,48 @@ func PersesAvailabilityPredicate() predicate.Funcs {
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			return PersesBecameAvailable(e.ObjectOld, e.ObjectNew)
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return false
+		},
+		GenericFunc: func(e event.GenericEvent) bool {
+			return false
+		},
+	}
+}
+
+// PodBecameReady returns true when a pod transitions from non-Ready to Ready.
+func PodBecameReady(oldObj, newObj client.Object) bool {
+	oldPod, ok := oldObj.(*corev1.Pod)
+	if !ok {
+		return false
+	}
+	newPod, ok := newObj.(*corev1.Pod)
+	if !ok {
+		return false
+	}
+	return !isPodConditionReady(oldPod) && isPodConditionReady(newPod)
+}
+
+func isPodConditionReady(pod *corev1.Pod) bool {
+	for _, cond := range pod.Status.Conditions {
+		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
+// PodReadinessPredicate returns a predicate that triggers reconciliation
+// when a pod transitions to Ready. This is used to re-sync resources to
+// pods that restarted and lost their in-memory or emptyDir state.
+func PodReadinessPredicate() predicate.Funcs {
+	return predicate.Funcs{
+		CreateFunc: func(e event.CreateEvent) bool {
+			return false
+		},
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return PodBecameReady(e.ObjectOld, e.ObjectNew)
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
 			return false
