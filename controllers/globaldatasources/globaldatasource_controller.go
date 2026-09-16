@@ -116,15 +116,18 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalDatasource(ctx contex
 	}
 
 	var errs []error
-	reason := persescommon.ReasonBackendError
+	var reason persescommon.ConditionStatusReason
 	for _, persesClient := range clients {
 		if rsn, err := r.syncGlobalDatasourceToClient(ctx, persesClient, globaldatasource); err != nil {
-			reason = rsn
+			reason = persescommon.MergeReason(reason, rsn)
 			errs = append(errs, err)
 		}
 	}
 
 	if len(errs) > 0 {
+		if reason == "" {
+			reason = persescommon.ReasonBackendError
+		}
 		return subreconciler.RequeueWithErrorAndReason(errors.Join(errs...), reason)
 	}
 

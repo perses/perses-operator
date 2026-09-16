@@ -96,15 +96,18 @@ func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, per
 	}
 
 	var errs []error
-	reason := common.ReasonBackendError
+	var reason common.ConditionStatusReason
 	for _, persesClient := range clients {
 		if rsn, err := r.syncDashboardToClient(ctx, persesClient, dashboard); err != nil {
-			reason = rsn
+			reason = common.MergeReason(reason, rsn)
 			errs = append(errs, err)
 		}
 	}
 
 	if len(errs) > 0 {
+		if reason == "" {
+			reason = common.ReasonBackendError
+		}
 		return subreconciler.RequeueWithErrorAndReason(errors.Join(errs...), reason)
 	}
 
