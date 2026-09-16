@@ -118,6 +118,33 @@ const (
 	ReasonBackendError ConditionStatusReason = "PersesBackendError"
 )
 
+// reasonSeverity ranks condition reasons so that, when a reconcile fans out to
+// multiple pods and they fail for different reasons, the most actionable reason
+// governs the resulting status condition. Higher wins. User-facing reasons
+// (misconfiguration, validation) outrank connectivity, which outranks the
+// generic backend error, so a "last write wins" loop cannot mask a config
+// problem behind an unrelated backend error from another pod.
+var reasonSeverity = map[ConditionStatusReason]int{
+	ReasonBackendError:         1,
+	ReasonConnectionFailed:     2,
+	ReasonValidationFailed:     3,
+	ReasonInvalidConfiguration: 3,
+}
+
+// MergeReason returns whichever of current and incoming should govern the
+// status condition, breaking ties toward current. An empty current (no failure
+// seen yet) always yields to incoming. Unknown reasons rank below all known
+// ones so an explicit reason is always preferred over an unclassified one.
+func MergeReason(current, incoming ConditionStatusReason) ConditionStatusReason {
+	if current == "" {
+		return incoming
+	}
+	if reasonSeverity[incoming] > reasonSeverity[current] {
+		return incoming
+	}
+	return current
+}
+
 // IsClientError returns true if the error is an HTTP 4xx response from the
 // Perses API, indicating a client-side error such as a validation failure.
 // Returns false for 5xx errors, network errors, or non-HTTP errors.
