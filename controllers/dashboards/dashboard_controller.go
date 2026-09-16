@@ -91,6 +91,14 @@ func (r *PersesDashboardReconciler) reconcileDashboardInAllInstances(ctx context
 func (r *PersesDashboardReconciler) syncPersesDashboard(ctx context.Context, perses persesv1alpha2.Perses, dashboard *persesv1alpha2.PersesDashboard) (*ctrl.Result, common.ConditionStatusReason, error) {
 	clients, err := r.ClientFactory.CreateClientsForAllPods(ctx, r.APIReader, perses)
 	if err != nil {
+		if errors.Is(err, common.ErrNoReadyPods) {
+			// No ready pods to sync to yet (e.g. still starting up or scaled to
+			// zero). There is nothing to push now; requeue to retry once pods
+			// become ready. Report it as a waiting state rather than a hard
+			// connection failure.
+			dlog.WithError(err).Info("No ready pods to sync to, will retry")
+			return subreconciler.RequeueWithErrorAndReason(err, common.ReasonMissingPerses)
+		}
 		dlog.WithError(err).Error("Failed to create perses rest clients")
 		return subreconciler.RequeueWithErrorAndReason(err, common.ReasonConnectionFailed)
 	}
@@ -222,6 +230,13 @@ func (r *PersesDashboardReconciler) deleteDashboardInAllInstances(ctx context.Co
 func (r *PersesDashboardReconciler) deleteDashboard(ctx context.Context, perses persesv1alpha2.Perses, dashboardNamespace string, dashboardName string) (*ctrl.Result, error) {
 	clients, err := r.ClientFactory.CreateClientsForAllPods(ctx, r.APIReader, perses)
 	if err != nil {
+		if errors.Is(err, common.ErrNoReadyPods) {
+			// No ready pods means there is nowhere left to delete from — the
+			// pods that held the file-based state are already gone. Treat this
+			// as done instead of requeueing in a tight error loop.
+			dlog.WithError(err).Info("No ready pods to delete from, nothing to do")
+			return subreconciler.ContinueReconciling()
+		}
 		dlog.WithError(err).Error("Failed to create perses rest clients")
 		return subreconciler.RequeueWithError(err)
 	}

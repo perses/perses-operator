@@ -1140,6 +1140,7 @@ func TestCreateClientsForAllPods(t *testing.T) {
 
 		clients, err := NewWithConfig().CreateClientsForAllPods(ctx, reader, perses)
 		require.Error(t, err)
+		assert.ErrorIs(t, err, ErrNoReadyPods, "callers rely on errors.Is to treat this as a soft condition")
 		assert.Contains(t, err.Error(), "no ready pods found")
 		assert.Nil(t, clients)
 	})
