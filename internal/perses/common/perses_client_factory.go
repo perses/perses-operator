@@ -68,15 +68,20 @@ func NewWithConfig() *PersesClientFactoryWithConfig {
 	}
 }
 
-// ForgetInstance removes the cached client for the given Perses instance key.
-// The key format is "namespace/name".
+// ForgetInstance removes all cached clients for the given Perses instance key.
+// The key format is "namespace/name". Because per-pod clients are cached under
+// "namespace/name|podIP" keys, this evicts the bare service client as well as
+// every per-pod client belonging to the instance.
 func (f *PersesClientFactoryWithConfig) ForgetInstance(key string) {
 	f.mtx.Lock()
 	defer f.mtx.Unlock()
-	if entry, exists := f.cache[key]; exists {
-		closeClientConnections(entry.client)
+	podKeyPrefix := key + "|"
+	for k, entry := range f.cache {
+		if k == key || strings.HasPrefix(k, podKeyPrefix) {
+			closeClientConnections(entry.client)
+			delete(f.cache, k)
+		}
 	}
-	delete(f.cache, key)
 }
 
 // sweepExpiredLocked removes cache entries whose TTL has elapsed.
@@ -321,33 +326,42 @@ func (f *PersesClientFactoryWithConfig) CreateClient(ctx context.Context, k8sCli
 	instanceKey := fmt.Sprintf("%s/%s", perses.Namespace, perses.Name)
 	fingerprint := configFingerprint(perses)
 
+	return f.getOrBuildCached(instanceKey, fingerprint, func() (v1.ClientInterface, error) {
+		return f.buildClient(ctx, k8sClient, perses)
+	})
+}
+
+// getOrBuildCached returns the cached client for cacheKey when its fingerprint
+// matches and it has not expired, otherwise it builds a new one via build and
+// stores it. The build runs without any lock held to avoid blocking other
+// controllers during slow operations (TLS cert fetches from the API server).
+//
+// The TTL bounds credential staleness (SA token, TLS certs) so the fingerprint
+// only tracks config shape (Generation, port, TLS flags).
+func (f *PersesClientFactoryWithConfig) getOrBuildCached(cacheKey, fingerprint string, build func() (v1.ClientInterface, error)) (v1.ClientInterface, error) {
 	// Check cache under read lock — no file I/O needed.
-	// The TTL bounds credential staleness (SA token, TLS certs) so the
-	// fingerprint only tracks config shape (Generation, port, TLS flags).
 	f.mtx.RLock()
-	if cached, ok := f.cacheHit(instanceKey, fingerprint); ok {
+	if cached, ok := f.cacheHit(cacheKey, fingerprint); ok {
 		f.mtx.RUnlock()
 		return cached, nil
 	}
 	f.mtx.RUnlock()
 
-	// Build the client without holding any lock to avoid blocking other
-	// controllers during slow operations (TLS cert fetches from API server).
-	newClient, err := f.buildClient(ctx, k8sClient, perses)
+	newClient, err := build()
 	if err != nil {
 		return nil, err
 	}
 
 	// Store in cache under write lock. Re-check in case another goroutine raced.
 	f.mtx.Lock()
-	if cached, ok := f.cacheHit(instanceKey, fingerprint); ok {
+	if cached, ok := f.cacheHit(cacheKey, fingerprint); ok {
 		f.mtx.Unlock()
 		return cached, nil
 	}
-	if old, exists := f.cache[instanceKey]; exists {
+	if old, exists := f.cache[cacheKey]; exists {
 		closeClientConnections(old.client)
 	}
-	f.cache[instanceKey] = clientCacheEntry{
+	f.cache[cacheKey] = clientCacheEntry{
 		client:      newClient,
 		fingerprint: fingerprint,
 		createdAt:   time.Now(),
@@ -393,6 +407,9 @@ func (f *PersesClientFactoryWithConfig) CreateClientsForAllPods(ctx context.Cont
 
 	httpProtocol, containerPort := f.getProtocolAndPort(&perses)
 
+	instanceKey := fmt.Sprintf("%s/%s", perses.Namespace, perses.Name)
+	fingerprint := configFingerprint(perses)
+
 	var clients []v1.ClientInterface
 	for i := range podList.Items {
 		pod := &podList.Items[i]
@@ -401,7 +418,10 @@ func (f *PersesClientFactoryWithConfig) CreateClientsForAllPods(ctx context.Cont
 		}
 		hostPort := net.JoinHostPort(pod.Status.PodIP, strconv.Itoa(int(containerPort)))
 		urlStr := fmt.Sprintf("%s://%s%s", httpProtocol, hostPort, perses.Spec.Config.APIPrefix)
-		c, err := f.createClientForURL(urlStr, baseConfig)
+		cacheKey := instanceKey + "|" + pod.Status.PodIP
+		c, err := f.getOrBuildCached(cacheKey, fingerprint, func() (v1.ClientInterface, error) {
+			return f.createClientForURL(urlStr, baseConfig)
+		})
 		if err != nil {
 			return nil, err
 		}
