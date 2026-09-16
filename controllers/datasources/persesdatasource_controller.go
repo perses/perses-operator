@@ -24,6 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -238,23 +239,50 @@ func (r *PersesDatasourceReconciler) findDatasourcesForPerses(ctx context.Contex
 	return common.MetadataListToRequests(ctx, r.Client, persesv1alpha2.GroupVersion.WithKind("PersesDatasourceList"))
 }
 
+// findDatasourcesForPod returns reconcile requests for the PersesDatasources
+// that target the Perses instance owning a pod, when that pod becomes ready.
+// This re-syncs resources to pods that (re)started and lost their state,
+// without fanning out to every datasource in the cluster: only datasources
+// whose instanceSelector matches the owning instance are enqueued.
 func (r *PersesDatasourceReconciler) findDatasourcesForPod(ctx context.Context, obj client.Object) []reconcile.Request {
 	pod, ok := obj.(*corev1.Pod)
 	if !ok {
 		return nil
 	}
 
-	instanceName := pod.Labels["app.kubernetes.io/instance"]
-	if instanceName == "" {
+	instance, err := common.PersesInstanceForPod(ctx, r.Client, pod)
+	if err != nil {
+		log.WithError(err).Error("Failed to resolve Perses instance for pod")
+		return nil
+	}
+	if instance == nil {
 		return nil
 	}
 
-	managedBy := pod.Labels["app.kubernetes.io/managed-by"]
-	if managedBy != "perses-operator" {
+	instanceLabels := common.LabelsForPerses(instance.Name, instance)
+
+	datasources := &persesv1alpha2.PersesDatasourceList{}
+	if err := r.List(ctx, datasources); err != nil {
+		log.WithError(err).Error("Failed to list PersesDatasources for pod")
 		return nil
 	}
 
-	return r.findDatasourcesForPerses(ctx, obj)
+	var requests []reconcile.Request
+	for i := range datasources.Items {
+		datasource := &datasources.Items[i]
+		targets, err := common.ResourceTargetsInstance(datasource.Spec.InstanceSelector, instanceLabels)
+		if err != nil {
+			log.WithError(err).Errorf("Invalid instanceSelector on PersesDatasource %s/%s", datasource.Namespace, datasource.Name)
+			continue
+		}
+		if !targets {
+			continue
+		}
+		requests = append(requests, reconcile.Request{
+			NamespacedName: types.NamespacedName{Namespace: datasource.Namespace, Name: datasource.Name},
+		})
+	}
+	return requests
 }
 
 // SetupWithManager sets up the controller with the Manager.
