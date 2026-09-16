@@ -70,6 +70,14 @@ jobs:
       - name: Generate installer manifest
         run: make build-installer
 
+      - name: Import persesbot GPG key
+        # NOTE:  The matching public key must be registered with the persesbot GitHub account.
+        uses: crazy-max/ghaction-import-gpg@2dc316deee8e90f13e1a351ab510b4d5bc0c82cd # v7.0.0
+        with:
+          gpg_private_key: ${{ secrets.BOT_GPG_PRIVATE_KEY }}
+          git_user_signingkey: true
+          git_committer_name: ${{ env.BOT_USER }}
+
       - name: Create or update pull request
         # NOTE: BOT_TOKEN (PAT for persesbot) is required: a PR opened with the default
         # GITHUB_TOKEN would not trigger downstream pull_request workflows.
@@ -78,9 +86,6 @@ jobs:
           TAG: ${{ inputs.tag }}
           VERSION_REPLACED: ${{ inputs.version-replace }}
         run: |
-          git config user.name "${{ env.BOT_USER }}"
-          git config user.email "${{ env.BOT_USER }}@users.noreply.github.com"
-
           branch="release/v${TAG}"
           message="[IGNORE] Prepare release ${TAG}"
           head_ref="${branch}"
@@ -93,7 +98,7 @@ jobs:
           if git diff --cached --quiet; then
             echo "No changes to commit for the release preparation."
           else
-            git commit -s -m "${message}"
+            git commit -S -s -m "${message}"
           fi
           git push -f --set-upstream origin "${branch}"
 
