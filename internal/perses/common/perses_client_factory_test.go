@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/perses/perses/pkg/client/perseshttp"
 	"github.com/perses/perses/pkg/model/api/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -96,8 +97,17 @@ func TestConfigFingerprint(t *testing.T) {
 func TestForgetInstance(t *testing.T) {
 	factory := NewWithConfig()
 
-	// Manually populate cache
+	// Populate the cache with a service client plus two per-pod clients for the
+	// same instance, and an unrelated instance that must survive.
 	factory.cache["default/perses-1"] = clientCacheEntry{
+		client:      nil,
+		fingerprint: "test-fp",
+	}
+	factory.cache["default/perses-1|10.0.0.1"] = clientCacheEntry{
+		client:      nil,
+		fingerprint: "test-fp",
+	}
+	factory.cache["default/perses-1|10.0.0.2"] = clientCacheEntry{
 		client:      nil,
 		fingerprint: "test-fp",
 	}
@@ -106,20 +116,27 @@ func TestForgetInstance(t *testing.T) {
 		fingerprint: "test-fp-2",
 	}
 
-	assert.Len(t, factory.cache, 2)
+	assert.Len(t, factory.cache, 4)
 
 	factory.ForgetInstance("default/perses-1")
-	assert.Len(t, factory.cache, 1)
+	assert.Len(t, factory.cache, 1, "the service client and all per-pod clients should be evicted")
 
-	_, exists := factory.cache["default/perses-1"]
-	assert.False(t, exists, "Entry should be removed")
+	for _, k := range []string{"default/perses-1", "default/perses-1|10.0.0.1", "default/perses-1|10.0.0.2"} {
+		_, exists := factory.cache[k]
+		assert.Falsef(t, exists, "entry %q should be removed", k)
+	}
 
-	_, exists = factory.cache["prod/perses-2"]
-	assert.True(t, exists, "Other entry should remain")
+	_, exists := factory.cache["prod/perses-2"]
+	assert.True(t, exists, "Other instance should remain")
+
+	// A per-pod key must not evict a different instance that shares a name prefix.
+	factory.cache["prod/perses-2|10.0.1.1"] = clientCacheEntry{fingerprint: "test-fp-2"}
+	factory.ForgetInstance("prod/perses")
+	assert.Len(t, factory.cache, 2, "prefix match must respect the key/pod separator boundary")
 
 	// Forgetting a non-existent key should not panic
 	factory.ForgetInstance("nonexistent/key")
-	assert.Len(t, factory.cache, 1)
+	assert.Len(t, factory.cache, 2)
 }
 
 func TestCacheHitTTLExpiry(t *testing.T) {
@@ -1178,6 +1195,34 @@ func TestCreateClientsForAllPods(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, clients, 1)
 		assert.Equal(t, "http://perses.example:8080", clients[0].RESTClient().BaseURL.String())
+	})
+
+	t.Run("caches and reuses per-pod clients across calls", func(t *testing.T) {
+		reader := fake.NewClientBuilder().WithScheme(newScheme()).WithObjects(
+			readyPod("ready-1", "10.0.0.1", corev1.PodRunning, true),
+			readyPod("ready-2", "10.0.0.2", corev1.PodRunning, true),
+		).Build()
+
+		factory := NewWithConfig()
+
+		first, err := factory.CreateClientsForAllPods(ctx, reader, perses)
+		require.NoError(t, err)
+		require.Len(t, first, 2)
+		assert.Len(t, factory.cache, 2, "one cache entry per ready pod")
+
+		second, err := factory.CreateClientsForAllPods(ctx, reader, perses)
+		require.NoError(t, err)
+		require.Len(t, second, 2)
+		assert.Len(t, factory.cache, 2, "second call must not grow the cache")
+
+		// Same client instances must come back — a fresh build would leak the old ones.
+		firstREST := []*perseshttp.RESTClient{first[0].RESTClient(), first[1].RESTClient()}
+		secondREST := []*perseshttp.RESTClient{second[0].RESTClient(), second[1].RESTClient()}
+		assert.ElementsMatch(t, firstREST, secondREST, "per-pod clients should be reused, not rebuilt")
+
+		// ForgetInstance evicts every per-pod client for the instance.
+		factory.ForgetInstance("default/perses-1")
+		assert.Empty(t, factory.cache)
 	})
 }
 
