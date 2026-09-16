@@ -24,6 +24,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -236,7 +237,51 @@ func MetadataListToRequests(ctx context.Context, r client.Reader, gvk schema.Gro
 	return requests
 }
 
-// PersesAvailabilityPredicate returns a predicate that triggers reconciliation
+// PersesInstanceForPod resolves the Perses instance that owns pod, or nil if
+// the pod is not a Perses-operator-managed pod or no matching instance exists.
+// The pod's app.kubernetes.io/instance label carries the sanitized instance
+// name (see LabelsForPerses), so the owner is found by matching each candidate
+// instance's computed instance label rather than assuming the raw name.
+func PersesInstanceForPod(ctx context.Context, r client.Reader, pod *corev1.Pod) (*v1alpha2.Perses, error) {
+	if pod.Labels["app.kubernetes.io/managed-by"] != "perses-operator" {
+		return nil, nil
+	}
+	instanceLabel := pod.Labels["app.kubernetes.io/instance"]
+	if instanceLabel == "" {
+		return nil, nil
+	}
+
+	instances := &v1alpha2.PersesList{}
+	if err := r.List(ctx, instances, client.InNamespace(pod.Namespace)); err != nil {
+		return nil, err
+	}
+	for i := range instances.Items {
+		instance := &instances.Items[i]
+		if LabelsForPerses(instance.Name, instance)["app.kubernetes.io/instance"] == instanceLabel {
+			return instance, nil
+		}
+	}
+	return nil, nil
+}
+
+// ResourceTargetsInstance reports whether a resource with the given
+// instanceSelector targets the Perses instance described by instanceLabels.
+// A nil selector matches every instance (mirroring the reconcile path's use of
+// labels.Everything() when no selector is set). It is the inverse of the
+// forward match the controllers apply when listing instances for a resource,
+// and is used by pod mappers to enqueue only the resources that target the
+// instance owning the pod.
+func ResourceTargetsInstance(instanceSelector *metav1.LabelSelector, instanceLabels map[string]string) (bool, error) {
+	if instanceSelector == nil {
+		return true, nil
+	}
+	selector, err := metav1.LabelSelectorAsSelector(instanceSelector)
+	if err != nil {
+		return false, err
+	}
+	return selector.Matches(labels.Set(instanceLabels)), nil
+}
+
 // when a Perses instance becomes available or is deleted. This is used by
 // child resource controllers (Dashboard, Datasource, GlobalDatasource) to
 // reconcile their resources when the parent Perses instance becomes ready.
@@ -282,10 +327,20 @@ func isPodConditionReady(pod *corev1.Pod) bool {
 // PodReadinessPredicate returns a predicate that triggers reconciliation
 // when a pod transitions to Ready. This is used to re-sync resources to
 // pods that restarted and lost their in-memory or emptyDir state.
+//
+// CreateFunc fires for pods that are already Ready when the event is observed.
+// On operator startup the informer replays every existing pod as a Create
+// event (event.CreateEvent, with IsInInitialList set), so returning false here
+// would skip resyncing pods that were already running before the operator
+// (re)started.
 func PodReadinessPredicate() predicate.Funcs {
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			return false
+			pod, ok := e.Object.(*corev1.Pod)
+			if !ok {
+				return false
+			}
+			return isPodConditionReady(pod)
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			return PodBecameReady(e.ObjectOld, e.ObjectNew)
