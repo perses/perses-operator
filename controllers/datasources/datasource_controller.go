@@ -113,6 +113,14 @@ func (r *PersesDatasourceReconciler) reconcileDatasourcesInAllInstances(ctx cont
 func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, perses persesv1alpha2.Perses, datasource *persesv1alpha2.PersesDatasource) (*ctrl.Result, persescommon.ConditionStatusReason, error) {
 	clients, err := r.ClientFactory.CreateClientsForAllPods(ctx, r.APIReader, perses)
 	if err != nil {
+		if errors.Is(err, persescommon.ErrNoReadyPods) {
+			// No ready pods to sync to yet (e.g. still starting up or scaled to
+			// zero). There is nothing to push now; requeue to retry once pods
+			// become ready. Report it as a waiting state rather than a hard
+			// connection failure.
+			dlog.WithError(err).Info("No ready pods to sync to, will retry")
+			return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonMissingPerses)
+		}
 		dlog.WithError(err).Error("Failed to create perses rest clients")
 		return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonConnectionFailed)
 	}
@@ -438,6 +446,13 @@ func (r *PersesDatasourceReconciler) deleteDatasourceInAllInstances(ctx context.
 func (r *PersesDatasourceReconciler) deleteDatasource(ctx context.Context, perses persesv1alpha2.Perses, datasourceNamespace string, datasourceName string) (*ctrl.Result, error) {
 	clients, err := r.ClientFactory.CreateClientsForAllPods(ctx, r.APIReader, perses)
 	if err != nil {
+		if errors.Is(err, persescommon.ErrNoReadyPods) {
+			// No ready pods means there is nowhere left to delete from — the
+			// pods that held the file-based state are already gone. Treat this
+			// as done instead of requeueing in a tight error loop.
+			dlog.WithError(err).Info("No ready pods to delete from, nothing to do")
+			return subreconciler.ContinueReconciling()
+		}
 		dlog.WithError(err).Error("Failed to create perses rest clients")
 		return subreconciler.RequeueWithError(err)
 	}

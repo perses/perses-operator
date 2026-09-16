@@ -15,6 +15,7 @@ package common
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 	"net"
@@ -36,6 +37,12 @@ import (
 )
 
 const tokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+
+// ErrNoReadyPods is returned by CreateClientsForAllPods when a Perses instance
+// has no ready pods to sync to. Callers use errors.Is to distinguish "nothing
+// to act on" (e.g. scaled to zero, or a delete after the pods are gone) from a
+// genuine failure that warrants an errored requeue.
+var ErrNoReadyPods = errors.New("no ready pods found for Perses instance")
 
 type PersesClientFactory interface {
 	CreateClient(ctx context.Context, client client.Reader, perses persesv1alpha2.Perses) (v1.ClientInterface, error)
@@ -429,7 +436,7 @@ func (f *PersesClientFactoryWithConfig) CreateClientsForAllPods(ctx context.Cont
 	}
 
 	if len(clients) == 0 {
-		return nil, fmt.Errorf("no ready pods found for Perses instance %s/%s", perses.Namespace, perses.Name)
+		return nil, fmt.Errorf("%w %s/%s", ErrNoReadyPods, perses.Namespace, perses.Name)
 	}
 
 	return clients, nil
