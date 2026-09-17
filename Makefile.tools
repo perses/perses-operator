@@ -29,8 +29,8 @@ GOJSONTOYAML_BINARY = $(LOCALBIN)/gojsontoyaml
 GOJSONTOYAML_VERSION = v0.1.0
 
 ENVTEST = $(LOCALBIN)/setup-envtest
-ENVTEST_VERSION = release-0.24  # Version of setup-envtest binary
-ENVTEST_K8S_VERSION = 1.36.0    # Kubernetes version for test assets
+ENVTEST_VERSION = release-0.25  # Version of setup-envtest binary
+ENVTEST_K8S_VERSION = 1.37.0    # Kubernetes version for test assets
 
 JSONNET_BINARY = $(LOCALBIN)/jsonnet
 JSONNET_VERSION = v0.21.0
@@ -42,7 +42,7 @@ JSONNETLINT_BINARY = $(LOCALBIN)/jsonnet-lint
 JSONNETLINT_VERSION = v0.21.0
 
 CONVERSION_GEN = $(LOCALBIN)/conversion-gen
-CONVERSION_GEN_VERSION = v0.36.2
+CONVERSION_GEN_VERSION = v0.37.0
 
 YQ = $(LOCALBIN)/yq
 YQ_VERSION = v4.53.3
