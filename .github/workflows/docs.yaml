@@ -30,8 +30,8 @@ jobs:
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true
-      - name: Install all tools
-        uses: ./.github/tools-cache
+      - name: Install API docs tools
+        run: make crd-ref-docs
       - name: check API docs are up-to-date
         run: make check-api-docs
 
