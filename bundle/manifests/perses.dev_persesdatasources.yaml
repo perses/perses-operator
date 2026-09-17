@@ -3,7 +3,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     cert-manager.io/inject-ca-from: perses-operator-system/perses-operator-serving-cert
-    controller-gen.kubebuilder.io/version: v0.20.1
+    controller-gen.kubebuilder.io/version: v0.22.0
   creationTimestamp: null
   name: persesdatasources.perses.dev
 spec:
