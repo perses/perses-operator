@@ -242,8 +242,13 @@ $(PROMTOOL) promtool: $(LOCALBIN) ## Install promtool locally if necessary.
 		set -ex ;\
 		[[ -f $(PROMTOOL) ]] && exit 0 ;\
 		OS=$$(go env GOOS) && ARCH=$$(go env GOARCH) && \
-		curl -sSL https://github.com/prometheus/prometheus/releases/download/v$(PROMTOOL_VERSION)/prometheus-$(PROMTOOL_VERSION).$${OS}-$${ARCH}.tar.gz \
-			| tar xz -C $(LOCALBIN) --strip-components=1 prometheus-$(PROMTOOL_VERSION).$${OS}-$${ARCH}/promtool ;\
+		ARCHIVE=prometheus-$(PROMTOOL_VERSION).$${OS}-$${ARCH}.tar.gz && \
+		TMP=$$(mktemp) && \
+		curl -fsSL --retry 5 --retry-delay 2 --retry-all-errors \
+			-o "$$TMP" \
+			https://github.com/prometheus/prometheus/releases/download/v$(PROMTOOL_VERSION)/$${ARCHIVE} && \
+		tar xzf "$$TMP" -C $(LOCALBIN) --strip-components=1 $${ARCHIVE%.tar.gz}/promtool && \
+		rm -f "$$TMP" ;\
 	}
 
 .PHONY: shellcheck
