@@ -1,6 +1,6 @@
 module github.com/perses/perses-operator
 
-go 1.26.5
+go 1.27.1
 
 require (
 	github.com/brunoga/deep v1.3.1
@@ -11,6 +11,7 @@ require (
 	github.com/openshift/library-go v0.0.0-20260615113748-bc9d4056464b
 	github.com/perses/common v0.31.2
 	github.com/perses/perses v0.54.0
+	github.com/perses/spec v0.2.0
 	github.com/prometheus/client_golang v1.24.1
 	github.com/sirupsen/logrus v1.10.2
 	github.com/stretchr/testify v1.12.1
@@ -22,8 +23,6 @@ require (
 	k8s.io/utils v0.0.0-20260626114624-be93311217bd
 	sigs.k8s.io/controller-runtime v0.25.1
 )
-
-require github.com/go-openapi/swag/pools v0.27.1 // indirect
 
 require (
 	cel.dev/expr v0.25.1 // indirect
@@ -72,6 +71,7 @@ require (
 	github.com/go-openapi/swag/loading v0.27.1 // indirect
 	github.com/go-openapi/swag/mangling v0.27.1 // indirect
 	github.com/go-openapi/swag/netutils v0.27.1 // indirect
+	github.com/go-openapi/swag/pools v0.27.1 // indirect
 	github.com/go-openapi/swag/stringutils v0.27.1 // indirect
 	github.com/go-openapi/swag/typeutils v0.27.1 // indirect
 	github.com/go-openapi/swag/yamlutils v0.27.1 // indirect
@@ -113,7 +113,6 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/mwitkow/go-conntrack v0.0.0-20190716064945-2f068394615f // indirect
 	github.com/nexucis/lamenv v0.5.2 // indirect
-	github.com/perses/spec v0.2.0
 	github.com/pjbgf/sha1cd v0.6.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
