@@ -8,7 +8,7 @@ runs:
       id: tools-cache
       with:
         path: ./bin
-        key: ${{ runner.os }}-tools-${{ hashFiles('Makefile.tools') }}
+        key: ${{ runner.os }}-tools-${{ hashFiles('Makefile.tools', 'go.mod') }}
 
     - name: Install tools
       if: steps.tools-cache.outputs.cache-hit != 'true'
