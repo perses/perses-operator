@@ -28,7 +28,7 @@ jobs:
           fetch-depth: 0
       - name: Import environment variables
         run: cat .github/env >> "$GITHUB_ENV"
-      - uses: perses/github-actions@a7d024e4d064be61d47b59bafd514d1465fb2e4d # v0.12.0
+      - uses: perses/github-actions@98d861448dd5b9b3ac9dcefe377323a913ecbb83 # v0.13.0
       - uses: ./.github/perses-ci/actions/setup_environment
         with:
           enable_go: true

@@ -305,7 +305,7 @@ E2E_IMG ?= $(IMAGE_TAG_BASE):$(E2E_TAG)
 e2e-versions: ## Display versions used for e2e testing.
 	@echo "Kind version: $(KIND_VERSION)"
 	@echo "Kind node image: $(KIND_NODE_IMAGE)"
-	@echo "Go version: $(shell grep golang-version .github/env | sed 's/golang-version=//')"
+	@echo "Go version: $(shell awk '/^go / {print $$2; exit}' go.mod)"
 
 .PHONY: e2e-create-cluster
 e2e-create-cluster: ## Create a kind cluster for e2e tests.
