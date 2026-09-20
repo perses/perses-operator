@@ -536,10 +536,6 @@ bin:
 generate-changelog:
 	$(GO) run ./scripts/generate-changelog/generate-changelog.go --version="${VERSION}"
 
-.PHONY: tag
-tag:
-	./scripts/release.sh --tag "${VERSION}"
-
 .PHONY: checklicense
 checklicense:
 	@echo ">> checking license"
