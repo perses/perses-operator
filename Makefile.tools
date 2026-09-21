@@ -221,12 +221,10 @@ $(GOLANGCI_LINT) golangci-lint: $(LOCALBIN) ## Install golangci-lint locally if 
 	}
 
 .PHONY: golangci-lint-kube-api-linter
-$(GOLANGCI_LINT_KAL) golangci-lint-kube-api-linter: $(GOLANGCI_LINT) $(LOCALBIN) ## Build custom golangci-lint with kube-api-linter plugin.
-	@{ \
-		set -ex ;\
-		[[ -f $(GOLANGCI_LINT_KAL) ]] && exit 0 ;\
-		$(GOLANGCI_LINT) custom ;\
-	}
+golangci-lint-kube-api-linter: $(GOLANGCI_LINT_KAL) ## Build custom golangci-lint with kube-api-linter plugin.
+
+$(GOLANGCI_LINT_KAL): $(GOLANGCI_LINT) .custom-gcl.yml | $(LOCALBIN)
+	$(GOLANGCI_LINT) custom
 
 .PHONY: shfmt
 $(SHFMT) shfmt: $(LOCALBIN) ## Install shfmt locally if necessary.
@@ -281,7 +279,9 @@ build-tools: $(KUSTOMIZE) \
 		$(MDOX) \
 		$(PROMTOOL) \
 		$(SHFMT) \
-		$(SHELLCHECK)
+		$(SHELLCHECK) \
+		$(GOLANGCI_LINT) \
+		$(GOLANGCI_LINT_KAL)
 
 
 .PHONY: clean-tools
