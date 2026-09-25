@@ -23,7 +23,7 @@ spec:
         folder: "/perses"
         extension: "yaml"
     security:
-      encryptionKeyFile: "/etc/perses/provisioning/secrets/provisioning-secret-encryption-key"
+      encryption_key_file: "/etc/perses/provisioning/secrets/provisioning-secret-encryption-key"
       cookie:
         secure: false
       enable_auth: false
