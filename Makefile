@@ -332,6 +332,9 @@ endif
 	kubectl set image -n perses-operator-system deployment/perses-operator-controller-manager manager=$(E2E_IMG)
 	kubectl patch deployment perses-operator-controller-manager -n perses-operator-system \
 		-p '{"spec":{"template":{"spec":{"containers":[{"name":"manager","imagePullPolicy":"IfNotPresent"}]}}}}'
+	# Short sync interval so drift-healing e2e can finish without waiting the production default (5m).
+	kubectl patch deployment perses-operator-controller-manager -n perses-operator-system --type=json \
+		-p '[{"op":"add","path":"/spec/template/spec/containers/1/args/-","value":"--resource-sync-interval=15s"}]'
 	kubectl wait --for=condition=Available --timeout=300s -n perses-operator-system deployment/perses-operator-controller-manager
 
 .PHONY: e2e-setup
