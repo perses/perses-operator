@@ -52,6 +52,7 @@ const (
 	TLSCipherSuitesFlag      = "tls-cipher-suites"
 	TLSClusterProfileFlag    = "tls-cluster-profile"
 	TLSConfigureOperandsFlag = "tls-configure-operands"
+	ResourceSyncIntervalFlag = "resource-sync-interval"
 
 	// Volume names
 	configVolumeName  = "config"

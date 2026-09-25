@@ -1,0 +1,20 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+# Operator e2e deploy uses --resource-sync-interval=15s; allow a few intervals + reconcile.
+timeout: 90
+commands:
+  - script: |
+      set -eu
+      kubectl port-forward -n $NAMESPACE svc/perses-drift-test 18094:8080 &
+      PF_PID=$!
+      trap "kill $PF_PID 2>/dev/null" EXIT
+      sleep 3
+      for i in $(seq 1 30); do
+        if curl -sf http://localhost:18094/api/v1/projects/$NAMESPACE/dashboards/drift-test-dashboard >/dev/null 2>&1; then
+          echo "Dashboard recreated by periodic sync (attempt $i)"
+          exit 0
+        fi
+        sleep 3
+      done
+      echo "FAIL: Dashboard was not recreated by periodic sync within timeout"
+      exit 1

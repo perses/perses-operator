@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -83,6 +84,7 @@ func main() {
 	var tlsCipherSuites string
 	var tlsClusterProfile bool
 	var tlsConfigureOperands bool
+	var resourceSyncInterval time.Duration
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8082", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -106,6 +108,8 @@ func main() {
 			"Watches for changes and restarts the operator. Requires an OpenShift cluster.")
 	flag.BoolVar(&tlsConfigureOperands, common.TLSConfigureOperandsFlag, false,
 		"Propagate TLS settings to managed Perses pods. Without this flag, TLS only applies to the operator itself.")
+	flag.DurationVar(&resourceSyncInterval, common.ResourceSyncIntervalFlag, operator.DefaultResourceSyncInterval,
+		"How often to re-sync PersesDashboard, PersesDatasource, and PersesGlobalDatasource resources to the Perses API to heal drift (e.g. UI deletes). Set to 0 to disable.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -261,6 +265,7 @@ func main() {
 		Metrics:               opMetrics,
 		ReconciliationTracker: reconciliationTracker,
 		ClientFactory:         persesClientFactory,
+		SyncInterval:          resourceSyncInterval,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PersesDashboard")
 		os.Exit(1)
@@ -273,6 +278,7 @@ func main() {
 		Metrics:               opMetrics,
 		ReconciliationTracker: reconciliationTracker,
 		ClientFactory:         persesClientFactory,
+		SyncInterval:          resourceSyncInterval,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PersesDatasource")
 		os.Exit(1)
@@ -285,6 +291,7 @@ func main() {
 		Metrics:               opMetrics,
 		ReconciliationTracker: reconciliationTracker,
 		ClientFactory:         persesClientFactory,
+		SyncInterval:          resourceSyncInterval,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PersesGlobalDatasource")
 		os.Exit(1)

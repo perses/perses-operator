@@ -18,7 +18,7 @@ Each `Perses` CR instance manages the following resources:
 * A Deployment (SQL storage) or StatefulSet (file-based storage) running the Perses server
 * A Service for in-cluster API access
 
-Dashboards and datasources (`PersesDashboard`, `PersesDatasource`, `PersesGlobalDatasource`) are synced to matching Perses instances via the Perses API.
+Dashboards and datasources (`PersesDashboard`, `PersesDatasource`, `PersesGlobalDatasource`) are synced to matching Perses instances via the Perses API. Controllers also re-sync on a configurable interval (`--resource-sync-interval`, default 5m) so resources deleted from the Perses UI are recreated while the CR still exists.
 
 More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html).
 

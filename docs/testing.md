@@ -69,6 +69,8 @@ The following Makefile variables can be overridden to customize the e2e environm
 | `E2E_TAG`           | Git short SHA                                   | Image tag for the operator    |
 | `E2E_IMG`           | `docker.io/persesdev/perses-operator:<E2E_TAG>` | Full operator image reference |
 
+`make e2e-deploy` sets `--resource-sync-interval=15s` on the operator so drift-healing tests (see `dashboard-api-drift`) finish quickly. Production default remains 5 minutes.
+
 ### Test Structure
 
 Tests are under `test/e2e/` following the [kuttl convention](https://github.com/kudobuilder/kuttl/blob/main/docs/kuttl-test-harness.md). Kuttl creates a random namespace per test case for isolation. Steps run sequentially.
@@ -76,6 +78,8 @@ Tests are under `test/e2e/` following the [kuttl convention](https://github.com/
 ```text
 test/e2e/
 ├── kuttl-test.yaml
+├── dashboard-api-drift/    # Recreate dashboard deleted from Perses API (periodic sync)
+├── dashboard-tags/         # Dashboard tag annotation sync
 ├── global-datasource/      # Global datasource sync
 ├── multi-instance-sync/    # Dashboard/datasource sync across instances
 ├── namespace-isolation/    # Namespace-scoped resource isolation
