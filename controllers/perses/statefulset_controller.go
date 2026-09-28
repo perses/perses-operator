@@ -93,10 +93,24 @@ func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Re
 		return subreconciler.RequeueWithDelay(time.Minute)
 	}
 
+	// A StatefulSet that is being deleted, for example by recreateStatefulSet, is left
+	// alone until it is gone; the next reconcile then creates it again.
+	if found.DeletionTimestamp != nil {
+		stlog.Debug("StatefulSet is being deleted, waiting before recreating it")
+		return subreconciler.RequeueWithDelay(2 * time.Second)
+	}
+
 	sts, err := r.createPersesStatefulSet(perses)
 	if err != nil {
 		stlog.WithError(err).Error("Failed to define new StatefulSet resource for perses")
 		return subreconciler.RequeueWithError(err)
+	}
+
+	// spec.selector is immutable, so a StatefulSet whose selector differs from the
+	// desired one, such as one created by an older operator version, cannot be
+	// updated and has to be recreated.
+	if !equality.Semantic.DeepEqual(found.Spec.Selector, sts.Spec.Selector) {
+		return r.recreateStatefulSet(ctx, found, sts)
 	}
 
 	// call update with dry run to fill out fields that are also returned via the k8s api
@@ -113,6 +127,37 @@ func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Re
 	}
 
 	return subreconciler.ContinueReconciling()
+}
+
+// recreateStatefulSet deletes the StatefulSet so the next reconciliation recreates
+// it with the desired selector. Without this, the update would be rejected on
+// every reconcile until the StatefulSet was deleted by hand.
+func (r *PersesReconciler) recreateStatefulSet(ctx context.Context, found, desired *appsv1.StatefulSet) (*ctrl.Result, error) {
+	// Make sure the desired StatefulSet is accepted by the API server before
+	// removing the existing one; otherwise an invalid spec would leave the
+	// instance without a StatefulSet until the spec is fixed.
+	if err := r.validateCreate(ctx, desired); err != nil {
+		stlog.WithError(err).Error("Desired StatefulSet is invalid, keeping the existing one")
+		return subreconciler.RequeueWithError(err)
+	}
+
+	stlog.WithField("oldSelector", found.Spec.Selector.MatchLabels).
+		Infof("Recreating StatefulSet %s/%s because its immutable spec.selector changed", found.Namespace, found.Name)
+
+	// Orphan the pods so the recreated StatefulSet adopts them: their labels
+	// still match the new, narrower selector, so they keep running and any
+	// template change rolls out according to the update strategy.
+	// The UID precondition makes sure only the StatefulSet that was inspected is
+	// deleted, never one that replaced it in the meantime.
+	if err := r.Delete(ctx, found,
+		client.PropagationPolicy(metav1.DeletePropagationOrphan),
+		client.Preconditions{UID: &found.UID},
+	); err != nil && !apierrors.IsNotFound(err) {
+		stlog.WithError(err).Error("Failed to delete StatefulSet for recreation")
+		return subreconciler.RequeueWithError(err)
+	}
+
+	return subreconciler.RequeueWithDelay(time.Second)
 }
 
 func (r *PersesReconciler) createPersesStatefulSet(
