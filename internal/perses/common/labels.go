@@ -46,16 +46,30 @@ func sanitizeLabel(label string) string {
 	return sanitized
 }
 
-func LabelsForPerses(name string, perses *v1alpha2.Perses) map[string]string {
-	instanceName := perses.Name
-
-	persesLabels := map[string]string{
+// SelectorLabelsForPerses returns the operator-set labels that identify the
+// workload's pods. These are used for the immutable spec.selector.matchLabels
+// of the Deployment and StatefulSet and for the Service selector, so they must
+// never include user-supplied labels from spec.metadata.labels: those can
+// change over the lifetime of the Perses instance (for example when a label
+// key encodes a port), and a changed selector is rejected by the API server
+// with "field is immutable". The operator-set labels are constants, and
+// keeping all of them in the selector means instances without user labels
+// keep the selector they were created with, and that pods of other operators
+// using the same name and instance values are never selected.
+// LabelsForPerses returns a superset of these for object and pod-template
+// metadata.
+func SelectorLabelsForPerses(name string, perses *v1alpha2.Perses) map[string]string {
+	return map[string]string{
 		"app.kubernetes.io/name":       sanitizeLabel(name),
-		"app.kubernetes.io/instance":   sanitizeLabel(instanceName),
+		"app.kubernetes.io/instance":   sanitizeLabel(perses.Name),
 		"app.kubernetes.io/part-of":    "perses-operator",
 		"app.kubernetes.io/created-by": "controller-manager",
 		"app.kubernetes.io/managed-by": "perses-operator",
 	}
+}
+
+func LabelsForPerses(name string, perses *v1alpha2.Perses) map[string]string {
+	persesLabels := SelectorLabelsForPerses(name, perses)
 
 	if perses.Spec.Metadata != nil {
 		for label, value := range perses.Spec.Metadata.Labels {

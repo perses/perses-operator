@@ -109,3 +109,55 @@ var _ = Describe("LabelsForPerses", func() {
 		),
 	)
 })
+
+var _ = Describe("SelectorLabelsForPerses", func() {
+	It("returns only the operator-set labels", func() {
+		labels := SelectorLabelsForPerses("perses-server", &v1alpha2.Perses{
+			ObjectMeta: metav1.ObjectMeta{Name: "test-perses"},
+		})
+
+		Expect(labels).To(Equal(map[string]string{
+			"app.kubernetes.io/name":       "perses-server",
+			"app.kubernetes.io/instance":   "test-perses",
+			"app.kubernetes.io/part-of":    "perses-operator",
+			"app.kubernetes.io/created-by": "controller-manager",
+			"app.kubernetes.io/managed-by": "perses-operator",
+		}))
+	})
+
+	It("equals the full label set when no user labels are given", func() {
+		perses := &v1alpha2.Perses{ObjectMeta: metav1.ObjectMeta{Name: "test-perses"}}
+
+		// Workloads created by older operator versions used the full label set
+		// as selector; without user labels it must stay identical so they are
+		// not recreated on upgrade.
+		Expect(SelectorLabelsForPerses("perses-server", perses)).To(Equal(LabelsForPerses("perses-server", perses)))
+	})
+
+	It("never includes user-supplied metadata labels", func() {
+		perses := &v1alpha2.Perses{
+			ObjectMeta: metav1.ObjectMeta{Name: "test-perses"},
+			Spec: v1alpha2.PersesSpec{
+				Metadata: &v1alpha2.Metadata{
+					Labels: map[string]string{
+						"custom-label": "custom-value",
+					},
+				},
+			},
+		}
+
+		selector := SelectorLabelsForPerses("perses-server", perses)
+		full := LabelsForPerses("perses-server", perses)
+
+		// User labels can change over the lifetime of the instance, so they
+		// must not leak into the immutable selector.
+		Expect(selector).NotTo(HaveKey("custom-label"))
+
+		// The full label set carries the user labels and remains a superset of
+		// the selector, so the pod template still matches the selector.
+		Expect(full).To(HaveKeyWithValue("custom-label", "custom-value"))
+		for k, v := range selector {
+			Expect(full).To(HaveKeyWithValue(k, v))
+		}
+	})
+})

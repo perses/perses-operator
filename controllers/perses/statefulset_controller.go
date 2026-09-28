@@ -150,7 +150,7 @@ func (r *PersesReconciler) createPersesStatefulSet(
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: ls,
+				MatchLabels: common.SelectorLabelsForPerses(perses.Name, perses),
 			},
 			Replicas: perses.Spec.Replicas,
 			Template: corev1.PodTemplateSpec{
