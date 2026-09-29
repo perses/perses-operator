@@ -60,6 +60,9 @@ type PersesDashboardReconciler struct {
 	ClientFactory         common.PersesClientFactory
 	Metrics               *operatormetrics.Metrics
 	ReconciliationTracker *operatormetrics.ReconciliationTracker
+	// SyncInterval controls periodic re-sync to heal Perses API drift.
+	// Non-positive disables periodic sync.
+	SyncInterval time.Duration
 }
 
 var log = logger.WithField("module", "perses_dashboards_controller")
@@ -137,7 +140,7 @@ func (r *PersesDashboardReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	log.WithField("duration", time.Since(start)).Debug("dashboard reconciliation completed")
-	return subreconciler.Evaluate(subreconciler.DoNotRequeue())
+	return subreconciler.Evaluate(subreconciler.RequeueForPeriodicSync(r.SyncInterval))
 }
 
 func (r *PersesDashboardReconciler) updateDashboardStatus(

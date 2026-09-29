@@ -328,10 +328,8 @@ endif
 	@echo ">> Installing cert-manager..."
 	$(MAKE) install-cert-manager
 	@echo ">> Installing CRDs and deploying operator..."
-	$(KUSTOMIZE) build config/default | kubectl apply --server-side -f -
+	$(KUSTOMIZE) build config/e2e | kubectl apply --server-side -f -
 	kubectl set image -n perses-operator-system deployment/perses-operator-controller-manager manager=$(E2E_IMG)
-	kubectl patch deployment perses-operator-controller-manager -n perses-operator-system \
-		-p '{"spec":{"template":{"spec":{"containers":[{"name":"manager","imagePullPolicy":"IfNotPresent"}]}}}}'
 	kubectl wait --for=condition=Available --timeout=300s -n perses-operator-system deployment/perses-operator-controller-manager
 
 .PHONY: e2e-setup

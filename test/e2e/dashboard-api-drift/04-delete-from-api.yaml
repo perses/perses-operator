@@ -1,0 +1,19 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  # Simulate a Perses UI delete: remove the dashboard from the Perses API only.
+  # The PersesDashboard CR must remain so periodic sync can recreate it.
+  - script: |
+      set -eu
+      kubectl get persesdashboard drift-test-dashboard -n "$NAMESPACE" >/dev/null
+      kubectl port-forward -n "$NAMESPACE" svc/perses-drift-test 18094:8080 &
+      PF_PID=$!
+      trap "kill $PF_PID 2>/dev/null" EXIT
+      sleep 3
+      curl -sf -X DELETE "http://localhost:18094/api/v1/projects/$NAMESPACE/dashboards/drift-test-dashboard"
+      if curl -sf "http://localhost:18094/api/v1/projects/$NAMESPACE/dashboards/drift-test-dashboard" >/dev/null 2>&1; then
+        echo "FAIL: Dashboard still present in Perses after DELETE"
+        exit 1
+      fi
+      echo "Dashboard deleted from Perses API; CR still present"
+      kubectl get persesdashboard drift-test-dashboard -n "$NAMESPACE" -o name

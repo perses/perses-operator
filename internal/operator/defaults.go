@@ -13,6 +13,8 @@
 
 package operator
 
+import "time"
+
 const (
 	// DefaultPersesVersion is the default image tag for Perses.
 	DefaultPersesVersion = "v0.54.0"
@@ -20,4 +22,8 @@ const (
 	DefaultPersesBaseImage = "docker.io/persesdev/perses"
 	// DefaultPersesImage is the default image used for Perses Deployment or StatefulSet operands.
 	DefaultPersesImage = DefaultPersesBaseImage + ":" + DefaultPersesVersion
+
+	// DefaultResourceSyncInterval is how often dashboard and datasource controllers
+	// re-sync to the Perses API to heal drift (for example, resources deleted in the UI).
+	DefaultResourceSyncInterval = 5 * time.Minute
 )

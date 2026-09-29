@@ -259,6 +259,8 @@ The Perses operator maps Perses projects to Kubernetes namespaces. When you crea
 
 When reconciling Dashboards or Datasources the Perses operator synchronizes the namespace into a Perses project across all Perses servers in the cluster.
 
+By default the operator re-syncs `PersesDashboard`, `PersesDatasource`, and `PersesGlobalDatasource` resources to the Perses API every **5 minutes** (`--resource-sync-interval`). That heals drift when a resource is deleted or changed outside Kubernetes (for example from the Perses UI) while the CR still exists. Set `--resource-sync-interval=0` to disable periodic sync and only reconcile on CR or Perses-instance events.
+
 ## Tags
 
 You can assign tags to Perses resources (dashboards, datasources, global datasources) using the `perses.dev/tags` annotation on the Kubernetes custom resource. Tags are specified as a comma-separated string:

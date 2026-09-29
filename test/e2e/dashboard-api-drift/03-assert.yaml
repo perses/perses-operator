@@ -1,0 +1,15 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 60
+commands:
+  - script: |
+      kubectl port-forward -n $NAMESPACE svc/perses-drift-test 18094:8080 &
+      PF_PID=$!
+      trap "kill $PF_PID 2>/dev/null" EXIT
+      sleep 3
+      RESULT=$(curl -sf http://localhost:18094/api/v1/projects/$NAMESPACE/dashboards/drift-test-dashboard) || {
+        echo "FAIL: Dashboard not found in Perses after initial sync"
+        exit 1
+      }
+      echo "Dashboard present after initial sync:"
+      echo "$RESULT"
