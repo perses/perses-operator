@@ -54,6 +54,16 @@ func RequeueWithDelay(dur time.Duration) (*reconcile.Result, error) {
 	return &ctrl.Result{RequeueAfter: dur}, nil
 }
 
+// RequeueForPeriodicSync requeues after interval so controllers can heal
+// drift against the Perses API (e.g. resources deleted from the UI).
+// A non-positive interval disables periodic sync (DoNotRequeue).
+func RequeueForPeriodicSync(interval time.Duration) (*reconcile.Result, error) {
+	if interval <= 0 {
+		return DoNotRequeue()
+	}
+	return RequeueWithDelay(interval)
+}
+
 // ShouldRequeue returns true if the reconciler result indicates
 // a requeue is required, or the error is not nil.
 func ShouldRequeue(r *ctrl.Result, err error) bool {

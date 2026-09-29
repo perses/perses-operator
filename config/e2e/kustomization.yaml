@@ -1,0 +1,11 @@
+# E2E overlay on top of config/default.
+# Shortens --resource-sync-interval so drift-healing tests finish quickly.
+# Production / release installs should keep using config/default (5m default).
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../default
+
+patches:
+  - path: manager_sync_interval_patch.yaml

@@ -128,4 +128,59 @@ var _ = Describe("Dashboard controller", func() {
 			Expect(degradedCond.Reason).To(Equal(string(common.ReasonMissingPerses)))
 		})
 	})
+
+	Context("periodic sync", func() {
+		const DashboardName = "test-dashboard"
+		const DashboardNamespace = "default"
+
+		It("should requeue after SyncInterval when reconciliation succeeds", func() {
+			dashboard := &persesv1alpha2.PersesDashboard{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      DashboardName,
+					Namespace: DashboardNamespace,
+				},
+			}
+			// Perses exists but is not Available, so sync is skipped and reconcile completes.
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "perses-sample",
+					Namespace: DashboardNamespace,
+				},
+			}
+
+			r := newTestDashboardReconciler(dashboard, perses)
+			r.SyncInterval = 2 * time.Minute
+
+			result, err := r.Reconcile(context.Background(), ctrl.Request{
+				NamespacedName: types.NamespacedName{Name: DashboardName, Namespace: DashboardNamespace},
+			})
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.RequeueAfter).To(Equal(2 * time.Minute))
+		})
+
+		It("should not requeue when SyncInterval is zero", func() {
+			dashboard := &persesv1alpha2.PersesDashboard{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      DashboardName,
+					Namespace: DashboardNamespace,
+				},
+			}
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "perses-sample",
+					Namespace: DashboardNamespace,
+				},
+			}
+
+			r := newTestDashboardReconciler(dashboard, perses)
+
+			result, err := r.Reconcile(context.Background(), ctrl.Request{
+				NamespacedName: types.NamespacedName{Name: DashboardName, Namespace: DashboardNamespace},
+			})
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(result.RequeueAfter).To(Equal(time.Duration(0)))
+		})
+	})
 })

@@ -59,6 +59,9 @@ type PersesDatasourceReconciler struct {
 	ClientFactory         common.PersesClientFactory
 	Metrics               *operatormetrics.Metrics
 	ReconciliationTracker *operatormetrics.ReconciliationTracker
+	// SyncInterval controls periodic re-sync to heal Perses API drift.
+	// Non-positive disables periodic sync.
+	SyncInterval time.Duration
 }
 
 var log = logger.WithField("module", "perses_datasource_controller")
@@ -137,7 +140,7 @@ func (r *PersesDatasourceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	log.WithField("duration", time.Since(start)).Debug("datasource reconciliation completed")
-	return subreconciler.Evaluate(subreconciler.DoNotRequeue())
+	return subreconciler.Evaluate(subreconciler.RequeueForPeriodicSync(r.SyncInterval))
 }
 
 func (r *PersesDatasourceReconciler) updateDatasourceStatus(
