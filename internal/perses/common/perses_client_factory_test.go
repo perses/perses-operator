@@ -15,11 +15,14 @@ package common
 
 import (
 	"context"
+	"flag"
+	"net/http"
 	"os"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/perses/perses/pkg/model/api/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -1048,4 +1051,150 @@ func TestConfigFingerprintOtherFields(t *testing.T) {
 	// Client nil should not crash and produce stable fingerprint
 	fpNilClient := configFingerprint(base)
 	assert.Equal(t, fpBase, fpNilClient, "Nil/empty Client should not alter fingerprint")
+}
+
+func newPersesForPods() persesv1alpha2.Perses {
+	return persesv1alpha2.Perses{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "perses-1",
+			Namespace: "default",
+		},
+		Spec: persesv1alpha2.PersesSpec{
+			ContainerPort: ptr.To(int32(8080)),
+		},
+	}
+}
+
+// readyPod builds a pod carrying the operator's selector labels, with a
+// configurable phase, IP, and Ready condition.
+func readyPod(name, ip string, phase corev1.PodPhase, ready bool) *corev1.Pod {
+	perses := newPersesForPods()
+	condStatus := corev1.ConditionFalse
+	if ready {
+		condStatus = corev1.ConditionTrue
+	}
+	return &corev1.Pod{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: perses.Namespace,
+			Labels:    LabelsForPerses(perses.Name, &perses),
+		},
+		Status: corev1.PodStatus{
+			Phase: phase,
+			PodIP: ip,
+			Conditions: []corev1.PodCondition{
+				{Type: corev1.PodReady, Status: condStatus},
+			},
+		},
+	}
+}
+
+func TestCreateClientsForAllPods(t *testing.T) {
+	ctx := context.Background()
+	perses := newPersesForPods()
+
+	t.Run("returns a client only for ready pods", func(t *testing.T) {
+		reader := fake.NewClientBuilder().WithScheme(newScheme()).WithObjects(
+			readyPod("ready-1", "10.0.0.1", corev1.PodRunning, true),
+			readyPod("ready-2", "10.0.0.2", corev1.PodRunning, true),
+			readyPod("pending", "10.0.0.3", corev1.PodPending, true),
+			readyPod("no-ip", "", corev1.PodRunning, true),
+			readyPod("not-ready", "10.0.0.4", corev1.PodRunning, false),
+		).Build()
+
+		clients, err := NewWithConfig().CreateClientsForAllPods(ctx, reader, perses)
+		require.NoError(t, err)
+		require.Len(t, clients, 2, "only the two running, IP-assigned, ready pods should yield clients")
+
+		got := []string{
+			clients[0].RESTClient().BaseURL.String(),
+			clients[1].RESTClient().BaseURL.String(),
+		}
+		assert.ElementsMatch(t, []string{
+			"http://10.0.0.1:8080",
+			"http://10.0.0.2:8080",
+		}, got)
+	})
+
+	t.Run("errors when no pods are ready", func(t *testing.T) {
+		reader := fake.NewClientBuilder().WithScheme(newScheme()).WithObjects(
+			readyPod("not-ready", "10.0.0.4", corev1.PodRunning, false),
+		).Build()
+
+		clients, err := NewWithConfig().CreateClientsForAllPods(ctx, reader, perses)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "no ready pods found")
+		assert.Nil(t, clients)
+	})
+
+	t.Run("brackets IPv6 pod IPs", func(t *testing.T) {
+		reader := fake.NewClientBuilder().WithScheme(newScheme()).WithObjects(
+			readyPod("ready-v6", "fd00::1", corev1.PodRunning, true),
+		).Build()
+
+		clients, err := NewWithConfig().CreateClientsForAllPods(ctx, reader, perses)
+		require.NoError(t, err)
+		require.Len(t, clients, 1)
+		assert.Equal(t, "http://[fd00::1]:8080", clients[0].RESTClient().BaseURL.String())
+	})
+
+	t.Run("pins TLS ServerName to the service FQDN for pod-direct HTTPS", func(t *testing.T) {
+		tlsPerses := newPersesForPods()
+		tlsPerses.Spec.TLS = &persesv1alpha2.TLS{Enable: ptr.To(true)}
+
+		reader := fake.NewClientBuilder().WithScheme(newScheme()).WithObjects(
+			readyPod("ready-1", "10.0.0.1", corev1.PodRunning, true),
+		).Build()
+
+		clients, err := NewWithConfig().CreateClientsForAllPods(ctx, reader, tlsPerses)
+		require.NoError(t, err)
+		require.Len(t, clients, 1)
+
+		// The client dials the pod IP but must verify against the service DNS name.
+		assert.Equal(t, "https://10.0.0.1:8080", clients[0].RESTClient().BaseURL.String())
+		transport, ok := clients[0].RESTClient().Client.Transport.(*http.Transport)
+		require.True(t, ok, "expected an *http.Transport")
+		require.NotNil(t, transport.TLSClientConfig)
+		assert.Equal(t, "perses-1.default.svc.cluster.local", transport.TLSClientConfig.ServerName)
+	})
+
+	t.Run("SQL mode returns a single service client", func(t *testing.T) {
+		// A configured server URL flag makes the service client deterministic
+		// and independent of cluster DNS. The flag is normally registered by
+		// main.go, so register it here if the test binary hasn't.
+		if flag.Lookup(PersesServerURLFlag) == nil {
+			flag.String(PersesServerURLFlag, "", "The Perses backend server URL")
+		}
+		require.NoError(t, flag.Set(PersesServerURLFlag, "http://perses.example:8080"))
+		t.Cleanup(func() { _ = flag.Set(PersesServerURLFlag, "") })
+
+		sqlPerses := newPersesForPods()
+		sqlPerses.Spec.Config.Database = config.Database{SQL: &config.SQL{}}
+
+		// No pods exist: SQL mode must not list pods, so this still succeeds.
+		reader := fake.NewClientBuilder().WithScheme(newScheme()).Build()
+
+		clients, err := NewWithConfig().CreateClientsForAllPods(ctx, reader, sqlPerses)
+		require.NoError(t, err)
+		require.Len(t, clients, 1)
+		assert.Equal(t, "http://perses.example:8080", clients[0].RESTClient().BaseURL.String())
+	})
+}
+
+func TestIsPodReady(t *testing.T) {
+	tests := []struct {
+		name string
+		pod  *corev1.Pod
+		want bool
+	}{
+		{"running, ready, with IP", readyPod("p", "10.0.0.1", corev1.PodRunning, true), true},
+		{"not running", readyPod("p", "10.0.0.1", corev1.PodPending, true), false},
+		{"no IP", readyPod("p", "", corev1.PodRunning, true), false},
+		{"ready condition false", readyPod("p", "10.0.0.1", corev1.PodRunning, false), false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isPodReady(tt.pod))
+		})
+	}
 }
