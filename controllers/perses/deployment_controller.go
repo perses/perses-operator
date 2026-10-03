@@ -16,6 +16,7 @@ package perses
 import (
 	"context"
 	"fmt"
+	"time"
 
 	logger "github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
@@ -91,10 +92,24 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 		return subreconciler.ContinueReconciling()
 	}
 
+	// A Deployment that is being deleted, for example by recreateDeployment, is left
+	// alone until it is gone; the next reconcile then creates it again.
+	if found.DeletionTimestamp != nil {
+		dlog.Debug("Deployment is being deleted, waiting before recreating it")
+		return subreconciler.RequeueWithDelay(2 * time.Second)
+	}
+
 	dep, err := r.createPersesDeployment(perses)
 	if err != nil {
 		dlog.WithError(err).Error("Failed to define new Deployment resource for perses")
 		return subreconciler.RequeueWithError(err)
+	}
+
+	// spec.selector is immutable, so a Deployment whose selector differs from the
+	// desired one, such as one created by an older operator version, cannot be
+	// updated and has to be recreated.
+	if !equality.Semantic.DeepEqual(found.Spec.Selector, dep.Spec.Selector) {
+		return r.recreateWorkload(ctx, dlog, found, dep, found.Spec.Selector)
 	}
 
 	// call update with dry run to fill out fields that are also returned via the k8s api
@@ -148,7 +163,7 @@ func (r *PersesReconciler) createPersesDeployment(
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: ls,
+				MatchLabels: common.SelectorLabelsForPerses(perses.Name, perses),
 			},
 			Replicas: perses.Spec.Replicas,
 			Template: corev1.PodTemplateSpec{

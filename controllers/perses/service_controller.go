@@ -113,19 +113,14 @@ func serviceNeedsUpdate(existing, updated *corev1.Service, name string, perses *
 		return true
 	}
 
-	// check for differences only in the labels that are set by the operator
-	labels := common.LabelsForPerses(name, perses)
-
-	// update the service if its selectors count do not match the labels count
-	if len(existing.Spec.Selector) != len(labels) {
+	// The selector is fully owned by the operator, so compare it as a whole.
+	if !equality.Semantic.DeepEqual(existing.Spec.Selector, updated.Spec.Selector) {
 		return true
 	}
 
-	for k := range labels {
+	// check for differences only in the labels that are set by the operator
+	for k := range common.LabelsForPerses(name, perses) {
 		if existing.Labels[k] != updated.Labels[k] {
-			return true
-		}
-		if existing.Spec.Selector[k] != updated.Spec.Selector[k] {
 			return true
 		}
 	}
@@ -167,7 +162,11 @@ func (r *PersesReconciler) createPersesService(
 				Protocol:   corev1.ProtocolTCP,
 				TargetPort: intstr.FromInt32(port),
 			}},
-			Selector: ls,
+			// Select on the operator-set labels only, like the workload
+			// selector: user labels may change while old pods still carry the
+			// previous values, and selecting on them would drop those pods
+			// from the Service until the rollout completes.
+			Selector: common.SelectorLabelsForPerses(perses.Name, perses),
 		},
 	}
 
