@@ -109,7 +109,7 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 	// desired one, such as one created by an older operator version, cannot be
 	// updated and has to be recreated.
 	if !equality.Semantic.DeepEqual(found.Spec.Selector, dep.Spec.Selector) {
-		return r.recreateDeployment(ctx, found, dep)
+		return r.recreateWorkload(ctx, dlog, found, dep, found.Spec.Selector)
 	}
 
 	// call update with dry run to fill out fields that are also returned via the k8s api
@@ -126,37 +126,6 @@ func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Req
 	}
 
 	return subreconciler.ContinueReconciling()
-}
-
-// recreateDeployment deletes the Deployment so the next reconciliation recreates
-// it with the desired selector. Without this, the update would be rejected on
-// every reconcile until the Deployment was deleted by hand.
-func (r *PersesReconciler) recreateDeployment(ctx context.Context, found, desired *appsv1.Deployment) (*ctrl.Result, error) {
-	// Make sure the desired Deployment is accepted by the API server before
-	// removing the existing one; otherwise an invalid spec would leave the
-	// instance without a Deployment until the spec is fixed.
-	if err := r.validateCreate(ctx, desired); err != nil {
-		dlog.WithError(err).Error("Desired Deployment is invalid, keeping the existing one")
-		return subreconciler.RequeueWithError(err)
-	}
-
-	dlog.WithField("oldSelector", found.Spec.Selector.MatchLabels).
-		Infof("Recreating Deployment %s/%s because its immutable spec.selector changed", found.Namespace, found.Name)
-
-	// Orphan the ReplicaSets so the recreated Deployment adopts them: their
-	// labels still match the new, narrower selector, so the pods keep running
-	// and any template change rolls out as a normal rolling update.
-	// The UID precondition makes sure only the Deployment that was inspected is
-	// deleted, never one that replaced it in the meantime.
-	if err := r.Delete(ctx, found,
-		client.PropagationPolicy(metav1.DeletePropagationOrphan),
-		client.Preconditions{UID: &found.UID},
-	); err != nil && !apierrors.IsNotFound(err) {
-		dlog.WithError(err).Error("Failed to delete Deployment for recreation")
-		return subreconciler.RequeueWithError(err)
-	}
-
-	return subreconciler.RequeueWithDelay(time.Second)
 }
 
 func (r *PersesReconciler) createPersesDeployment(

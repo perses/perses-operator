@@ -348,21 +348,6 @@ func (r *PersesReconciler) validateVolumes(ctx context.Context, req ctrl.Request
 	return subreconciler.ContinueReconciling()
 }
 
-// validateCreate asks the API server to validate obj as a new object without
-// persisting it. The object is copied and given a generated name so the dry
-// run is not rejected with AlreadyExists while the object it replaces still
-// exists; the returned error is wrapped with the real name, since the API
-// server's message names the probe.
-func (r *PersesReconciler) validateCreate(ctx context.Context, obj client.Object) error {
-	probe := obj.DeepCopyObject().(client.Object)
-	probe.SetName("")
-	probe.SetGenerateName(obj.GetName() + "-")
-	if err := r.Create(ctx, probe, client.DryRunAll); err != nil {
-		return fmt.Errorf("desired %s/%s would be rejected by the API server: %w", obj.GetNamespace(), obj.GetName(), err)
-	}
-	return nil
-}
-
 func (r *PersesReconciler) setStatusToComplete(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
 	return r.updatePersesStatus(ctx, req, func(perses *v1alpha2.Perses) {
 		meta.SetStatusCondition(&perses.Status.Conditions, metav1.Condition{
