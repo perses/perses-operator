@@ -67,9 +67,11 @@ MDOX = $(LOCALBIN)/mdox
 MDOX_VERSION = main
 
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
-GOLANGCI_LINT_VERSION = v2.13.2
+GOLANGCI_LINT_VERSION = v2.14.0
 
 GOLANGCI_LINT_KAL = $(LOCALBIN)/golangci-lint-kube-api-linter
+
+GO_VERSION = $(shell awk '/^go [0-9]/ {print $$2; exit}' go.mod)
 
 SHFMT = $(LOCALBIN)/shfmt
 SHFMT_VERSION = v3.14.1
@@ -224,7 +226,7 @@ $(GOLANGCI_LINT) golangci-lint: $(LOCALBIN) ## Install golangci-lint locally if 
 golangci-lint-kube-api-linter: $(GOLANGCI_LINT_KAL) ## Build custom golangci-lint with kube-api-linter plugin.
 
 $(GOLANGCI_LINT_KAL): $(GOLANGCI_LINT) .custom-gcl.yml | $(LOCALBIN)
-	$(GOLANGCI_LINT) custom
+	GOTOOLCHAIN=go$(GO_VERSION) $(GOLANGCI_LINT) custom
 
 .PHONY: shfmt
 $(SHFMT) shfmt: $(LOCALBIN) ## Install shfmt locally if necessary.
