@@ -135,11 +135,14 @@ func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		r.setStatusToComplete,
 	}
 
-	// Run all subreconcilers sequentially
+	// Run all subreconcilers sequentially. When one halts without an error,
+	// keep its result so a requested delayed requeue reaches the controller.
 	var reconcileErr error
+	var haltResult *ctrl.Result
 	for _, f := range subreconcilersForPerses {
 		if r, err := f(ctx, req); subreconciler.ShouldHaltOrRequeue(r, err) {
 			reconcileErr = err
+			haltResult = r
 			break
 		}
 	}
@@ -165,6 +168,11 @@ func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	if reconcileErr != nil {
 		return subreconciler.Evaluate(subreconciler.RequeueWithError(reconcileErr))
+	}
+
+	if haltResult != nil && haltResult.RequeueAfter > 0 {
+		log.WithField("requeueAfter", haltResult.RequeueAfter).Debug("reconciliation halted, requeueing")
+		return subreconciler.Evaluate(haltResult, nil)
 	}
 
 	log.WithField("duration", time.Since(start)).Debug("reconciliation completed")

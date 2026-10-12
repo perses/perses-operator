@@ -93,10 +93,24 @@ func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Re
 		return subreconciler.RequeueWithDelay(time.Minute)
 	}
 
+	// A StatefulSet that is being deleted, for example by recreateStatefulSet, is left
+	// alone until it is gone; the next reconcile then creates it again.
+	if found.DeletionTimestamp != nil {
+		stlog.Debug("StatefulSet is being deleted, waiting before recreating it")
+		return subreconciler.RequeueWithDelay(2 * time.Second)
+	}
+
 	sts, err := r.createPersesStatefulSet(perses)
 	if err != nil {
 		stlog.WithError(err).Error("Failed to define new StatefulSet resource for perses")
 		return subreconciler.RequeueWithError(err)
+	}
+
+	// spec.selector is immutable, so a StatefulSet whose selector differs from the
+	// desired one, such as one created by an older operator version, cannot be
+	// updated and has to be recreated.
+	if !equality.Semantic.DeepEqual(found.Spec.Selector, sts.Spec.Selector) {
+		return r.recreateWorkload(ctx, stlog, found, sts, found.Spec.Selector)
 	}
 
 	// call update with dry run to fill out fields that are also returned via the k8s api
@@ -150,7 +164,7 @@ func (r *PersesReconciler) createPersesStatefulSet(
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: ls,
+				MatchLabels: common.SelectorLabelsForPerses(perses.Name, perses),
 			},
 			Replicas: perses.Spec.Replicas,
 			Template: corev1.PodTemplateSpec{
