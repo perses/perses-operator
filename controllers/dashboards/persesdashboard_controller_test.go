@@ -127,6 +127,36 @@ var _ = Describe("Dashboard controller", func() {
 			Expect(degradedCond.Message).To(Equal(degradedErr.Error()))
 			Expect(degradedCond.Reason).To(Equal(string(common.ReasonMissingPerses)))
 		})
+
+		It("should write a valid non-empty reason for the no-ready-pods wait state", func() {
+			// Regression: the no-ready-pods sync path once returned an empty
+			// reason, which the CRD schema rejects (reason has minLength 1),
+			// causing a tight reconcile error loop. The path now reports
+			// ReasonMissingPerses; assert that lands as a valid condition.
+			dashboard := &persesv1alpha2.PersesDashboard{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      DashboardName,
+					Namespace: DashboardNamespace,
+				},
+			}
+
+			r := newTestDashboardReconciler(dashboard)
+			ctx := withDashboard(context.Background(), dashboard)
+			req := ctrl.Request{NamespacedName: types.NamespacedName{Name: DashboardName, Namespace: DashboardNamespace}}
+
+			noPodsErr := fmt.Errorf("no ready pods found for Perses instance")
+			_, err := r.setStatusToDegraded(ctx, req, &ctrl.Result{RequeueAfter: time.Minute}, common.ReasonMissingPerses, noPodsErr)
+			Expect(err).To(MatchError(noPodsErr))
+
+			fresh := &persesv1alpha2.PersesDashboard{}
+			Expect(r.Get(context.Background(), req.NamespacedName, fresh)).To(Succeed())
+			for _, cond := range fresh.Status.Conditions {
+				Expect(cond.Reason).ToNot(BeEmpty(), "condition reason must be non-empty to satisfy the CRD schema")
+			}
+			availableCond := apimeta.FindStatusCondition(fresh.Status.Conditions, common.TypeAvailablePerses)
+			Expect(availableCond).ToNot(BeNil())
+			Expect(availableCond.Reason).To(Equal(string(common.ReasonMissingPerses)))
+		})
 	})
 
 	Context("periodic sync", func() {

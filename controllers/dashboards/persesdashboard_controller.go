@@ -19,9 +19,11 @@ import (
 	"time"
 
 	logger "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -70,6 +72,7 @@ var log = logger.WithField("module", "perses_dashboards_controller")
 // +kubebuilder:rbac:groups=perses.dev,resources=persesdashboards,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=perses.dev,resources=persesdashboards/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=perses.dev,resources=persesdashboards/finalizers,verbs=update
+// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
 func (r *PersesDashboardReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	start := time.Now()
 	objKey := req.String()
@@ -239,6 +242,52 @@ func (r *PersesDashboardReconciler) findDashboardsForPerses(ctx context.Context,
 	return common.MetadataListToRequests(ctx, r.Client, persesv1alpha2.GroupVersion.WithKind("PersesDashboardList"))
 }
 
+// findDashboardsForPod returns reconcile requests for the PersesDashboards that
+// target the Perses instance owning a pod, when that pod becomes ready. This
+// re-syncs resources to pods that (re)started and lost their state, without
+// fanning out to every dashboard in the cluster: only dashboards whose
+// instanceSelector matches the owning instance are enqueued.
+func (r *PersesDashboardReconciler) findDashboardsForPod(ctx context.Context, obj client.Object) []reconcile.Request {
+	pod, ok := obj.(*corev1.Pod)
+	if !ok {
+		return nil
+	}
+
+	instance, err := common.PersesInstanceForPod(ctx, r.Client, pod)
+	if err != nil {
+		log.WithError(err).Error("Failed to resolve Perses instance for pod")
+		return nil
+	}
+	if instance == nil {
+		return nil
+	}
+
+	instanceLabels := common.LabelsForPerses(instance.Name, instance)
+
+	dashboards := &persesv1alpha2.PersesDashboardList{}
+	if err := r.List(ctx, dashboards); err != nil {
+		log.WithError(err).Error("Failed to list PersesDashboards for pod")
+		return nil
+	}
+
+	var requests []reconcile.Request
+	for i := range dashboards.Items {
+		dashboard := &dashboards.Items[i]
+		targets, err := common.ResourceTargetsInstance(dashboard.Spec.InstanceSelector, instanceLabels)
+		if err != nil {
+			log.WithError(err).Errorf("Invalid instanceSelector on PersesDashboard %s/%s", dashboard.Namespace, dashboard.Name)
+			continue
+		}
+		if !targets {
+			continue
+		}
+		requests = append(requests, reconcile.Request{
+			NamespacedName: types.NamespacedName{Namespace: dashboard.Namespace, Name: dashboard.Name},
+		})
+	}
+	return requests
+}
+
 // SetupWithManager sets up the controller with the Manager.
 // It watches PersesDashboard resources and also watches Perses instances
 // to trigger re-reconciliation of all dashboards when a Perses instance becomes
@@ -253,6 +302,11 @@ func (r *PersesDashboardReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&persesv1alpha2.Perses{},
 			handler.EnqueueRequestsFromMapFunc(r.findDashboardsForPerses),
 			builder.WithPredicates(common.PersesAvailabilityPredicate()),
+		).
+		Watches(
+			&corev1.Pod{},
+			handler.EnqueueRequestsFromMapFunc(r.findDashboardsForPod),
+			builder.WithPredicates(common.PodReadinessPredicate()),
 		).
 		Complete(r)
 }
