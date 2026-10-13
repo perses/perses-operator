@@ -12,13 +12,13 @@ runs after the PR is merged and the new `v*` tag is pushed.
 1. User: Actions ▸ Release ▸ Run workflow (tag, version-replace)
    │
    ▼
-2. release.yaml            →  opens PR: chore: update VERSION to <tag>
+2. release.yaml            →  opens PR: [IGNORE] Prepare release <tag>
    │                           (VERSION + CHANGELOG.md + bundle/ + bundle.yaml)
    ▼
-3. User: review & merge PR into main
+3. User: review & merge PR into main through the merge queue
    │
    ▼
-4. User: push v<tag> tag on main
+4. User: create, verify & push signed v<tag> tag on main
    │
    ▼
 5. ci.yaml (on v* tag)     →  images (operator/bundle/catalog) + GitHub release
@@ -48,8 +48,8 @@ The workflow:
   (CSV `spec.version`, `spec.replaces: perses-operator.v<version-replace>`) and the
   jsonnet files under `jsonnet/generated` and `jsonnet/examples`.
 - Runs `make build-installer` — regenerates the root `bundle.yaml` installer.
-- Opens a PR titled `chore: update VERSION to <tag>` against `main` on branch
-  `chore-version-<tag>`
+- Opens a PR titled `[IGNORE] Prepare release <tag>` against `main` on branch
+  `release/v<tag>`.
 
 Re-running the workflow with the same `tag` updates the existing PR branch.
 
@@ -64,7 +64,10 @@ Re-running the workflow with the same `tag` updates the existing PR branch.
     (`spec.version`, `spec.replaces`)
   - CRDs and jsonnet generated files (if CRDs changed)
   - `bundle.yaml` (root installer manifest)
-- Approve and merge the PR into `main`.
+- Sign any manual edits, such as changelog corrections, and add a DCO signoff
+  with `git commit -s -S`. The workflows already add signoffs to generated commits.
+- Approve and merge the PR into `main` through the merge queue, which uses squash
+  and merge. Create the release tag only after the PR is merged.
 
 > Note: the PR is created using the `BOT_TOKEN` PAT (the same token used by
 > `publish-operator-hub.yaml`). This is required so downstream `pull_request`
@@ -74,14 +77,28 @@ Re-running the workflow with the same `tag` updates the existing PR branch.
 
 ## 3. Tag the release
 
-Pull the merged `main` and push the tag:
+For signed commits and tags, [generate a GPG key](https://docs.github.com/en/authentication/managing-commit-signature-verification/generating-a-new-gpg-key)
+if needed and [configure Git to use it](https://docs.github.com/en/authentication/managing-commit-signature-verification/telling-git-about-your-signing-key).
+DCO signoffs (`git commit -s`) and cryptographic signatures are separate:
+`git tag -s` signs the tag, while `git commit -S` signs a commit.
+
+Pull the merged `main`. The commands below use `upstream` for the remote pointing
+to `perses/perses-operator`. Replace it with your remote name in both the pull and
+push commands; use `origin` only if it points to that repository rather than your fork.
 
 ```bash
-git fetch origin
 git checkout main
-git pull
-git tag -a v<tag> -m "v<tag>"
-git push origin v<tag>
+git pull --rebase upstream main
+```
+
+Confirm that `HEAD` is the intended release commit and `VERSION` contains the
+version being released, then create, verify, and push the signed tag:
+
+```bash
+tag="v$(cat VERSION)"
+git tag -s "${tag}" -m "${tag}"
+git tag -v "${tag}"
+git push upstream "${tag}"
 ```
 
 > ⚠️ Do **not** use GitHub's "Create release" UI. `ci.yaml` drives `goreleaser`
