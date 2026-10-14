@@ -22,7 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/utils/ptr"
 
-	"github.com/perses/perses-operator/api/v1alpha2"
+	"github.com/rhobs/perses-operator/api/v1alpha2"
 )
 
 func TestBasicAuthConversion(t *testing.T) {

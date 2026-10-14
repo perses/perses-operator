@@ -13,6 +13,6 @@
 
 // Package v1alpha1 contains API Schema definitions for the v1alpha1 API group
 // +groupName=perses.dev
-// +k8s:conversion-gen=github.com/perses/perses-operator/api/v1alpha2
+// +k8s:conversion-gen=github.com/rhobs/perses-operator/api/v1alpha2
 
 package v1alpha1

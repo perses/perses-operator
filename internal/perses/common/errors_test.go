@@ -19,7 +19,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/perses/perses/pkg/client/perseshttp"
+	"github.com/rhobs/perses/pkg/client/perseshttp"
 	"github.com/stretchr/testify/assert"
 )
 

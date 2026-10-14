@@ -22,11 +22,11 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/perses/common/set"
-	"github.com/perses/perses/pkg/client/perseshttp"
-	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	speccommon "github.com/perses/spec/go/common"
 	specdashboard "github.com/perses/spec/go/dashboard"
 	specplugin "github.com/perses/spec/go/plugin"
+	"github.com/rhobs/perses/pkg/client/perseshttp"
+	persesv1 "github.com/rhobs/perses/pkg/model/api/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -35,10 +35,10 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
-	dashboardcontroller "github.com/perses/perses-operator/controllers/dashboards"
-	internal "github.com/perses/perses-operator/internal/perses"
-	"github.com/perses/perses-operator/internal/perses/common"
+	persesv1alpha2 "github.com/rhobs/perses-operator/api/v1alpha2"
+	dashboardcontroller "github.com/rhobs/perses-operator/controllers/dashboards"
+	internal "github.com/rhobs/perses-operator/internal/perses"
+	"github.com/rhobs/perses-operator/internal/perses/common"
 )
 
 var _ = Describe("Dashboard controller", Ordered, func() {

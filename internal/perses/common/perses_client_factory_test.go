@@ -28,7 +28,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
+	persesv1alpha2 "github.com/rhobs/perses-operator/api/v1alpha2"
 )
 
 func newScheme() *runtime.Scheme {

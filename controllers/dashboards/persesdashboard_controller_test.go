@@ -21,8 +21,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
-	"github.com/perses/perses-operator/internal/perses/common"
+	persesv1alpha2 "github.com/rhobs/perses-operator/api/v1alpha2"
+	"github.com/rhobs/perses-operator/internal/perses/common"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"

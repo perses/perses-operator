@@ -19,7 +19,7 @@
 package v1alpha1
 
 import (
-	v1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
+	v1alpha2 "github.com/rhobs/perses-operator/api/v1alpha2"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	conversion "k8s.io/apimachinery/pkg/conversion"
 	runtime "k8s.io/apimachinery/pkg/runtime"

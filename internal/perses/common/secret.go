@@ -21,7 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/perses/perses-operator/api/v1alpha2"
+	"github.com/rhobs/perses-operator/api/v1alpha2"
 )
 
 const SecretNameSuffix = "-secret"

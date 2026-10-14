@@ -33,10 +33,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/perses/perses-operator/api/v1alpha2"
-	persesController "github.com/perses/perses-operator/controllers/perses"
-	internalcache "github.com/perses/perses-operator/internal/cache"
-	"github.com/perses/perses-operator/internal/operator"
+	"github.com/rhobs/perses-operator/api/v1alpha2"
+	persesController "github.com/rhobs/perses-operator/controllers/perses"
+	internalcache "github.com/rhobs/perses-operator/internal/cache"
+	"github.com/rhobs/perses-operator/internal/operator"
 	//+kubebuilder:scaffold:imports
 )
 

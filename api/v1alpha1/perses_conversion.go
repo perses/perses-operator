@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/conversion"
 	conv "sigs.k8s.io/controller-runtime/pkg/conversion"
 
-	"github.com/perses/perses-operator/api/v1alpha2"
+	"github.com/rhobs/perses-operator/api/v1alpha2"
 )
 
 // ConvertTo converts Perses (v1alpha1) to the Hub version (v1alpha2)

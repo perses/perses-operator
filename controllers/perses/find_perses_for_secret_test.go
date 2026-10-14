@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/perses/perses-operator/api/v1alpha2"
+	"github.com/rhobs/perses-operator/api/v1alpha2"
 )
 
 func TestFindPersesForSecret_WithPartialObjectMetadata(t *testing.T) {

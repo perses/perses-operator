@@ -20,12 +20,12 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"github.com/perses/perses/pkg/client/perseshttp"
-	persesconfig "github.com/perses/perses/pkg/model/api/config"
-	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	speccommon "github.com/perses/spec/go/common"
 	specdatasource "github.com/perses/spec/go/datasource"
 	specplugin "github.com/perses/spec/go/plugin"
+	"github.com/rhobs/perses/pkg/client/perseshttp"
+	persesconfig "github.com/rhobs/perses/pkg/model/api/config"
+	persesv1 "github.com/rhobs/perses/pkg/model/api/v1"
 	"github.com/stretchr/testify/mock"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -36,10 +36,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
-	datasourcecontroller "github.com/perses/perses-operator/controllers/datasources"
-	internal "github.com/perses/perses-operator/internal/perses"
-	"github.com/perses/perses-operator/internal/perses/common"
+	persesv1alpha2 "github.com/rhobs/perses-operator/api/v1alpha2"
+	datasourcecontroller "github.com/rhobs/perses-operator/controllers/datasources"
+	internal "github.com/rhobs/perses-operator/internal/perses"
+	"github.com/rhobs/perses-operator/internal/perses/common"
 )
 
 // secretStrippingClient wraps a client.Client and strips Data/StringData from

@@ -17,7 +17,7 @@ import (
 	"fmt"
 
 	"github.com/brunoga/deep"
-	"github.com/perses/perses/pkg/model/api/config"
+	"github.com/rhobs/perses/pkg/model/api/config"
 )
 
 // PersesConfig represents the Perses server configuration including

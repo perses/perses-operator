@@ -18,8 +18,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/perses/perses-operator/api/v1alpha2"
-	"github.com/perses/perses/pkg/client/perseshttp"
+	"github.com/rhobs/perses-operator/api/v1alpha2"
+	"github.com/rhobs/perses/pkg/client/perseshttp"
 	logger "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

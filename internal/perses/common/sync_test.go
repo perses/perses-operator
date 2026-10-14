@@ -18,11 +18,11 @@ import (
 	"time"
 
 	"github.com/perses/common/set"
-	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	speccommon "github.com/perses/spec/go/common"
 	specDashboard "github.com/perses/spec/go/dashboard"
 	specdatasource "github.com/perses/spec/go/datasource"
 	specplugin "github.com/perses/spec/go/plugin"
+	persesv1 "github.com/rhobs/perses/pkg/model/api/v1"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -16,7 +16,7 @@ package common
 import (
 	"maps"
 
-	persesv1 "github.com/perses/perses/pkg/model/api/v1"
+	persesv1 "github.com/rhobs/perses/pkg/model/api/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 )
 

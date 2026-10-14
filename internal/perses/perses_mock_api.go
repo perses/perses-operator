@@ -19,11 +19,11 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	v1 "github.com/perses/perses/pkg/client/api/v1"
-	clientConfig "github.com/perses/perses/pkg/client/config"
-	"github.com/perses/perses/pkg/client/perseshttp"
-	modelv1 "github.com/perses/perses/pkg/model/api/v1"
 	speccommon "github.com/perses/spec/go/common"
+	v1 "github.com/rhobs/perses/pkg/client/api/v1"
+	clientConfig "github.com/rhobs/perses/pkg/client/config"
+	"github.com/rhobs/perses/pkg/client/perseshttp"
+	modelv1 "github.com/rhobs/perses/pkg/model/api/v1"
 	"github.com/stretchr/testify/mock"
 )
 

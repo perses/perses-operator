@@ -18,8 +18,8 @@ import (
 	"testing"
 
 	configv1 "github.com/openshift/api/config/v1"
-	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
-	"github.com/perses/perses-operator/internal/perses/common"
+	persesv1alpha2 "github.com/rhobs/perses-operator/api/v1alpha2"
+	"github.com/rhobs/perses-operator/internal/perses/common"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
