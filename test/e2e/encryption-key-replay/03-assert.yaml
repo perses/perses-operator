@@ -1,0 +1,20 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 300
+commands:
+  - script: |
+      set -eu
+      # Wait for the new template before checking rollout status.
+      for i in $(seq 1 40); do
+        if kubectl get statefulset -n "$NAMESPACE" perses-replay -o jsonpath='{.spec.template.spec.volumes}' | grep -q explicit-replay-key; then
+          break
+        fi
+        sleep 3
+      done
+      kubectl get statefulset -n "$NAMESPACE" perses-replay -o jsonpath='{.spec.template.spec.volumes}' | grep -q explicit-replay-key
+      kubectl rollout status -n "$NAMESPACE" statefulset/perses-replay --timeout=120s
+      kubectl exec -n "$NAMESPACE" deployment/credential-backend -- python /fixture/verify.py source-switch "$NAMESPACE"
+      test "$(kubectl get persesdatasource -n "$NAMESPACE" replay-project -o jsonpath='{.metadata.generation}')" = "$(kubectl get configmap -n "$NAMESPACE" replay-generations -o jsonpath='{.data.project}')"
+      test "$(kubectl get persesglobaldatasource replay-global -o jsonpath='{.metadata.generation}')" = "$(kubectl get configmap -n "$NAMESPACE" replay-generations -o jsonpath='{.data.global}')"
+
+      kubectl get secret -n "$NAMESPACE" perses-replay-encryption-key -o name

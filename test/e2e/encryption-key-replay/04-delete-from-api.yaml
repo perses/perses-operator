@@ -1,0 +1,8 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |
+      set -eu
+      kubectl get persesdatasource -n "$NAMESPACE" replay-project -o name
+      kubectl get persesglobaldatasource replay-global -o name
+      kubectl exec -n "$NAMESPACE" deployment/credential-backend -- python /fixture/verify.py delete "$NAMESPACE"

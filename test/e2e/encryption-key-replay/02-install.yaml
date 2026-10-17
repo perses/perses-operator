@@ -1,0 +1,9 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+timeout: 60
+commands:
+  - script: |
+      set -eu
+
+      kubectl exec -n "$NAMESPACE" deployment/credential-backend -- python -c 'import base64,json,os; print(json.dumps({"apiVersion":"v1","kind":"Secret","metadata":{"name":"explicit-replay-key"},"data":{"key":base64.b64encode(os.urandom(32)).decode()}}))' | kubectl apply -n "$NAMESPACE" -f -
+      kubectl patch perses -n "$NAMESPACE" perses-replay --type=merge -p '{"spec":{"config":{"security":{"encryption_key_file":"/etc/perses/provisioning/secrets/explicit-replay-key-key"}},"provisioning":{"secretRefs":[{"name":"explicit-replay-key","key":"key"}]}}}'

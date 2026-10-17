@@ -242,6 +242,7 @@ _Appears in:_
 | `ephemeral_dashboard` _[EphemeralDashboard](#ephemeraldashboard)_ | EphemeralDashboard contains the config about the ephemeral dashboard feature |  |  |
 | `frontend` _[Frontend](#frontend)_ | Frontend contains any config that will be used by the frontend itself. |  |  |
 | `plugin` _[Plugin](#plugin)_ | Plugin contains the config for runtime plugins. |  |  |
+| `search` _[Search](#search)_ | Search contains the config for the search engine and the index in memory. |  |  |
 
 
 #### PersesDashboard

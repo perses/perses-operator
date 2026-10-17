@@ -38,7 +38,7 @@ import (
 var stlog = logger.WithField("module", "statefulset_controller")
 
 func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	perses, ok := persesFromContext(ctx)
+	perses, ok := runtimePersesFromContext(ctx)
 	if !ok {
 		stlog.Error("perses not found in context")
 		return subreconciler.RequeueWithError(fmt.Errorf("perses not found in context"))

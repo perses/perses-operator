@@ -1,0 +1,10 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 180
+commands:
+  - script: |
+      set -eu
+      kubectl exec -n "$NAMESPACE" deployment/credential-backend -- python /fixture/verify.py deleted-secret-repair "$NAMESPACE"
+      test "$(kubectl get persesdatasource -n "$NAMESPACE" replay-project -o jsonpath='{.metadata.generation}')" = "$(kubectl get configmap -n "$NAMESPACE" replay-generations -o jsonpath='{.data.project}')"
+      test "$(kubectl get persesglobaldatasource replay-global -o jsonpath='{.metadata.generation}')" = "$(kubectl get configmap -n "$NAMESPACE" replay-generations -o jsonpath='{.data.global}')"
+      kubectl delete persesglobaldatasource replay-global
