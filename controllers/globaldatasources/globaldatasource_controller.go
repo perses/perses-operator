@@ -74,16 +74,37 @@ func (r *PersesGlobalDatasourceReconciler) reconcileGlobalDatasourcesInAllInstan
 		return r.setStatusToDegraded(ctx, req, &ctrl.Result{RequeueAfter: time.Minute}, persescommon.ReasonMissingPerses, fmt.Errorf("no Perses instances found matching the label selector"))
 	}
 
+	pending := false
+	synced := false
 	for _, persesInstance := range persesInstances.Items {
 		if !meta.IsStatusConditionTrue(persesInstance.Status.Conditions, persescommon.TypeAvailablePerses) {
 			gdlog.Infof("Skipping Perses instance %s/%s (not yet available)", persesInstance.Namespace, persesInstance.Name)
+			pending = true
+			continue
+		}
+		ready, err := persescommon.PersesWorkloadReady(ctx, r.APIReader, &persesInstance)
+		if err != nil {
+			res, err := subreconciler.RequeueWithError(err)
+			return r.setStatusToDegraded(ctx, req, res, persescommon.ReasonConnectionFailed, err)
+		}
+		if !ready {
+			pending = true
 			continue
 		}
 		if res, reason, err := r.syncPersesGlobalDatasource(ctx, persesInstance, globaldatasource); subreconciler.ShouldHaltOrRequeue(res, err) {
 			return r.setStatusToDegraded(ctx, req, res, reason, err)
 		}
+		synced = true
 	}
 
+	if pending {
+		if res, err := r.updateGlobalDatasourceStatus(ctx, req, func(ds *persesv1alpha2.PersesGlobalDatasource) {
+			persescommon.SetPartialReconcileConditions(&ds.Status.Conditions, synced)
+		}); err != nil {
+			return res, err
+		}
+		return subreconciler.RequeueWithDelay(persescommon.WorkloadRetryInterval)
+	}
 	return subreconciler.ContinueReconciling()
 }
 
@@ -113,28 +134,24 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalDatasource(ctx contex
 		return res, persescommon.ReasonBackendError, err
 	}
 
-	if !notFound && persescommon.GlobalDatasourceInSync(existing, globalDatasourceWithName) {
-		gdlog.Debugf("GlobalDatasource already in sync: %s", globaldatasource.Name)
-		res, err := subreconciler.ContinueReconciling()
-		return res, "", err
-	}
-
-	if validateErr := validate.New(persesClient.RESTClient()).GlobalDatasource(globalDatasourceWithName); validateErr != nil {
-		if persescommon.IsClientError(validateErr) {
-			gdlog.WithError(validateErr).Errorf("GlobalDatasource validation failed: %s", globaldatasource.Name)
+	inSync := !notFound && persescommon.GlobalDatasourceInSync(existing, globalDatasourceWithName)
+	if !inSync {
+		if validateErr := validate.New(persesClient.RESTClient()).GlobalDatasource(globalDatasourceWithName); validateErr != nil {
+			if persescommon.IsClientError(validateErr) {
+				gdlog.WithError(validateErr).Errorf("GlobalDatasource validation failed: %s", globaldatasource.Name)
+				return subreconciler.RequeueWithErrorAndReason(
+					fmt.Errorf("global datasource %q failed server-side validation: %w", globaldatasource.Name, validateErr),
+					persescommon.ReasonValidationFailed,
+				)
+			}
+			gdlog.WithError(validateErr).Errorf("GlobalDatasource validation request failed: %s", globaldatasource.Name)
 			return subreconciler.RequeueWithErrorAndReason(
-				fmt.Errorf("global datasource %q failed server-side validation: %w", globaldatasource.Name, validateErr),
-				persescommon.ReasonValidationFailed,
+				fmt.Errorf("global datasource %q validation request failed: %w", globaldatasource.Name, validateErr),
+				persescommon.ReasonBackendError,
 			)
 		}
-		gdlog.WithError(validateErr).Errorf("GlobalDatasource validation request failed: %s", globaldatasource.Name)
-		return subreconciler.RequeueWithErrorAndReason(
-			fmt.Errorf("global datasource %q validation request failed: %w", globaldatasource.Name, validateErr),
-			persescommon.ReasonBackendError,
-		)
 	}
-
-	// Sync secret only after validation passes to avoid orphaned secrets
+	// Sync credentials independently of datasource changes.
 	if persescommon.HasSecretConfig(globaldatasource.Spec.Client) {
 		_, reason, err := r.syncPersesGlobalSecret(ctx, persesClient, globaldatasource)
 		if err != nil {
@@ -143,6 +160,10 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalDatasource(ctx contex
 		}
 	}
 
+	if inSync {
+		res, err := subreconciler.ContinueReconciling()
+		return res, "", err
+	}
 	if notFound {
 		_, err = persesClient.GlobalDatasource().Create(globalDatasourceWithName)
 		if err != nil {

@@ -15,6 +15,7 @@ package common
 
 import (
 	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -31,4 +32,17 @@ func SnapshotConditions(conditions []metav1.Condition) []metav1.Condition {
 // a previously taken snapshot. It is safe to call with nil or empty slices.
 func ConditionsChanged(before, after []metav1.Condition) bool {
 	return !equality.Semantic.DeepEqual(before, after)
+}
+
+// SetPartialReconcileConditions marks a datasource whose selected Perses
+// instances are still rolling out: Available once at least one has synced,
+// otherwise unavailable and reconciling.
+func SetPartialReconcileConditions(conditions *[]metav1.Condition, synced bool) {
+	if synced {
+		const msg = "Synced to available Perses instances; waiting for others to finish rolling out"
+		meta.SetStatusCondition(conditions, metav1.Condition{Type: TypeAvailablePerses, Status: metav1.ConditionTrue, Reason: "PartiallyReconciled", Message: msg})
+		meta.SetStatusCondition(conditions, metav1.Condition{Type: TypeDegradedPerses, Status: metav1.ConditionFalse, Reason: "PartiallyReconciled", Message: msg})
+		return
+	}
+	meta.SetStatusCondition(conditions, metav1.Condition{Type: TypeAvailablePerses, Status: metav1.ConditionFalse, Reason: "Reconciling", Message: "Waiting for selected Perses workloads to finish rolling out"})
 }

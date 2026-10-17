@@ -1,0 +1,110 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 300
+commands:
+  - script: |
+      set -eu
+      kubectl rollout status -n "$NAMESPACE" deployment/credential-backend --timeout=90s
+      kubectl rollout status -n "$NAMESPACE" statefulset/perses-replay --timeout=120s
+
+      kubectl port-forward -n "$NAMESPACE" svc/credential-backend 18095:8080 &
+      BACKEND_PID=$!
+      kubectl port-forward -n "$NAMESPACE" svc/perses-replay 18096:8080 &
+      PERSES_PID=$!
+      trap 'kill "$BACKEND_PID" "$PERSES_PID" 2>/dev/null || true' EXIT
+
+      for i in $(seq 1 30); do
+        if RESULT=$(curl -sf --max-time 5 -u fixture-user:fixture-password http://localhost:18095/check) && [ "$RESULT" = credentials-verified ]; then
+          break
+        fi
+        sleep 1
+      done
+      test "$RESULT" = credentials-verified || {
+        echo "FAIL: Authenticated backend did not serve the expected response"
+        exit 1
+      }
+      test "$(curl -s --max-time 5 -o /dev/null -w '%{http_code}' http://localhost:18095/check)" = 401
+      test "$(curl -s --max-time 5 -u fixture-user:wrong-password -o /dev/null -w '%{http_code}' http://localhost:18095/check)" = 401
+
+      cat <<EOF | kubectl apply -n "$NAMESPACE" -f -
+      apiVersion: perses.dev/v1alpha2
+      kind: PersesDatasource
+      metadata:
+        name: replay-project
+      spec:
+        instanceSelector:
+          matchLabels:
+            test.perses.dev/instance: encryption-replay
+        config:
+          default: false
+          plugin:
+            kind: PrometheusDatasource
+            spec:
+              proxy:
+                kind: HTTPProxy
+                spec:
+                  url: http://credential-backend:8080
+                  secret: replay-project-secret
+        client:
+          basicAuth:
+            type: secret
+            name: replay-credentials
+            namespace: $NAMESPACE
+            username: fixture-user
+            passwordPath: password
+      ---
+      apiVersion: perses.dev/v1alpha2
+      kind: PersesGlobalDatasource
+      metadata:
+        name: replay-global
+      spec:
+        instanceSelector:
+          matchLabels:
+            test.perses.dev/instance: encryption-replay
+        config:
+          default: false
+          plugin:
+            kind: PrometheusDatasource
+            spec:
+              proxy:
+                kind: HTTPProxy
+                spec:
+                  url: http://credential-backend:8080
+                  secret: replay-global-secret
+        client:
+          basicAuth:
+            type: secret
+            name: replay-credentials
+            namespace: $NAMESPACE
+            username: fixture-user
+            passwordPath: password
+      EOF
+      test "$(kubectl get secret -n "$NAMESPACE" perses-replay-encryption-key -o jsonpath='{.immutable}')" = true
+      KEY=$(kubectl get secret -n "$NAMESPACE" perses-replay-encryption-key -o jsonpath='{.data.encryption-key}')
+      KEY_SIZE=$(printf '%s' "$KEY" | kubectl exec -i -n "$NAMESPACE" deployment/credential-backend -- base64 -d | wc -c)
+      test "$KEY_SIZE" -eq 32
+
+      for i in $(seq 1 50); do
+        if PROJECT_RESULT=$(curl -sf --max-time 5 "http://localhost:18096/proxy/projects/$NAMESPACE/datasources/replay-project/check") &&
+           GLOBAL_RESULT=$(curl -sf --max-time 5 http://localhost:18096/proxy/globaldatasources/replay-global/check) &&
+           [ "$PROJECT_RESULT" = credentials-verified ] && [ "$GLOBAL_RESULT" = credentials-verified ]; then
+          break
+        fi
+        if [ "$i" -eq 50 ]; then
+          echo "FAIL: Initial project/global proxy credentials did not become usable"
+          exit 1
+        fi
+        sleep 3
+      done
+      echo "Initial project/global proxy credentials verified"
+
+      curl -sf --max-time 5 -X POST -H 'Content-Type: application/json' \
+        -d '{"kind":"GlobalSecret","metadata":{"name":"unrelated-direct-secret"},"spec":{"basicAuth":{"username":"direct-user","password":"direct-test-only"}}}' \
+        http://localhost:18096/api/v1/globalsecrets >/dev/null
+      DIRECT_SECRET=$(curl -sf --max-time 5 http://localhost:18096/api/v1/globalsecrets/unrelated-direct-secret)
+
+      PROJECT_GENERATION=$(kubectl get persesdatasource -n "$NAMESPACE" replay-project -o jsonpath='{.metadata.generation}')
+      GLOBAL_GENERATION=$(kubectl get persesglobaldatasource replay-global -o jsonpath='{.metadata.generation}')
+      kubectl create configmap -n "$NAMESPACE" replay-generations \
+        --from-literal=project="$PROJECT_GENERATION" --from-literal=global="$GLOBAL_GENERATION" \
+        --from-literal=direct-secret="$DIRECT_SECRET"

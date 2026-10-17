@@ -22,7 +22,7 @@ import (
 	"github.com/perses/perses/pkg/client/api/validate"
 	"github.com/perses/perses/pkg/client/perseshttp"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
-	persesv1Common "github.com/perses/perses/pkg/model/api/v1/common"
+	persesv1Common "github.com/perses/spec/go/common"
 
 	logger "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/meta"

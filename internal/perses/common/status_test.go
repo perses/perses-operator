@@ -127,6 +127,29 @@ func TestSnapshotConditionsEmpty(t *testing.T) {
 	assert.Empty(t, snapshot)
 }
 
+func TestSetPartialReconcileConditions(t *testing.T) {
+	t.Run("synced sets Available and clears Degraded", func(t *testing.T) {
+		conditions := []metav1.Condition{}
+		SetPartialReconcileConditions(&conditions, true)
+		available := meta.FindStatusCondition(conditions, TypeAvailablePerses)
+		degraded := meta.FindStatusCondition(conditions, TypeDegradedPerses)
+		assert.Equal(t, metav1.ConditionTrue, available.Status)
+		assert.Equal(t, "PartiallyReconciled", available.Reason)
+		assert.Equal(t, metav1.ConditionFalse, degraded.Status)
+		assert.Equal(t, "PartiallyReconciled", degraded.Reason)
+	})
+
+	t.Run("nothing synced marks unavailable and reconciling", func(t *testing.T) {
+		conditions := []metav1.Condition{}
+		SetPartialReconcileConditions(&conditions, false)
+		available := meta.FindStatusCondition(conditions, TypeAvailablePerses)
+		assert.Equal(t, metav1.ConditionFalse, available.Status)
+		assert.Equal(t, "Reconciling", available.Reason)
+		// Degraded is left untouched when nothing synced.
+		assert.Nil(t, meta.FindStatusCondition(conditions, TypeDegradedPerses))
+	})
+}
+
 func TestSetStatusConditionIdempotency(t *testing.T) {
 	conditions := []metav1.Condition{}
 
