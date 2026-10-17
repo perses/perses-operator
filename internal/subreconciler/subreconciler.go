@@ -85,3 +85,15 @@ func ShouldRequeue(r *ctrl.Result, err error) bool {
 func ShouldHaltOrRequeue(r *ctrl.Result, err error) bool {
 	return (r != nil) || ShouldRequeue(r, err)
 }
+
+// RunAll runs the subreconcilers in order, stopping at the first one that halts
+// or requeues. It returns that stage's result and error (both nil if every
+// stage continued).
+func RunAll(ctx context.Context, req ctrl.Request, fns ...FnWithRequest) (*ctrl.Result, error) {
+	for _, f := range fns {
+		if r, err := f(ctx, req); ShouldHaltOrRequeue(r, err) {
+			return r, err
+		}
+	}
+	return nil, nil
+}

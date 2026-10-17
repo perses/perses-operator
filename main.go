@@ -109,7 +109,7 @@ func main() {
 	flag.BoolVar(&tlsConfigureOperands, common.TLSConfigureOperandsFlag, false,
 		"Propagate TLS settings to managed Perses pods. Without this flag, TLS only applies to the operator itself.")
 	flag.DurationVar(&resourceSyncInterval, common.ResourceSyncIntervalFlag, operator.DefaultResourceSyncInterval,
-		"How often to re-sync PersesDashboard, PersesDatasource, and PersesGlobalDatasource resources to the Perses API to heal drift (e.g. UI deletes). Set to 0 to disable.")
+		"Interval for syncing dashboards and datasources to the Perses API. At 0, only managed credentials sync periodically (every 5 minutes).")
 	opts := zap.Options{
 		Development: true,
 	}

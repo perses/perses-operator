@@ -1,0 +1,139 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: replay-credentials
+stringData:
+  password: fixture-password
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: credential-backend
+data:
+  server.py: |
+    import base64
+    from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+    class Handler(BaseHTTPRequestHandler):
+        def do_GET(self):
+            expected = 'Basic ' + base64.b64encode(b'fixture-user:fixture-password').decode()
+            if self.headers.get('Authorization') != expected:
+                self.send_response(401)
+                self.end_headers()
+                return
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b'credentials-verified')
+        def log_message(self, *args):
+            pass
+    ThreadingHTTPServer(('0.0.0.0', 8080), Handler).serve_forever()
+  verify.py: |
+    import json, pathlib, sys, time, urllib.error, urllib.request
+    mode, namespace = sys.argv[1:]
+    base = 'http://perses-replay:8080'
+    direct = '/api/v1/globalsecrets/unrelated-direct-secret'
+    baseline = pathlib.Path('/tmp/direct-secret.json')
+    def request(path, method='GET', payload=None):
+        data = None if payload is None else json.dumps(payload).encode()
+        req = urllib.request.Request(base + path, data=data, method=method,
+                                     headers={'Content-Type': 'application/json'})
+        with urllib.request.urlopen(req, timeout=5) as response:
+            return response.read()
+    if mode == 'delete':
+        request('/api/v1/projects/' + namespace + '/secrets/replay-project-secret', 'DELETE')
+        request('/api/v1/globalsecrets/replay-global-secret', 'DELETE')
+        print('Deleted only managed API secrets; datasource CRs retained')
+        sys.exit(0)
+    paths = ['/proxy/projects/' + namespace + '/datasources/replay-project/check',
+             '/proxy/globaldatasources/replay-global/check']
+    deadline = time.monotonic() + 150
+    while time.monotonic() < deadline:
+        try:
+            assert all(request(path) == b'credentials-verified' for path in paths)
+            break
+        except (urllib.error.URLError, TimeoutError, AssertionError):
+            time.sleep(3)
+    else:
+        sys.exit('Credential use did not recover within 150s during ' + mode)
+    if mode == 'initial':
+        request('/api/v1/globalsecrets', 'POST', {
+            'kind': 'GlobalSecret', 'metadata': {'name': 'unrelated-direct-secret'},
+            'spec': {'basicAuth': {'username': 'direct-user', 'password': 'direct-test-only'}}})
+        baseline.write_bytes(request(direct))
+    else:
+        assert json.loads(request(direct)) == json.loads(baseline.read_bytes()), 'Direct secret was modified'
+    print('Project/global proxy credentials verified during ' + mode)
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: credential-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: credential-backend
+  template:
+    metadata:
+      labels:
+        app: credential-backend
+    spec:
+      containers:
+        - name: http
+          image: docker.io/library/python:3.13-alpine
+          command: [python, /fixture/server.py]
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+          volumeMounts:
+            - name: fixture
+              mountPath: /fixture
+              readOnly: true
+      volumes:
+        - name: fixture
+          configMap:
+            name: credential-backend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: credential-backend
+spec:
+  selector:
+    app: credential-backend
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: perses.dev/v1alpha2
+kind: Perses
+metadata:
+  name: perses-replay
+  labels:
+    test.perses.dev/instance: encryption-replay
+spec:
+  image: docker.io/persesdev/perses:v0.55.0-rc.1
+  containerPort: 8080
+  config:
+    database:
+      file:
+        folder: /perses
+        extension: yaml
+    security:
+      enable_auth: false
+      readonly: false
+      cookie:
+        secure: false
+  env:
+    - name: PERSES_DATASOURCE_PROXY_ALLOWED_HOSTS_0
+      value: credential-backend
+    - name: PERSES_DATASOURCE_PROXY_DENY_PRIVATE_NETWORKS
+      value: "false"
+  storage:
+    pvcTemplate:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi

@@ -1,0 +1,68 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 300
+commands:
+  - script: |
+      set -eu
+      kubectl rollout status -n "$NAMESPACE" deployment/credential-backend --timeout=90s
+      kubectl rollout status -n "$NAMESPACE" statefulset/perses-replay --timeout=120s
+
+      cat <<EOF | kubectl apply -n "$NAMESPACE" -f -
+      apiVersion: perses.dev/v1alpha2
+      kind: PersesDatasource
+      metadata:
+        name: replay-project
+      spec:
+        instanceSelector:
+          matchLabels:
+            test.perses.dev/instance: encryption-replay
+        config:
+          default: false
+          plugin:
+            kind: PrometheusDatasource
+            spec:
+              proxy:
+                kind: HTTPProxy
+                spec:
+                  url: http://credential-backend:8080
+                  secret: replay-project-secret
+        client:
+          basicAuth:
+            type: secret
+            name: replay-credentials
+            namespace: $NAMESPACE
+            username: fixture-user
+            passwordPath: password
+      ---
+      apiVersion: perses.dev/v1alpha2
+      kind: PersesGlobalDatasource
+      metadata:
+        name: replay-global
+      spec:
+        instanceSelector:
+          matchLabels:
+            test.perses.dev/instance: encryption-replay
+        config:
+          default: false
+          plugin:
+            kind: PrometheusDatasource
+            spec:
+              proxy:
+                kind: HTTPProxy
+                spec:
+                  url: http://credential-backend:8080
+                  secret: replay-global-secret
+        client:
+          basicAuth:
+            type: secret
+            name: replay-credentials
+            namespace: $NAMESPACE
+            username: fixture-user
+            passwordPath: password
+      EOF
+      kubectl get secret -n "$NAMESPACE" perses-replay-encryption-key -o json | \
+        kubectl exec -i -n "$NAMESPACE" deployment/credential-backend -- python -c 'import base64,json,sys; s=json.load(sys.stdin); assert s["immutable"]; assert len(base64.b64decode(s["data"]["encryption-key"])) == 32'
+      kubectl exec -n "$NAMESPACE" deployment/credential-backend -- python /fixture/verify.py initial "$NAMESPACE"
+      PROJECT_GENERATION=$(kubectl get persesdatasource -n "$NAMESPACE" replay-project -o jsonpath='{.metadata.generation}')
+      GLOBAL_GENERATION=$(kubectl get persesglobaldatasource replay-global -o jsonpath='{.metadata.generation}')
+      kubectl create configmap -n "$NAMESPACE" replay-generations --from-literal=project="$PROJECT_GENERATION" --from-literal=global="$GLOBAL_GENERATION"

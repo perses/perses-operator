@@ -59,8 +59,7 @@ type PersesDatasourceReconciler struct {
 	ClientFactory         common.PersesClientFactory
 	Metrics               *operatormetrics.Metrics
 	ReconciliationTracker *operatormetrics.ReconciliationTracker
-	// SyncInterval controls periodic re-sync to heal Perses API drift.
-	// Non-positive disables periodic sync.
+	// SyncInterval sets drift checks; managed credentials retain a nonzero interval.
 	SyncInterval time.Duration
 }
 
@@ -108,13 +107,7 @@ func (r *PersesDatasourceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		r.setStatusToComplete,
 	}
 
-	var reconcileErr error
-	for _, f := range subreconcilersForPerses {
-		if r, err := f(ctx, req); subreconciler.ShouldHaltOrRequeue(r, err) {
-			reconcileErr = err
-			break
-		}
-	}
+	haltedResult, reconcileErr := subreconciler.RunAll(ctx, req, subreconcilersForPerses...)
 
 	// Track reconciliation status
 	if r.ReconciliationTracker != nil {
@@ -140,7 +133,10 @@ func (r *PersesDatasourceReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	log.WithField("duration", time.Since(start)).Debug("datasource reconciliation completed")
-	return subreconciler.Evaluate(subreconciler.RequeueForPeriodicSync(r.SyncInterval))
+	if haltedResult != nil {
+		return *haltedResult, nil
+	}
+	return subreconciler.Evaluate(subreconciler.RequeueForPeriodicSync(common.CredentialSyncInterval(r.SyncInterval, datasource.Spec.Client)))
 }
 
 func (r *PersesDatasourceReconciler) updateDatasourceStatus(

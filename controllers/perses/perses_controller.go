@@ -38,6 +38,7 @@ import (
 
 	"github.com/perses/perses-operator/api/v1alpha2"
 	operatormetrics "github.com/perses/perses-operator/internal/metrics"
+	"github.com/perses/perses-operator/internal/operator"
 	"github.com/perses/perses-operator/internal/perses/common"
 	"github.com/perses/perses-operator/internal/subreconciler"
 )
@@ -120,13 +121,14 @@ func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	// Store perses in context for all sub-reconcilers
-	ctx = withPerses(ctx, perses)
+	ctx = withEncryptionRuntime(withPerses(ctx, perses), perses)
 
 	subreconcilersForPerses := []subreconciler.FnWithRequest{
 		r.handleDelete,
 		r.setStatusToUnknown,
 		r.removeFinalizer,
 		r.validateVolumes,
+		r.reconcileEncryptionKey,
 		r.reconcileProvisioning,
 		r.reconcileService,
 		r.reconcileConfigMap,
@@ -136,13 +138,7 @@ func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	// Run all subreconcilers sequentially
-	var reconcileErr error
-	for _, f := range subreconcilersForPerses {
-		if r, err := f(ctx, req); subreconciler.ShouldHaltOrRequeue(r, err) {
-			reconcileErr = err
-			break
-		}
-	}
+	haltedResult, reconcileErr := subreconciler.RunAll(ctx, req, subreconcilersForPerses...)
 
 	// Track reconciliation status
 	if r.ReconciliationTracker != nil {
@@ -168,6 +164,12 @@ func (r *PersesReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	log.WithField("duration", time.Since(start)).Debug("reconciliation completed")
+	if haltedResult != nil {
+		return *haltedResult, nil
+	}
+	if state, ok := ctx.Value(encryptionRuntimeContextKey).(*encryptionRuntime); ok && state.Managed {
+		return subreconciler.Evaluate(subreconciler.RequeueWithDelay(operator.DefaultResourceSyncInterval))
+	}
 	return subreconciler.Evaluate(subreconciler.DoNotRequeue())
 }
 
