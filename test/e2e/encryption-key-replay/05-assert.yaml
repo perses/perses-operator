@@ -1,0 +1,33 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 180
+commands:
+  - script: |
+      set -eu
+      kubectl port-forward -n "$NAMESPACE" svc/perses-replay 18096:8080 &
+      PF_PID=$!
+      trap 'kill "$PF_PID" 2>/dev/null || true' EXIT
+
+      for i in $(seq 1 50); do
+        if PROJECT_RESULT=$(curl -sf --max-time 5 "http://localhost:18096/proxy/projects/$NAMESPACE/datasources/replay-project/check") &&
+           GLOBAL_RESULT=$(curl -sf --max-time 5 http://localhost:18096/proxy/globaldatasources/replay-global/check) &&
+           [ "$PROJECT_RESULT" = credentials-verified ] && [ "$GLOBAL_RESULT" = credentials-verified ]; then
+          break
+        fi
+        if [ "$i" -eq 50 ]; then
+          echo "FAIL: Project/global proxy credentials did not recover after deleting managed API secrets"
+          exit 1
+        fi
+        sleep 3
+      done
+      echo "Project/global proxy credentials verified after deleting managed API secrets"
+
+      DIRECT_SECRET=$(curl -sf --max-time 5 http://localhost:18096/api/v1/globalsecrets/unrelated-direct-secret)
+
+      test "$DIRECT_SECRET" = "$(kubectl get configmap -n "$NAMESPACE" replay-generations -o jsonpath='{.data.direct-secret}')" || {
+        echo "FAIL: Unrelated direct API secret was modified"
+        exit 1
+      }
+      test "$(kubectl get persesdatasource -n "$NAMESPACE" replay-project -o jsonpath='{.metadata.generation}')" = "$(kubectl get configmap -n "$NAMESPACE" replay-generations -o jsonpath='{.data.project}')"
+      test "$(kubectl get persesglobaldatasource replay-global -o jsonpath='{.metadata.generation}')" = "$(kubectl get configmap -n "$NAMESPACE" replay-generations -o jsonpath='{.data.global}')"
+      kubectl delete persesglobaldatasource replay-global

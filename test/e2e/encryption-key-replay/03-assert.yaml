@@ -1,0 +1,43 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 300
+commands:
+  - script: |
+      set -eu
+      # Wait for the new template before checking rollout status.
+      for i in $(seq 1 40); do
+        if kubectl get statefulset -n "$NAMESPACE" perses-replay -o jsonpath='{.spec.template.spec.volumes}' | grep -q explicit-replay-key; then
+          break
+        fi
+        sleep 3
+      done
+      kubectl get statefulset -n "$NAMESPACE" perses-replay -o jsonpath='{.spec.template.spec.volumes}' | grep -q explicit-replay-key
+      kubectl rollout status -n "$NAMESPACE" statefulset/perses-replay --timeout=120s
+      kubectl port-forward -n "$NAMESPACE" svc/perses-replay 18096:8080 &
+      PF_PID=$!
+      trap 'kill "$PF_PID" 2>/dev/null || true' EXIT
+
+      for i in $(seq 1 50); do
+        if PROJECT_RESULT=$(curl -sf --max-time 5 "http://localhost:18096/proxy/projects/$NAMESPACE/datasources/replay-project/check") &&
+           GLOBAL_RESULT=$(curl -sf --max-time 5 http://localhost:18096/proxy/globaldatasources/replay-global/check) &&
+           [ "$PROJECT_RESULT" = credentials-verified ] && [ "$GLOBAL_RESULT" = credentials-verified ]; then
+          break
+        fi
+        if [ "$i" -eq 50 ]; then
+          echo "FAIL: Project/global proxy credentials did not recover after switching encryption keys"
+          exit 1
+        fi
+        sleep 3
+      done
+      echo "Project/global proxy credentials verified after switching encryption keys"
+
+      DIRECT_SECRET=$(curl -sf --max-time 5 http://localhost:18096/api/v1/globalsecrets/unrelated-direct-secret)
+
+      test "$DIRECT_SECRET" = "$(kubectl get configmap -n "$NAMESPACE" replay-generations -o jsonpath='{.data.direct-secret}')" || {
+        echo "FAIL: Unrelated direct API secret was modified"
+        exit 1
+      }
+      test "$(kubectl get persesdatasource -n "$NAMESPACE" replay-project -o jsonpath='{.metadata.generation}')" = "$(kubectl get configmap -n "$NAMESPACE" replay-generations -o jsonpath='{.data.project}')"
+      test "$(kubectl get persesglobaldatasource replay-global -o jsonpath='{.metadata.generation}')" = "$(kubectl get configmap -n "$NAMESPACE" replay-generations -o jsonpath='{.data.global}')"
+
+      kubectl get secret -n "$NAMESPACE" perses-replay-encryption-key -o name

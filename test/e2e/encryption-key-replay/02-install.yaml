@@ -1,0 +1,13 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+timeout: 60
+commands:
+  - script: |
+      set -eu
+
+      KEY_DIR=$(mktemp -d)
+      trap 'rm -rf "$KEY_DIR"' EXIT
+      dd if=/dev/urandom of="$KEY_DIR/key" bs=32 count=1 2>/dev/null
+      kubectl create secret generic explicit-replay-key -n "$NAMESPACE" \
+        --from-file=key="$KEY_DIR/key" --dry-run=client -o yaml | kubectl apply -n "$NAMESPACE" -f -
+      kubectl patch perses -n "$NAMESPACE" perses-replay --type=merge -p '{"spec":{"config":{"security":{"encryption_key_file":"/etc/perses/provisioning/secrets/explicit-replay-key-key"}},"provisioning":{"secretRefs":[{"name":"explicit-replay-key","key":"key"}]}}}'

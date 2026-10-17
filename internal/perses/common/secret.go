@@ -192,6 +192,9 @@ func GetTLSCertData(ctx context.Context, client client.Reader, namespace string,
 		if certData == "" {
 			return "", "", fmt.Errorf("no data found for certificate: %s in namespace: %s for %s", cert.CertPath, namespace, name)
 		}
+		if cert.PrivateKeyPath != nil && keyData == "" {
+			return "", "", fmt.Errorf("no data found for private key: %s in namespace: %s for %s", *cert.PrivateKeyPath, namespace, name)
+		}
 
 		return certData, keyData, nil
 	}

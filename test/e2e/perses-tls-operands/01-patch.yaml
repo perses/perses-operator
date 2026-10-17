@@ -2,9 +2,26 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
   - script: |
+      set -eu
+      ORIGINAL_ARGS=$(kubectl get configmap tls-original-manager-args -n "$NAMESPACE" \
+        --ignore-not-found -o jsonpath='{.data.args}')
+      if [ -z "$ORIGINAL_ARGS" ]; then
+        ORIGINAL_ARGS=$(kubectl get deployment perses-operator-controller-manager \
+          -n perses-operator-system \
+          -o jsonpath='{.spec.template.spec.containers[?(@.name=="manager")].args}')
+        # Save once so retries do not capture the temporary TLS arguments.
+        kubectl create configmap tls-original-manager-args -n "$NAMESPACE" \
+          --from-literal=args="$ORIGINAL_ARGS"
+      fi
+
+      TLS_ARGS="${ORIGINAL_ARGS%]}"
+      if [ "$ORIGINAL_ARGS" != '[]' ]; then
+        TLS_ARGS="$TLS_ARGS,"
+      fi
+      TLS_ARGS="$TLS_ARGS\"--tls-min-version=VersionTLS12\",\"--tls-cipher-suites=TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384\",\"--tls-configure-operands\"]"
       kubectl patch deployment perses-operator-controller-manager \
         -n perses-operator-system \
         --type=strategic \
-        -p='{"spec":{"template":{"spec":{"containers":[{"name":"manager","args":["--health-probe-bind-address=:8081","--metrics-bind-address=127.0.0.1:8082","--leader-elect","--tls-min-version=VersionTLS12","--tls-cipher-suites=TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384","--tls-configure-operands"]}]}}}}'
+        -p "{\"spec\":{\"template\":{\"spec\":{\"containers\":[{\"name\":\"manager\",\"args\":$TLS_ARGS}]}}}}"
       kubectl rollout status deployment perses-operator-controller-manager \
         -n perses-operator-system --timeout=120s

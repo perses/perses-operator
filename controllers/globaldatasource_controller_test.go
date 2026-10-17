@@ -100,7 +100,10 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 						Message:            "Available for testing",
 						LastTransitionTime: metav1.Now(),
 					}}
-					return k8sClient.Status().Update(ctx, perses)
+					if err := k8sClient.Status().Update(ctx, perses); err != nil {
+						return err
+					}
+					return readyDatasourceWorkload(ctx, perses)
 				}, time.Second*10, time.Millisecond*250).Should(Succeed())
 			}
 
@@ -146,6 +149,7 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 						Name: GlobalDatasourceName,
 					},
 					Spec: persesv1alpha2.DatasourceSpec{
+						InstanceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"test.perses.dev/datasource": PersesName}},
 						Config: persesv1alpha2.Datasource{
 							Spec: newGlobalDatasource.Spec,
 						},
@@ -271,6 +275,7 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 						Name: GlobalDatasourceName,
 					},
 					Spec: persesv1alpha2.DatasourceSpec{
+						InstanceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"test.perses.dev/datasource": PersesName}},
 						Config: persesv1alpha2.Datasource{
 							Spec: newGlobalDatasource.Spec,
 						},
@@ -391,6 +396,7 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 						Name: GlobalDatasourceName,
 					},
 					Spec: persesv1alpha2.DatasourceSpec{
+						InstanceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"test.perses.dev/datasource": PersesName}},
 						Config: persesv1alpha2.Datasource{
 							Spec: newGlobalDatasource.Spec,
 						},
@@ -441,6 +447,7 @@ var _ = Describe("GlobalDatasource controller", Ordered, func() {
 						Name: GlobalDatasourceName,
 					},
 					Spec: persesv1alpha2.DatasourceSpec{
+						InstanceSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"test.perses.dev/datasource": PersesName}},
 						Config: persesv1alpha2.Datasource{
 							Spec: newGlobalDatasource.Spec,
 						},

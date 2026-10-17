@@ -1,0 +1,19 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |
+      set -eu
+      kubectl get persesdatasource -n "$NAMESPACE" replay-project -o name
+      kubectl get persesglobaldatasource replay-global -o name
+      kubectl port-forward -n "$NAMESPACE" svc/perses-replay 18096:8080 &
+      PF_PID=$!
+      trap 'kill "$PF_PID" 2>/dev/null || true' EXIT
+      for i in $(seq 1 30); do
+        if curl -sf --max-time 5 http://localhost:18096/api/v1/globalsecrets/unrelated-direct-secret >/dev/null; then
+          break
+        fi
+        sleep 1
+      done
+      curl -sf --max-time 5 -X DELETE "http://localhost:18096/api/v1/projects/$NAMESPACE/secrets/replay-project-secret"
+      curl -sf --max-time 5 -X DELETE http://localhost:18096/api/v1/globalsecrets/replay-global-secret
+      echo "Deleted only managed API secrets; datasource CRs retained"

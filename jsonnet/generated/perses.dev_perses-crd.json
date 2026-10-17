@@ -1476,6 +1476,27 @@
                                           "description": "DatasourcePluginKind is the name of the datasource plugin that should be filled when creating datasources found.",
                                           "type": "string"
                                         },
+                                        "default": {
+                                          "description": "Marks the discovered datasource as default",
+                                          "properties": {
+                                            "annotations": {
+                                              "additionalProperties": {
+                                                "type": "string"
+                                              },
+                                              "type": "object"
+                                            },
+                                            "enable": {
+                                              "type": "boolean"
+                                            },
+                                            "labels": {
+                                              "additionalProperties": {
+                                                "type": "string"
+                                              },
+                                              "type": "object"
+                                            }
+                                          },
+                                          "type": "object"
+                                        },
                                         "labels": {
                                           "additionalProperties": {
                                             "type": "string"
@@ -1575,12 +1596,84 @@
                               "disable"
                             ],
                             "type": "object"
+                          },
+                          "proxy": {
+                            "description": "Proxy contains the configuration of the datasource proxy: the destinations it is allowed to reach (whatever the kind of proxy),\nand the configuration specific to each kind of proxy.",
+                            "properties": {
+                              "allowed_hosts": {
+                                "description": "AllowedHosts, when not empty, is the exhaustive list of hosts the proxy can reach.\nAn entry is either an exact hostname (e.g. \"prometheus.example.com\"), a wildcard matching any subdomain\n(e.g. \"*.example.com\") or an IP address. The port must not be provided.",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
+                              "allowed_networks": {
+                                "description": "AllowedNetworks is a list of IP addresses or CIDRs that are allowed.\nWhen an IP address is part of both an allowed and a denied network (the built-in ones, DeniedNetworks and\nDenyPrivateNetworks), the most specific network wins (on equal prefix lengths, the allowed network wins).\nFor example, allowing 10.0.0.0/8 doesn't allow the Kubernetes API service IP, and allowing 169.254.0.0/16 doesn't\nallow 169.254.169.254 (both denied as single IP addresses), while allowing these IP addresses explicitly does.\nUse [\"127.0.0.0/8\", \"::1/128\"] if your datasources are running on the same host as Perses.",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
+                              "denied_networks": {
+                                "description": "DeniedNetworks is a list of IP addresses or CIDRs that are denied, in addition to the built-in ones.",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
+                              "deny_private_networks": {
+                                "description": "DenyPrivateNetworks when true denies the private networks as well:\n10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 100.64.0.0/10, fc00::/7 and fec0::/10.",
+                                "type": "boolean"
+                              },
+                              "http": {
+                                "description": "HTTP contains the configuration specific to the proxy of the datasources of kind HTTPProxy.",
+                                "properties": {
+                                  "allowed_schemes": {
+                                    "description": "AllowedSchemes is the list of URL schemes an HTTP datasource is allowed to use.\nAccepted values are \"http\" and \"https\". Default: [\"http\", \"https\"].",
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "type": "array"
+                                  },
+                                  "default_timeout": {
+                                    "description": "DefaultTimeout is the maximum amount of time allowed to establish a connection to a datasource,\nwhen the datasource doesn't define its own timeout (or sets it to 0).\nDefault: 30s, or MaxTimeout if it is lower",
+                                    "format": "duration",
+                                    "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
+                                    "type": "string"
+                                  },
+                                  "max_conns_per_host": {
+                                    "description": "MaxConnsPerHost limits the total number of connections (in use and idle) that Perses opens,\nfor a given datasource, to a given host.\nOnce the limit is reached, the new requests wait until a connection is available,\nor until they are canceled.\nIt can be used to protect Perses (file descriptors) and the datasources from a burst of queries.\nZero means no limit.",
+                                    "type": "integer"
+                                  },
+                                  "max_idle_conns": {
+                                    "description": "MaxIdleConns limits the number of idle connections kept open, for a given datasource, across all hosts.\nIdle connections are reused by the next requests, saving the TCP and TLS handshakes,\nbut each of them holds a socket and some memory.\nDefault: 100",
+                                    "type": "integer"
+                                  },
+                                  "max_idle_conns_per_host": {
+                                    "description": "MaxIdleConnsPerHost limits the number of idle connections kept open, for a given datasource, to a given host.\nA datasource usually talks to a single host, so it is in practice the number of idle connections kept per datasource.\nDefault: 10",
+                                    "type": "integer"
+                                  },
+                                  "max_timeout": {
+                                    "description": "MaxTimeout is the highest timeout a datasource can define. A datasource can only lower the timeout, never go beyond it.\nA long timeout keeps goroutines and sockets busy against unreachable hosts,\nso letting the users increase it freely would expose Perses to resource exhaustion.\nDefault: the value of DefaultTimeout",
+                                    "format": "duration",
+                                    "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
+                                    "type": "string"
+                                  }
+                                },
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "deny_private_networks"
+                            ],
+                            "type": "object"
                           }
                         },
                         "required": [
                           "disable_local",
                           "global",
-                          "project"
+                          "project",
+                          "proxy"
                         ],
                         "type": "object"
                       },
@@ -1613,6 +1706,24 @@
                       "frontend": {
                         "description": "Frontend contains any config that will be used by the frontend itself.",
                         "properties": {
+                          "auto_refresh": {
+                            "description": "AutoRefresh contains the auto-refresh configuration for dashboards",
+                            "properties": {
+                              "disable": {
+                                "type": "boolean"
+                              },
+                              "options": {
+                                "items": {
+                                  "description": "DurationString is a string that represents a duration, such as \"1h\", \"30m\", \"15s\", etc.\nIt is used to unmarshal a duration string from JSON or YAML, and validate that it is a valid duration string.\n\nNot converting the duration string into a time.Duration type allows us to avoid the issue of changing the initial input with an alias.\nThis is something that happens when we use Duration type, because when the duration is unmarshalled then marshaled again, the input can be changed with an equivalent duration.\nFor example \"14d\" will be changed to \"2w\".\n\nSo, use DurationString instead of Duration when you want to preserve the original input string.\nIf, for any reason, you need to convert the DurationString to a time.Duration, you can use the ParseDuration function.",
+                                  "format": "duration",
+                                  "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              }
+                            },
+                            "type": "object"
+                          },
                           "banner": {
                             "description": "BannerInfo contains the content to be display in a banner at the top of each page along with the severity of the information",
                             "properties": {
@@ -1629,12 +1740,31 @@
                             ],
                             "type": "object"
                           },
+                          "default_user_preferences": {
+                            "description": "DefaultUserPreferences contains server-wide defaults for user preferences.",
+                            "properties": {
+                              "rows_per_page": {
+                                "type": "integer"
+                              },
+                              "theme": {
+                                "type": "string"
+                              },
+                              "timezone": {
+                                "type": "string"
+                              }
+                            },
+                            "type": "object"
+                          },
                           "disable": {
                             "description": "When it is true, Perses won't serve the frontend anymore, and any other config set here will be ignored",
                             "type": "boolean"
                           },
                           "enable_keyboard_shortcuts": {
                             "description": "EnableKeyboardShortcuts enables keyboard shortcuts in the UI. Defaults to true when omitted.",
+                            "type": "boolean"
+                          },
+                          "enable_lock_mode": {
+                            "description": "EnablePluginVersioning enables the dashboard \"lock\" button that pins every plugin to its latest available\nversion. Defaults to false (feature hidden) when omitted.",
                             "type": "boolean"
                           },
                           "explorer": {
@@ -1650,22 +1780,35 @@
                             "type": "object"
                           },
                           "important_dashboards": {
-                            "description": "ImportantDashboards contains important dashboard selectors",
+                            "description": "ImportantDashboards contains grouped important dashboard selectors.\nEach selector can target one dashboard or an entire project when dashboard is omitted.",
                             "items": {
                               "properties": {
-                                "dashboard": {
-                                  "description": "Dashboard is the name of the dashboard (dashboard.metadata.name)",
+                                "dashboards": {
+                                  "items": {
+                                    "properties": {
+                                      "dashboard": {
+                                        "description": "Dashboard is the name of the dashboard (dashboard.metadata.name).\nWhen omitted, all dashboards from the project are considered important.",
+                                        "type": "string"
+                                      },
+                                      "project": {
+                                        "description": "Project is the name of the project (dashboard.metadata.project)",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "project"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "type": "array"
+                                },
+                                "description": {
                                   "type": "string"
                                 },
-                                "project": {
-                                  "description": "Project is the name of the project (dashboard.metadata.project)",
+                                "title": {
                                   "type": "string"
                                 }
                               },
-                              "required": [
-                                "dashboard",
-                                "project"
-                              ],
                               "type": "object"
                             },
                             "type": "array"
@@ -1747,6 +1890,10 @@
                       "provisioning": {
                         "description": "Provisioning contains the provisioning config that can be used if you want to provide default resources.",
                         "properties": {
+                          "enable_watch": {
+                            "description": "EnableWatch can be used to update provisioning on change instead of waiting for the configured interval.\nInterval is still used to reconcile the state.",
+                            "type": "boolean"
+                          },
                           "folders": {
                             "items": {
                               "type": "string"
@@ -1781,6 +1928,36 @@
                           },
                           "variables_path": {
                             "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "search": {
+                        "description": "Search contains the config for the search engine and the index in memory.",
+                        "properties": {
+                          "check_latest_update_interval": {
+                            "description": "CheckLatestUpdateInterval is the interval when it checks if the index cache needs to be refreshed with db content. Only for SQL database setup.",
+                            "format": "duration",
+                            "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
+                            "type": "string"
+                          },
+                          "excluded_chars": {
+                            "description": "ExcludedChars is the list of characters that will be excluded from the search engine.",
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "index_keys": {
+                            "properties": {
+                              "dashboard": {
+                                "items": {
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              }
+                            },
+                            "type": "object"
                           }
                         },
                         "type": "object"
@@ -1824,6 +2001,47 @@
                                         "auth_url": {
                                           "format": "uri",
                                           "type": "string"
+                                        },
+                                        "claims": {
+                                          "description": "Claims lists upstream token claim fields that Perses should persist in the\nPerses JWT and optionally map to Perses roles.",
+                                          "items": {
+                                            "description": "ProviderClaimConfig describes one claim field that Perses should persist\nfrom the upstream access token, and optionally map to Perses roles.",
+                                            "properties": {
+                                              "claim_name": {
+                                                "description": "ClaimName is the JSON field name in the upstream access token (e.g. \"roles\", \"groups\").",
+                                                "type": "string"
+                                              },
+                                              "mappings": {
+                                                "description": "Mappings maps individual claim values to Perses roles.",
+                                                "items": {
+                                                  "description": "ClaimMapping maps a single upstream token claim value to a Perses role.\nWhen Project is empty, RoleName is resolved as a GlobalRole (global permissions).\nWhen Project is non-empty, RoleName is resolved as a project-scoped Role within that project.",
+                                                  "properties": {
+                                                    "claim_value": {
+                                                      "type": "string"
+                                                    },
+                                                    "project": {
+                                                      "description": "Project is optional. When set, maps the claim value to a project-scoped Role.\nWhen empty, maps to a GlobalRole.",
+                                                      "type": "string"
+                                                    },
+                                                    "role_name": {
+                                                      "type": "string"
+                                                    }
+                                                  },
+                                                  "required": [
+                                                    "claim_value",
+                                                    "role_name"
+                                                  ],
+                                                  "type": "object"
+                                                },
+                                                "type": "array"
+                                              }
+                                            },
+                                            "required": [
+                                              "claim_name"
+                                            ],
+                                            "type": "object"
+                                          },
+                                          "type": "array"
                                         },
                                         "client_credentials": {
                                           "properties": {
@@ -1949,8 +2167,7 @@
                                             }
                                           },
                                           "required": [
-                                            "timeout",
-                                            "tls_config"
+                                            "timeout"
                                           ],
                                           "type": "object"
                                         },
@@ -1996,6 +2213,47 @@
                                   "oidc": {
                                     "items": {
                                       "properties": {
+                                        "claims": {
+                                          "description": "Claims lists upstream token claim fields that Perses should persist in the\nPerses JWT and optionally map to Perses roles.",
+                                          "items": {
+                                            "description": "ProviderClaimConfig describes one claim field that Perses should persist\nfrom the upstream access token, and optionally map to Perses roles.",
+                                            "properties": {
+                                              "claim_name": {
+                                                "description": "ClaimName is the JSON field name in the upstream access token (e.g. \"roles\", \"groups\").",
+                                                "type": "string"
+                                              },
+                                              "mappings": {
+                                                "description": "Mappings maps individual claim values to Perses roles.",
+                                                "items": {
+                                                  "description": "ClaimMapping maps a single upstream token claim value to a Perses role.\nWhen Project is empty, RoleName is resolved as a GlobalRole (global permissions).\nWhen Project is non-empty, RoleName is resolved as a project-scoped Role within that project.",
+                                                  "properties": {
+                                                    "claim_value": {
+                                                      "type": "string"
+                                                    },
+                                                    "project": {
+                                                      "description": "Project is optional. When set, maps the claim value to a project-scoped Role.\nWhen empty, maps to a GlobalRole.",
+                                                      "type": "string"
+                                                    },
+                                                    "role_name": {
+                                                      "type": "string"
+                                                    }
+                                                  },
+                                                  "required": [
+                                                    "claim_value",
+                                                    "role_name"
+                                                  ],
+                                                  "type": "object"
+                                                },
+                                                "type": "array"
+                                              }
+                                            },
+                                            "required": [
+                                              "claim_name"
+                                            ],
+                                            "type": "object"
+                                          },
+                                          "type": "array"
+                                        },
                                         "client_credentials": {
                                           "properties": {
                                             "client_id": {
@@ -2031,6 +2289,10 @@
                                           "type": "string"
                                         },
                                         "client_secret_file": {
+                                          "type": "string"
+                                        },
+                                        "custom_login_property": {
+                                          "description": "CustomLoginProperty is the name of the userinfo property to use as the \"login\" of the user\n(e.g. \"preferred_username\"). It must be one of the properties Perses already extracts from\nthe userinfo response. If not set or not found in the response, it falls back to the email,\nthen to the subject.",
                                           "type": "string"
                                         },
                                         "device_code": {
@@ -2120,8 +2382,7 @@
                                             }
                                           },
                                           "required": [
-                                            "timeout",
-                                            "tls_config"
+                                            "timeout"
                                           ],
                                           "type": "object"
                                         },
@@ -2385,7 +2646,7 @@
                             "type": "boolean"
                           },
                           "encryption_key": {
-                            "description": "EncryptionKey is the secret key used to encrypt and decrypt sensitive data\nstored in the database such as the password of the basic auth for a datasource.\nNote that if it is not provided, it will use a default value.\nOn a production instance, you should set this key.\nAlso note the key size must be exactly 32 bytes long as we are using AES-256 to encrypt the data.",
+                            "description": "EncryptionKey is the secret key used to encrypt and decrypt sensitive data\nstored in the database such as the password of the basic auth for a datasource.\nIn case authentication is enabled, it is also used to encrypt the access and refresh token used for authentication.\nTherefore, if auth is enabled, and you did not set this key, Perses will not start and will return an error.\nAlso note the key size must be exactly 32 bytes long as we are using AES-256 to encrypt the data.",
                             "type": "string"
                           },
                           "encryption_key_file": {
@@ -2395,6 +2656,13 @@
                           "readonly": {
                             "description": "Readonly will deactivate any HTTP POST, PUT, DELETE endpoint",
                             "type": "boolean"
+                          },
+                          "secret_file_allowed_directories": {
+                            "description": "SecretFileAllowedDirectories is the list of absolute directories from which the Secrets and GlobalSecrets\nare allowed to read files (basicAuth.passwordFile, authorization.credentialsFile, oauth.clientSecretFile,\ntlsConfig.caFile/certFile/keyFile).\nWhen empty (default), any file reference in a Secret or a GlobalSecret is rejected.\nThis prevents a user allowed to create a secret from exfiltrating arbitrary files from the server.",
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
                           }
                         },
                         "required": [
@@ -4552,6 +4820,27 @@
                                           "description": "DatasourcePluginKind is the name of the datasource plugin that should be filled when creating datasources found.",
                                           "type": "string"
                                         },
+                                        "default": {
+                                          "description": "Marks the discovered datasource as default",
+                                          "properties": {
+                                            "annotations": {
+                                              "additionalProperties": {
+                                                "type": "string"
+                                              },
+                                              "type": "object"
+                                            },
+                                            "enable": {
+                                              "type": "boolean"
+                                            },
+                                            "labels": {
+                                              "additionalProperties": {
+                                                "type": "string"
+                                              },
+                                              "type": "object"
+                                            }
+                                          },
+                                          "type": "object"
+                                        },
                                         "labels": {
                                           "additionalProperties": {
                                             "type": "string"
@@ -4651,12 +4940,84 @@
                               "disable"
                             ],
                             "type": "object"
+                          },
+                          "proxy": {
+                            "description": "Proxy contains the configuration of the datasource proxy: the destinations it is allowed to reach (whatever the kind of proxy),\nand the configuration specific to each kind of proxy.",
+                            "properties": {
+                              "allowed_hosts": {
+                                "description": "AllowedHosts, when not empty, is the exhaustive list of hosts the proxy can reach.\nAn entry is either an exact hostname (e.g. \"prometheus.example.com\"), a wildcard matching any subdomain\n(e.g. \"*.example.com\") or an IP address. The port must not be provided.",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
+                              "allowed_networks": {
+                                "description": "AllowedNetworks is a list of IP addresses or CIDRs that are allowed.\nWhen an IP address is part of both an allowed and a denied network (the built-in ones, DeniedNetworks and\nDenyPrivateNetworks), the most specific network wins (on equal prefix lengths, the allowed network wins).\nFor example, allowing 10.0.0.0/8 doesn't allow the Kubernetes API service IP, and allowing 169.254.0.0/16 doesn't\nallow 169.254.169.254 (both denied as single IP addresses), while allowing these IP addresses explicitly does.\nUse [\"127.0.0.0/8\", \"::1/128\"] if your datasources are running on the same host as Perses.",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
+                              "denied_networks": {
+                                "description": "DeniedNetworks is a list of IP addresses or CIDRs that are denied, in addition to the built-in ones.",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              },
+                              "deny_private_networks": {
+                                "description": "DenyPrivateNetworks when true denies the private networks as well:\n10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 100.64.0.0/10, fc00::/7 and fec0::/10.",
+                                "type": "boolean"
+                              },
+                              "http": {
+                                "description": "HTTP contains the configuration specific to the proxy of the datasources of kind HTTPProxy.",
+                                "properties": {
+                                  "allowed_schemes": {
+                                    "description": "AllowedSchemes is the list of URL schemes an HTTP datasource is allowed to use.\nAccepted values are \"http\" and \"https\". Default: [\"http\", \"https\"].",
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "type": "array"
+                                  },
+                                  "default_timeout": {
+                                    "description": "DefaultTimeout is the maximum amount of time allowed to establish a connection to a datasource,\nwhen the datasource doesn't define its own timeout (or sets it to 0).\nDefault: 30s, or MaxTimeout if it is lower",
+                                    "format": "duration",
+                                    "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
+                                    "type": "string"
+                                  },
+                                  "max_conns_per_host": {
+                                    "description": "MaxConnsPerHost limits the total number of connections (in use and idle) that Perses opens,\nfor a given datasource, to a given host.\nOnce the limit is reached, the new requests wait until a connection is available,\nor until they are canceled.\nIt can be used to protect Perses (file descriptors) and the datasources from a burst of queries.\nZero means no limit.",
+                                    "type": "integer"
+                                  },
+                                  "max_idle_conns": {
+                                    "description": "MaxIdleConns limits the number of idle connections kept open, for a given datasource, across all hosts.\nIdle connections are reused by the next requests, saving the TCP and TLS handshakes,\nbut each of them holds a socket and some memory.\nDefault: 100",
+                                    "type": "integer"
+                                  },
+                                  "max_idle_conns_per_host": {
+                                    "description": "MaxIdleConnsPerHost limits the number of idle connections kept open, for a given datasource, to a given host.\nA datasource usually talks to a single host, so it is in practice the number of idle connections kept per datasource.\nDefault: 10",
+                                    "type": "integer"
+                                  },
+                                  "max_timeout": {
+                                    "description": "MaxTimeout is the highest timeout a datasource can define. A datasource can only lower the timeout, never go beyond it.\nA long timeout keeps goroutines and sockets busy against unreachable hosts,\nso letting the users increase it freely would expose Perses to resource exhaustion.\nDefault: the value of DefaultTimeout",
+                                    "format": "duration",
+                                    "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
+                                    "type": "string"
+                                  }
+                                },
+                                "type": "object"
+                              }
+                            },
+                            "required": [
+                              "deny_private_networks"
+                            ],
+                            "type": "object"
                           }
                         },
                         "required": [
                           "disable_local",
                           "global",
-                          "project"
+                          "project",
+                          "proxy"
                         ],
                         "type": "object"
                       },
@@ -4689,6 +5050,24 @@
                       "frontend": {
                         "description": "Frontend contains any config that will be used by the frontend itself.",
                         "properties": {
+                          "auto_refresh": {
+                            "description": "AutoRefresh contains the auto-refresh configuration for dashboards",
+                            "properties": {
+                              "disable": {
+                                "type": "boolean"
+                              },
+                              "options": {
+                                "items": {
+                                  "description": "DurationString is a string that represents a duration, such as \"1h\", \"30m\", \"15s\", etc.\nIt is used to unmarshal a duration string from JSON or YAML, and validate that it is a valid duration string.\n\nNot converting the duration string into a time.Duration type allows us to avoid the issue of changing the initial input with an alias.\nThis is something that happens when we use Duration type, because when the duration is unmarshalled then marshaled again, the input can be changed with an equivalent duration.\nFor example \"14d\" will be changed to \"2w\".\n\nSo, use DurationString instead of Duration when you want to preserve the original input string.\nIf, for any reason, you need to convert the DurationString to a time.Duration, you can use the ParseDuration function.",
+                                  "format": "duration",
+                                  "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              }
+                            },
+                            "type": "object"
+                          },
                           "banner": {
                             "description": "BannerInfo contains the content to be display in a banner at the top of each page along with the severity of the information",
                             "properties": {
@@ -4705,12 +5084,31 @@
                             ],
                             "type": "object"
                           },
+                          "default_user_preferences": {
+                            "description": "DefaultUserPreferences contains server-wide defaults for user preferences.",
+                            "properties": {
+                              "rows_per_page": {
+                                "type": "integer"
+                              },
+                              "theme": {
+                                "type": "string"
+                              },
+                              "timezone": {
+                                "type": "string"
+                              }
+                            },
+                            "type": "object"
+                          },
                           "disable": {
                             "description": "When it is true, Perses won't serve the frontend anymore, and any other config set here will be ignored",
                             "type": "boolean"
                           },
                           "enable_keyboard_shortcuts": {
                             "description": "EnableKeyboardShortcuts enables keyboard shortcuts in the UI. Defaults to true when omitted.",
+                            "type": "boolean"
+                          },
+                          "enable_lock_mode": {
+                            "description": "EnablePluginVersioning enables the dashboard \"lock\" button that pins every plugin to its latest available\nversion. Defaults to false (feature hidden) when omitted.",
                             "type": "boolean"
                           },
                           "explorer": {
@@ -4726,22 +5124,35 @@
                             "type": "object"
                           },
                           "important_dashboards": {
-                            "description": "ImportantDashboards contains important dashboard selectors",
+                            "description": "ImportantDashboards contains grouped important dashboard selectors.\nEach selector can target one dashboard or an entire project when dashboard is omitted.",
                             "items": {
                               "properties": {
-                                "dashboard": {
-                                  "description": "Dashboard is the name of the dashboard (dashboard.metadata.name)",
+                                "dashboards": {
+                                  "items": {
+                                    "properties": {
+                                      "dashboard": {
+                                        "description": "Dashboard is the name of the dashboard (dashboard.metadata.name).\nWhen omitted, all dashboards from the project are considered important.",
+                                        "type": "string"
+                                      },
+                                      "project": {
+                                        "description": "Project is the name of the project (dashboard.metadata.project)",
+                                        "type": "string"
+                                      }
+                                    },
+                                    "required": [
+                                      "project"
+                                    ],
+                                    "type": "object"
+                                  },
+                                  "type": "array"
+                                },
+                                "description": {
                                   "type": "string"
                                 },
-                                "project": {
-                                  "description": "Project is the name of the project (dashboard.metadata.project)",
+                                "title": {
                                   "type": "string"
                                 }
                               },
-                              "required": [
-                                "dashboard",
-                                "project"
-                              ],
                               "type": "object"
                             },
                             "type": "array"
@@ -4823,6 +5234,10 @@
                       "provisioning": {
                         "description": "Provisioning contains the provisioning config that can be used if you want to provide default resources.",
                         "properties": {
+                          "enable_watch": {
+                            "description": "EnableWatch can be used to update provisioning on change instead of waiting for the configured interval.\nInterval is still used to reconcile the state.",
+                            "type": "boolean"
+                          },
                           "folders": {
                             "items": {
                               "type": "string"
@@ -4857,6 +5272,36 @@
                           },
                           "variables_path": {
                             "type": "string"
+                          }
+                        },
+                        "type": "object"
+                      },
+                      "search": {
+                        "description": "Search contains the config for the search engine and the index in memory.",
+                        "properties": {
+                          "check_latest_update_interval": {
+                            "description": "CheckLatestUpdateInterval is the interval when it checks if the index cache needs to be refreshed with db content. Only for SQL database setup.",
+                            "format": "duration",
+                            "pattern": "^(([0-9]+)y)?(([0-9]+)w)?(([0-9]+)d)?(([0-9]+)h)?(([0-9]+)m)?(([0-9]+)s)?(([0-9]+)ms)?$",
+                            "type": "string"
+                          },
+                          "excluded_chars": {
+                            "description": "ExcludedChars is the list of characters that will be excluded from the search engine.",
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
+                          },
+                          "index_keys": {
+                            "properties": {
+                              "dashboard": {
+                                "items": {
+                                  "type": "string"
+                                },
+                                "type": "array"
+                              }
+                            },
+                            "type": "object"
                           }
                         },
                         "type": "object"
@@ -4900,6 +5345,47 @@
                                         "auth_url": {
                                           "format": "uri",
                                           "type": "string"
+                                        },
+                                        "claims": {
+                                          "description": "Claims lists upstream token claim fields that Perses should persist in the\nPerses JWT and optionally map to Perses roles.",
+                                          "items": {
+                                            "description": "ProviderClaimConfig describes one claim field that Perses should persist\nfrom the upstream access token, and optionally map to Perses roles.",
+                                            "properties": {
+                                              "claim_name": {
+                                                "description": "ClaimName is the JSON field name in the upstream access token (e.g. \"roles\", \"groups\").",
+                                                "type": "string"
+                                              },
+                                              "mappings": {
+                                                "description": "Mappings maps individual claim values to Perses roles.",
+                                                "items": {
+                                                  "description": "ClaimMapping maps a single upstream token claim value to a Perses role.\nWhen Project is empty, RoleName is resolved as a GlobalRole (global permissions).\nWhen Project is non-empty, RoleName is resolved as a project-scoped Role within that project.",
+                                                  "properties": {
+                                                    "claim_value": {
+                                                      "type": "string"
+                                                    },
+                                                    "project": {
+                                                      "description": "Project is optional. When set, maps the claim value to a project-scoped Role.\nWhen empty, maps to a GlobalRole.",
+                                                      "type": "string"
+                                                    },
+                                                    "role_name": {
+                                                      "type": "string"
+                                                    }
+                                                  },
+                                                  "required": [
+                                                    "claim_value",
+                                                    "role_name"
+                                                  ],
+                                                  "type": "object"
+                                                },
+                                                "type": "array"
+                                              }
+                                            },
+                                            "required": [
+                                              "claim_name"
+                                            ],
+                                            "type": "object"
+                                          },
+                                          "type": "array"
                                         },
                                         "client_credentials": {
                                           "properties": {
@@ -5025,8 +5511,7 @@
                                             }
                                           },
                                           "required": [
-                                            "timeout",
-                                            "tls_config"
+                                            "timeout"
                                           ],
                                           "type": "object"
                                         },
@@ -5072,6 +5557,47 @@
                                   "oidc": {
                                     "items": {
                                       "properties": {
+                                        "claims": {
+                                          "description": "Claims lists upstream token claim fields that Perses should persist in the\nPerses JWT and optionally map to Perses roles.",
+                                          "items": {
+                                            "description": "ProviderClaimConfig describes one claim field that Perses should persist\nfrom the upstream access token, and optionally map to Perses roles.",
+                                            "properties": {
+                                              "claim_name": {
+                                                "description": "ClaimName is the JSON field name in the upstream access token (e.g. \"roles\", \"groups\").",
+                                                "type": "string"
+                                              },
+                                              "mappings": {
+                                                "description": "Mappings maps individual claim values to Perses roles.",
+                                                "items": {
+                                                  "description": "ClaimMapping maps a single upstream token claim value to a Perses role.\nWhen Project is empty, RoleName is resolved as a GlobalRole (global permissions).\nWhen Project is non-empty, RoleName is resolved as a project-scoped Role within that project.",
+                                                  "properties": {
+                                                    "claim_value": {
+                                                      "type": "string"
+                                                    },
+                                                    "project": {
+                                                      "description": "Project is optional. When set, maps the claim value to a project-scoped Role.\nWhen empty, maps to a GlobalRole.",
+                                                      "type": "string"
+                                                    },
+                                                    "role_name": {
+                                                      "type": "string"
+                                                    }
+                                                  },
+                                                  "required": [
+                                                    "claim_value",
+                                                    "role_name"
+                                                  ],
+                                                  "type": "object"
+                                                },
+                                                "type": "array"
+                                              }
+                                            },
+                                            "required": [
+                                              "claim_name"
+                                            ],
+                                            "type": "object"
+                                          },
+                                          "type": "array"
+                                        },
                                         "client_credentials": {
                                           "properties": {
                                             "client_id": {
@@ -5107,6 +5633,10 @@
                                           "type": "string"
                                         },
                                         "client_secret_file": {
+                                          "type": "string"
+                                        },
+                                        "custom_login_property": {
+                                          "description": "CustomLoginProperty is the name of the userinfo property to use as the \"login\" of the user\n(e.g. \"preferred_username\"). It must be one of the properties Perses already extracts from\nthe userinfo response. If not set or not found in the response, it falls back to the email,\nthen to the subject.",
                                           "type": "string"
                                         },
                                         "device_code": {
@@ -5196,8 +5726,7 @@
                                             }
                                           },
                                           "required": [
-                                            "timeout",
-                                            "tls_config"
+                                            "timeout"
                                           ],
                                           "type": "object"
                                         },
@@ -5461,7 +5990,7 @@
                             "type": "boolean"
                           },
                           "encryption_key": {
-                            "description": "EncryptionKey is the secret key used to encrypt and decrypt sensitive data\nstored in the database such as the password of the basic auth for a datasource.\nNote that if it is not provided, it will use a default value.\nOn a production instance, you should set this key.\nAlso note the key size must be exactly 32 bytes long as we are using AES-256 to encrypt the data.",
+                            "description": "EncryptionKey is the secret key used to encrypt and decrypt sensitive data\nstored in the database such as the password of the basic auth for a datasource.\nIn case authentication is enabled, it is also used to encrypt the access and refresh token used for authentication.\nTherefore, if auth is enabled, and you did not set this key, Perses will not start and will return an error.\nAlso note the key size must be exactly 32 bytes long as we are using AES-256 to encrypt the data.",
                             "type": "string"
                           },
                           "encryption_key_file": {
@@ -5471,6 +6000,13 @@
                           "readonly": {
                             "description": "Readonly will deactivate any HTTP POST, PUT, DELETE endpoint",
                             "type": "boolean"
+                          },
+                          "secret_file_allowed_directories": {
+                            "description": "SecretFileAllowedDirectories is the list of absolute directories from which the Secrets and GlobalSecrets\nare allowed to read files (basicAuth.passwordFile, authorization.credentialsFile, oauth.clientSecretFile,\ntlsConfig.caFile/certFile/keyFile).\nWhen empty (default), any file reference in a Secret or a GlobalSecret is rejected.\nThis prevents a user allowed to create a secret from exfiltrating arbitrary files from the server.",
+                            "items": {
+                              "type": "string"
+                            },
+                            "type": "array"
                           }
                         },
                         "required": [

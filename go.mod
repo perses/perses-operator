@@ -1,6 +1,6 @@
 module github.com/rhobs/perses-operator
 
-go 1.27.1
+go 1.27.2
 
 require (
 	github.com/brunoga/deep v1.3.1
@@ -10,7 +10,7 @@ require (
 	github.com/openshift/controller-runtime-common v0.0.0-20260428152732-64ee174f5e2e
 	github.com/openshift/library-go v0.0.0-20260615113748-bc9d4056464b
 	github.com/perses/common v0.31.2
-	github.com/perses/spec v0.3.0-rc.0
+	github.com/perses/spec v0.3.0-rc.1
 	github.com/prometheus/client_golang v1.24.1
 	github.com/rhobs/perses v0.0.0-20261014180603-9f3f7bdb8409
 	github.com/sirupsen/logrus v1.10.2

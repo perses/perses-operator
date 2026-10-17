@@ -80,14 +80,14 @@ spec:
       privateKeyPath: tls.key
 
   replicas: 1
-  
+
   # Optional resource limits and requests
   resources:
     limits:
       memory: 500Mi
     requests:
       memory:
-      
+
   containerPort: 8080
 
   # Optional log level for Perses server
@@ -259,7 +259,7 @@ The Perses operator maps Perses projects to Kubernetes namespaces. When you crea
 
 When reconciling Dashboards or Datasources the Perses operator synchronizes the namespace into a Perses project across all Perses servers in the cluster.
 
-By default the operator re-syncs `PersesDashboard`, `PersesDatasource`, and `PersesGlobalDatasource` resources to the Perses API every **5 minutes** (`--resource-sync-interval`). That heals drift when a resource is deleted or changed outside Kubernetes (for example from the Perses UI) while the CR still exists. Set `--resource-sync-interval=0` to disable periodic sync and only reconcile on CR or Perses-instance events.
+By default, the operator re-syncs `PersesDashboard`, `PersesDatasource`, and `PersesGlobalDatasource` resources to the Perses API every **5 minutes** (`--resource-sync-interval`) to repair external changes or deletions. Set the interval to `0` to disable periodic sync, except for datasources with managed credentials, which retain a five-minute interval.
 
 ## Tags
 
@@ -286,12 +286,22 @@ The same annotation works on `PersesDatasource` and `PersesGlobalDatasource` res
 
 Tag values must follow Perses tag validation rules: lowercase letters, numbers, spaces, hyphens, and underscores only, with a maximum of 50 characters per tag and 20 tags total.
 
+## Encryption keys
+
+Without an explicit key, the operator creates and reuses an immutable Secret named `<instance>-encryption-key` with a random **32-byte** `encryption-key` entry, even when authentication is disabled. Explicit key/key-file settings, including environment overrides, take precedence.
+
+Back up the key **with its matching database**: deleting a Perses CR can delete its key Secret. Missing or replaced generated keys stop reconciliation rather than being regenerated. Instances sharing a database must use the same explicit key.
+
+Key rotation invalidates login sessions and requires coordinated backend restarts. Use a maintenance window for multi-replica deployments; recovery is not atomic or guaranteed zero-downtime.
+
 ## Secrets
 
-Perses secrets are exclusively managed by the Perses Operator with
+The operator manages Perses API secrets referenced by
 [`PersesDatasource`](#persesdatasource) and
 [`PersesGlobalDatasource`](#persesglobaldatasource) resources
-under the `client` field for proxy configuration.
+under the `client` field for proxy configuration. Secrets created directly in Perses remain the administrator's responsibility.
+
+Managed API secrets are resynced on every datasource reconciliation, even when configuration is unchanged. Repair after deletion or key changes waits for workload readiness and the next successful sync.
 
 The api supports three types of secret sources:
 

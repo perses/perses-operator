@@ -37,7 +37,7 @@ import (
 var dlog = logger.WithField("module", "deployment_controller")
 
 func (r *PersesReconciler) reconcileDeployment(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	perses, ok := persesFromContext(ctx)
+	perses, ok := runtimePersesFromContext(ctx)
 	if !ok {
 		dlog.Error("perses not found in context")
 		return subreconciler.RequeueWithError(fmt.Errorf("perses not found in context"))
