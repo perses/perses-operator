@@ -167,6 +167,32 @@ var _ = Describe("Perses controller", func() {
 				return k8sClient.Get(ctx, configMapNamespaceName, found)
 			}, time.Minute*3, time.Second).Should(Succeed())
 
+			By("Checking that the API persisted the immutable key and initialization UID without changing the user spec")
+			Eventually(func() error {
+				key := &corev1.Secret{}
+				if err := k8sClient.Get(ctx, types.NamespacedName{Name: common.GetEncryptionKeyName(PersesName), Namespace: persesNamespace}, key); err != nil {
+					return err
+				}
+				fresh := &persesv1alpha2.Perses{}
+				if err := k8sClient.Get(ctx, typeNamespaceName, fresh); err != nil {
+					return err
+				}
+				if key.UID == "" || fresh.Annotations[common.EncryptionKeyInitializedAnnotation] != string(key.UID) || !ptr.Deref(key.Immutable, false) || len(key.Data[common.EncryptionKeyDataKey]) != 32 {
+					return fmt.Errorf("generated key initialization is not persisted")
+				}
+				if fresh.Spec.Config.Security.EncryptionKeyFile != "" || len(fresh.Spec.Config.Security.EncryptionKey) != 0 {
+					return fmt.Errorf("generated configuration leaked into CR spec")
+				}
+				cm := &corev1.ConfigMap{}
+				if err := k8sClient.Get(ctx, configMapNamespaceName, cm); err != nil {
+					return err
+				}
+				if !strings.Contains(cm.Data["config.yaml"], common.EncryptionKeyFilePath) || strings.Contains(cm.Data["config.yaml"], string(key.Data[common.EncryptionKeyDataKey])) {
+					return fmt.Errorf("invalid runtime key rendering")
+				}
+				return nil
+			}, time.Minute, time.Second).Should(Succeed())
+
 			By("Checking if StatefulSet was successfully created in the reconciliation")
 			Eventually(func() error {
 				found := &appsv1.StatefulSet{}

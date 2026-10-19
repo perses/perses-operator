@@ -309,8 +309,13 @@ e2e-versions: ## Display versions used for e2e testing.
 
 .PHONY: e2e-create-cluster
 e2e-create-cluster: ## Create a kind cluster for e2e tests.
-	@echo ">> Creating kind cluster with image $(KIND_NODE_IMAGE)..."
-	kind create cluster --name $(KIND_CLUSTER_NAME) --image $(KIND_NODE_IMAGE) --wait 5m 2>/dev/null || true
+	@clusters=$$(kind get clusters) || exit $$?; \
+	if printf '%s\n' "$$clusters" | grep -Fxq -- "$(KIND_CLUSTER_NAME)"; then \
+		echo ">> Reusing existing kind cluster $(KIND_CLUSTER_NAME)..."; \
+	else \
+		echo ">> Creating kind cluster with image $(KIND_NODE_IMAGE)..."; \
+		kind create cluster --name "$(KIND_CLUSTER_NAME)" --image "$(KIND_NODE_IMAGE)" --wait 5m; \
+	fi
 
 .PHONY: e2e-deploy
 e2e-deploy: manifests generate kustomize check-container-runtime ## Build operator image, load into kind and deploy.
