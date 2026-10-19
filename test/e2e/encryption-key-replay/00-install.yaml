@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: replay-credentials
+stringData:
+  password: fixture-password
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: credential-backend
+data:
+  httpd.conf: |
+    /:fixture-user:fixture-password
+  check: |
+    credentials-verified
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: credential-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: credential-backend
+  template:
+    metadata:
+      labels:
+        app: credential-backend
+    spec:
+      containers:
+        - name: http
+          image: docker.io/library/busybox:1.37.0
+          command:
+            [httpd, -f, -p, "8080", -h, /fixture, -c, /fixture/httpd.conf]
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+          volumeMounts:
+            - name: fixture
+              mountPath: /fixture
+              readOnly: true
+      volumes:
+        - name: fixture
+          configMap:
+            name: credential-backend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: credential-backend
+spec:
+  selector:
+    app: credential-backend
+  ports:
+    - port: 8080
+      targetPort: 8080
+---
+apiVersion: perses.dev/v1alpha2
+kind: Perses
+metadata:
+  name: perses-replay
+  labels:
+    test.perses.dev/instance: encryption-replay
+spec:
+  image: docker.io/persesdev/perses:v0.55.0-rc.1
+  containerPort: 8080
+  config:
+    database:
+      file:
+        folder: /perses
+        extension: yaml
+    security:
+      enable_auth: false
+      readonly: false
+      cookie:
+        secure: false
+  env:
+    - name: PERSES_DATASOURCE_PROXY_ALLOWED_HOSTS_0
+      value: credential-backend
+    - name: PERSES_DATASOURCE_PROXY_DENY_PRIVATE_NETWORKS
+      value: "false"
+  storage:
+    pvcTemplate:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi

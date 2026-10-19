@@ -41,9 +41,18 @@ E2E tests use [kuttl](https://github.com/kudobuilder/kuttl) to validate the oper
 ### Prerequisites
 
 - [Go](https://go.dev/doc/install)
-- [kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation)
+- [kind](https://kind.sigs.k8s.io/docs/user/quick-start/#installation) — use the version pinned by `kind-version` in [`.github/env`](../.github/env) to match CI and the configured Kubernetes node image
 - [Docker](https://docs.docker.com/get-docker/) or [Podman](https://podman.io/docs/installation) — the Makefile auto-detects the available container runtime
 - [kubectl](https://kubernetes.io/docs/tasks/tools/)
+
+Before setup, compare the expected versions with your installed kind:
+
+```bash
+make e2e-versions
+kind version
+```
+
+Install or upgrade kind to the pinned version if they differ. The Makefile uses kind from your `PATH`; neither `make build-tools` nor setting `KIND_VERSION` installs or upgrades it. Older kind versions may generate kubeadm configuration APIs that the configured node image no longer supports.
 
 ### Quick Start
 
@@ -52,6 +61,8 @@ make e2e-setup    # Create cluster + deploy operator
 make test-e2e     # Run tests
 make e2e-cleanup  # Tear down
 ```
+
+`make e2e-setup` reuses a cluster with the configured name if one already exists. Cluster-listing and creation failures stop setup and show the underlying error instead of continuing to deployment.
 
 When iterating:
 
@@ -80,6 +91,7 @@ test/e2e/
 ├── kuttl-test.yaml
 ├── dashboard-api-drift/    # Recreate dashboard deleted from Perses API (periodic sync)
 ├── dashboard-tags/         # Dashboard tag annotation sync
+├── encryption-key-replay/  # Credential recovery after key changes and API-secret deletion
 ├── global-datasource/      # Global datasource sync
 ├── multi-instance-sync/    # Dashboard/datasource sync across instances
 ├── namespace-isolation/    # Namespace-scoped resource isolation
@@ -94,6 +106,8 @@ test/e2e/
 - To add steps to an existing test case, add numbered files (e.g. `05-install.yaml`, `05-assert.yaml`).
 
 ### Debugging
+
+If setup fails while creating the cluster, check the kind error output and compare `kind version` with `make e2e-versions`. An error such as `your configuration file uses an old API spec: "kubeadm.k8s.io/v1beta3"` indicates that kind generated a kubeadm configuration unsupported by the node image; install the kind version pinned in `.github/env` and retry setup.
 
 ```bash
 # Operator logs

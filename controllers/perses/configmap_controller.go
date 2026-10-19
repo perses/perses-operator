@@ -36,7 +36,7 @@ import (
 var cmlog = logger.WithField("module", "configmap_controller")
 
 func (r *PersesReconciler) reconcileConfigMap(ctx context.Context, req ctrl.Request) (*ctrl.Result, error) {
-	perses, ok := persesFromContext(ctx)
+	perses, ok := runtimePersesFromContext(ctx)
 	if !ok {
 		cmlog.Error("perses not found in context")
 		return subreconciler.RequeueWithError(fmt.Errorf("perses not found in context"))

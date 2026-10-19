@@ -76,16 +76,37 @@ func (r *PersesDatasourceReconciler) reconcileDatasourcesInAllInstances(ctx cont
 		return r.setStatusToDegraded(ctx, req, &ctrl.Result{RequeueAfter: time.Minute}, persescommon.ReasonMissingPerses, fmt.Errorf("no Perses instances found matching the label selector"))
 	}
 
+	pending := false
+	synced := false
 	for _, persesInstance := range persesInstances.Items {
 		if !meta.IsStatusConditionTrue(persesInstance.Status.Conditions, persescommon.TypeAvailablePerses) {
 			dlog.Infof("Skipping Perses instance %s/%s (not yet available)", persesInstance.Namespace, persesInstance.Name)
+			pending = true
+			continue
+		}
+		ready, err := persescommon.PersesWorkloadReady(ctx, r.APIReader, &persesInstance)
+		if err != nil {
+			res, err := subreconciler.RequeueWithError(err)
+			return r.setStatusToDegraded(ctx, req, res, persescommon.ReasonConnectionFailed, err)
+		}
+		if !ready {
+			pending = true
 			continue
 		}
 		if res, reason, err := r.syncPersesDatasource(ctx, persesInstance, datasource); subreconciler.ShouldHaltOrRequeue(res, err) {
 			return r.setStatusToDegraded(ctx, req, res, reason, err)
 		}
+		synced = true
 	}
 
+	if pending {
+		if res, err := r.updateDatasourceStatus(ctx, req, func(ds *persesv1alpha2.PersesDatasource) {
+			persescommon.SetPartialReconcileConditions(&ds.Status.Conditions, synced)
+		}); err != nil {
+			return res, err
+		}
+		return subreconciler.RequeueWithDelay(persescommon.WorkloadRetryInterval)
+	}
 	return subreconciler.ContinueReconciling()
 }
 
@@ -143,28 +164,24 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 		return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonBackendError)
 	}
 
-	if !notFound && persescommon.DatasourceInSync(existing, datasourceWithName) {
-		dlog.Debugf("Datasource already in sync: %s", datasource.Name)
-		res, err := subreconciler.ContinueReconciling()
-		return res, "", err
-	}
-
-	if validateErr := validate.New(persesClient.RESTClient()).Datasource(datasourceWithName); validateErr != nil {
-		if persescommon.IsClientError(validateErr) {
-			dlog.WithError(validateErr).Errorf("Datasource validation failed: %s", datasource.Name)
+	inSync := !notFound && persescommon.DatasourceInSync(existing, datasourceWithName)
+	if !inSync {
+		if validateErr := validate.New(persesClient.RESTClient()).Datasource(datasourceWithName); validateErr != nil {
+			if persescommon.IsClientError(validateErr) {
+				dlog.WithError(validateErr).Errorf("Datasource validation failed: %s", datasource.Name)
+				return subreconciler.RequeueWithErrorAndReason(
+					fmt.Errorf("datasource %q failed server-side validation: %w", datasource.Name, validateErr),
+					persescommon.ReasonValidationFailed,
+				)
+			}
+			dlog.WithError(validateErr).Errorf("Datasource validation request failed: %s", datasource.Name)
 			return subreconciler.RequeueWithErrorAndReason(
-				fmt.Errorf("datasource %q failed server-side validation: %w", datasource.Name, validateErr),
-				persescommon.ReasonValidationFailed,
+				fmt.Errorf("datasource %q validation request failed: %w", datasource.Name, validateErr),
+				persescommon.ReasonBackendError,
 			)
 		}
-		dlog.WithError(validateErr).Errorf("Datasource validation request failed: %s", datasource.Name)
-		return subreconciler.RequeueWithErrorAndReason(
-			fmt.Errorf("datasource %q validation request failed: %w", datasource.Name, validateErr),
-			persescommon.ReasonBackendError,
-		)
 	}
-
-	// Sync secret only after validation passes to avoid orphaned secrets
+	// Sync credentials independently of datasource changes.
 	if persescommon.HasSecretConfig(datasource.Spec.Client) {
 		_, reason, err := r.syncPersesSecret(ctx, persesClient, datasource)
 		if err != nil {
@@ -173,6 +190,10 @@ func (r *PersesDatasourceReconciler) syncPersesDatasource(ctx context.Context, p
 		}
 	}
 
+	if inSync {
+		res, err := subreconciler.ContinueReconciling()
+		return res, "", err
+	}
 	if notFound {
 		_, err = persesClient.Datasource(datasource.Namespace).Create(datasourceWithName)
 		if err != nil {
