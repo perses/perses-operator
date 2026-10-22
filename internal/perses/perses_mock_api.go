@@ -19,7 +19,7 @@ import (
 	"net/http/httptest"
 	"strings"
 
-	speccommon "github.com/perses/spec/go/common"
+	speccommon "github.com/rhobs/perses-spec/go/common"
 	v1 "github.com/rhobs/perses/pkg/client/api/v1"
 	clientConfig "github.com/rhobs/perses/pkg/client/config"
 	"github.com/rhobs/perses/pkg/client/perseshttp"

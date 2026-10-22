@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"time"
 
-	persesv1Common "github.com/perses/spec/go/common"
+	persesv1Common "github.com/rhobs/perses-spec/go/common"
 	"github.com/rhobs/perses/pkg/client/api/validate"
 	"github.com/rhobs/perses/pkg/client/perseshttp"
 	persesv1 "github.com/rhobs/perses/pkg/model/api/v1"

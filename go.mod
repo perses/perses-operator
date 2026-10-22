@@ -1,6 +1,6 @@
 module github.com/rhobs/perses-operator
 
-go 1.27.2
+go 1.26.10
 
 require (
 	github.com/brunoga/deep v1.3.1
@@ -10,9 +10,9 @@ require (
 	github.com/openshift/controller-runtime-common v0.0.0-20260428152732-64ee174f5e2e
 	github.com/openshift/library-go v0.0.0-20260615113748-bc9d4056464b
 	github.com/perses/common v0.31.2
-	github.com/perses/spec v0.3.0-rc.1
 	github.com/prometheus/client_golang v1.24.1
-	github.com/rhobs/perses v0.0.0-20261014180603-9f3f7bdb8409
+	github.com/rhobs/perses v0.0.0-20261021131516-8d275c09af11
+	github.com/rhobs/perses-spec v0.0.0-20261020104126-c7666210297f
 	github.com/sirupsen/logrus v1.10.2
 	github.com/stretchr/testify v1.12.1
 	gopkg.in/yaml.v2 v2.4.0
@@ -89,7 +89,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/goreleaser/chglog v0.7.4 // indirect
 	github.com/goreleaser/fileglob v1.4.1 // indirect
-	github.com/goreleaser/goreleaser/v2 v2.18.2 // indirect
+	github.com/goreleaser/goreleaser/v2 v2.17.1 // indirect
 	github.com/goreleaser/nfpm/v2 v2.47.0 // indirect
 	github.com/huandu/xstrings v1.5.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect

@@ -20,7 +20,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/perses/spec/go/common"
+	"github.com/rhobs/perses-spec/go/common"
 	v1 "github.com/rhobs/perses/pkg/client/api/v1"
 	"github.com/rhobs/perses/pkg/client/api/validate"
 	"github.com/rhobs/perses/pkg/client/perseshttp"

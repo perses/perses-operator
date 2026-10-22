@@ -20,9 +20,9 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	speccommon "github.com/perses/spec/go/common"
-	specdatasource "github.com/perses/spec/go/datasource"
-	specplugin "github.com/perses/spec/go/plugin"
+	speccommon "github.com/rhobs/perses-spec/go/common"
+	specdatasource "github.com/rhobs/perses-spec/go/datasource"
+	specplugin "github.com/rhobs/perses-spec/go/plugin"
 	"github.com/rhobs/perses/pkg/client/perseshttp"
 	persesconfig "github.com/rhobs/perses/pkg/model/api/config"
 	persesv1 "github.com/rhobs/perses/pkg/model/api/v1"

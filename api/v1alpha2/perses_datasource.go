@@ -17,7 +17,7 @@ import (
 	"fmt"
 
 	"github.com/brunoga/deep"
-	datasource "github.com/perses/spec/go/datasource"
+	datasource "github.com/rhobs/perses-spec/go/datasource"
 )
 
 // Datasource represents the Perses datasource configuration including

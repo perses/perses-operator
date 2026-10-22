@@ -24,7 +24,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	speccommon "github.com/perses/spec/go/common"
+	speccommon "github.com/rhobs/perses-spec/go/common"
 	v1 "github.com/rhobs/perses/pkg/client/api/v1"
 	clientConfig "github.com/rhobs/perses/pkg/client/config"
 	"github.com/rhobs/perses/pkg/model/api/v1/secret"

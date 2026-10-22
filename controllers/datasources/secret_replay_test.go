@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
-	speccommon "github.com/perses/spec/go/common"
 	"github.com/rhobs/perses-operator/api/v1alpha2"
 	"github.com/rhobs/perses-operator/internal/perses/common"
+	speccommon "github.com/rhobs/perses-spec/go/common"
 	v1 "github.com/rhobs/perses/pkg/client/api/v1"
 	clientconfig "github.com/rhobs/perses/pkg/client/config"
 	model "github.com/rhobs/perses/pkg/model/api/v1"

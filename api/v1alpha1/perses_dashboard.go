@@ -17,7 +17,7 @@ import (
 	"fmt"
 
 	"github.com/brunoga/deep"
-	dashboardSpec "github.com/perses/spec/go/dashboard"
+	dashboardSpec "github.com/rhobs/perses-spec/go/dashboard"
 )
 
 type Dashboard struct {
