@@ -532,7 +532,7 @@ cross-release: generate-goreleaser manifests generate fmt vet
 	goreleaser release --clean
 
 .PHONY: bin
-bin: 
+bin:
 	go build $(BUILD_OPTS) -mod=readonly -o bin/manager main.go
 
 .PHONY: generate-changelog
