@@ -1,15 +1,29 @@
 apiVersion: kuttl.dev/v1beta1
 kind: TestAssert
-timeout: 60
+timeout: 90
 commands:
   - script: |
+      set -eu
       kubectl port-forward -n $NAMESPACE svc/perses-drift-test 18094:8080 &
       PF_PID=$!
       trap "kill $PF_PID 2>/dev/null" EXIT
       sleep 3
-      RESULT=$(curl -sf http://localhost:18094/api/v1/projects/$NAMESPACE/dashboards/drift-test-dashboard) || {
+      RESULT=$(curl --connect-timeout 3 --max-time 5 -sf "http://localhost:18094/api/v1/projects/$NAMESPACE/dashboards/drift-test-dashboard") || {
         echo "FAIL: Dashboard not found in Perses after initial sync"
         exit 1
       }
       echo "Dashboard present after initial sync:"
       echo "$RESULT"
+      # Observe three 15-second sync intervals; even metadata must stay unchanged.
+      INITIAL_RESULT="$RESULT"
+      for i in 1 2 3; do
+        sleep 15
+        RESULT=$(curl --connect-timeout 3 --max-time 5 -sf "http://localhost:18094/api/v1/projects/$NAMESPACE/dashboards/drift-test-dashboard")
+        if [ "$RESULT" != "$INITIAL_RESULT" ]; then
+          echo "FAIL: Unchanged dashboard was rewritten during periodic sync (interval $i)"
+          echo "Before: $INITIAL_RESULT"
+          echo "After:  $RESULT"
+          exit 1
+        fi
+      done
+      echo "Dashboard unchanged across three periodic sync intervals"

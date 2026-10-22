@@ -14,16 +14,19 @@
 package common
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/perses/common/set"
+	persesv1alpha2 "github.com/perses/perses-operator/api/v1alpha2"
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
 	speccommon "github.com/perses/spec/go/common"
 	specDashboard "github.com/perses/spec/go/dashboard"
 	specdatasource "github.com/perses/spec/go/datasource"
 	specplugin "github.com/perses/spec/go/plugin"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestDashboardInSync(t *testing.T) {
@@ -84,6 +87,102 @@ func TestDashboardInSync(t *testing.T) {
 		desired.Metadata.Tags = set.Set[string]{}
 		assert.True(t, DashboardInSync(existing, desired))
 	})
+}
+
+func TestDashboardInSyncWithLayoutReferences(t *testing.T) {
+	const specJSON = `{
+		"duration": "5m",
+		"panels": {
+			"firstPanel": {
+				"kind": "Panel",
+				"spec": {
+					"display": {"name": "Test Panel"},
+					"plugin": {"kind": "TimeSeriesChart", "spec": {}},
+					"queries": [{"kind": "TimeSeriesQuery", "spec": {
+						"plugin": {"kind": "PrometheusTimeSeriesQuery", "spec": {"query": "up"}}
+					}}]
+				}
+			},
+			"secondPanel": {
+				"kind": "Panel",
+				"spec": {
+					"display": {"name": "Test Panel"},
+					"plugin": {"kind": "TimeSeriesChart", "spec": {}},
+					"queries": [{"kind": "TimeSeriesQuery", "spec": {
+						"plugin": {"kind": "PrometheusTimeSeriesQuery", "spec": {"query": "up"}}
+					}}]
+				}
+			}
+		},
+		"layouts": [{"kind": "Grid", "spec": {"items": [{
+			"x": 0, "y": 0, "width": 24, "height": 6,
+			"content": {"$ref": "#/spec/panels/firstPanel"}
+		}]}}]
+	}`
+
+	for _, tc := range []struct {
+		name   string
+		mutate func(*persesv1.Dashboard)
+		want   bool
+	}{
+		{
+			name: "API-resolved references match the Kubernetes spec",
+			want: true,
+		},
+		{
+			name: "panel edits are detected",
+			mutate: func(dashboard *persesv1.Dashboard) {
+				dashboard.Spec.Panels["firstPanel"].Spec.Display.Name = "Changed Panel"
+			},
+		},
+		{
+			name: "query edits are detected",
+			mutate: func(dashboard *persesv1.Dashboard) {
+				dashboard.Spec.Panels["firstPanel"].Spec.Queries[0].Spec.Plugin.Spec.(map[string]any)["query"] = "rate(up[5m])"
+			},
+		},
+		{
+			name: "reference changes between identical panels are detected",
+			mutate: func(dashboard *persesv1.Dashboard) {
+				ref := dashboard.Spec.Layouts[0].Spec.(*specDashboard.GridLayoutSpec).Items[0].Content
+				ref.Ref = "#/spec/panels/secondPanel"
+				ref.Path = []string{"spec", "panels", "secondPanel"}
+				ref.Object = dashboard.Spec.Panels["secondPanel"]
+			},
+		},
+		{
+			name: "layout edits are detected",
+			mutate: func(dashboard *persesv1.Dashboard) {
+				dashboard.Spec.Layouts[0].Spec.(*specDashboard.GridLayoutSpec).Items[0].Width = 12
+			},
+		},
+		{
+			name: "tag edits are detected",
+			mutate: func(dashboard *persesv1.Dashboard) {
+				dashboard.Metadata.Tags = set.New("changed")
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var existing persesv1.Dashboard
+			require.NoError(t, json.Unmarshal([]byte(`{"kind":"Dashboard","metadata":{"name":"test-dashboard"},"spec":`+specJSON+`}`), &existing))
+			var cr persesv1alpha2.PersesDashboard
+			require.NoError(t, json.Unmarshal([]byte(`{"spec":{"config":`+specJSON+`}}`), &cr))
+			desired := &persesv1.Dashboard{Spec: cr.Spec.Config.Spec}
+
+			existingRef := existing.Spec.Layouts[0].Spec.(*specDashboard.GridLayoutSpec).Items[0].Content
+			desiredRef := desired.Spec.Layouts[0].Spec.(*specDashboard.GridLayoutSpec).Items[0].Content
+			require.NotNil(t, existingRef.Object)
+			require.Nil(t, desiredRef.Object)
+
+			if tc.mutate != nil {
+				tc.mutate(&existing)
+			}
+			assert.Equal(t, tc.want, DashboardInSync(&existing, desired))
+			assert.NotNil(t, existingRef.Object, "comparison must not mutate the API dashboard")
+			assert.Nil(t, desiredRef.Object, "comparison must not mutate the desired dashboard")
+		})
+	}
 }
 
 func TestDatasourceInSync(t *testing.T) {

@@ -17,14 +17,28 @@ import (
 	"maps"
 
 	persesv1 "github.com/perses/perses/pkg/model/api/v1"
+	speccommon "github.com/perses/spec/go/common"
 	"k8s.io/apimachinery/pkg/api/equality"
+	"k8s.io/apimachinery/pkg/conversion"
 )
+
+var dashboardEquality = func() conversion.Equalities {
+	equalities := equality.Semantic.Copy()
+	// The API client resolves references, but Kubernetes only decodes the spec.
+	// Path and Object are derived fields, not part of the serialized dashboard.
+	if err := equalities.AddFunc(func(a, b speccommon.JSONRef) bool {
+		return a.Ref == b.Ref
+	}); err != nil {
+		panic(err)
+	}
+	return equalities
+}()
 
 // DashboardInSync returns true if the existing dashboard in Perses
 // matches the desired state (tags and spec).
 func DashboardInSync(existing, desired *persesv1.Dashboard) bool {
 	return maps.Equal(existing.Metadata.Tags, desired.Metadata.Tags) &&
-		equality.Semantic.DeepEqual(existing.Spec, desired.Spec)
+		dashboardEquality.DeepEqual(existing.Spec, desired.Spec)
 }
 
 // DatasourceInSync returns true if the existing datasource in Perses
