@@ -99,6 +99,13 @@ func (r *PersesReconciler) reconcileStatefulSet(ctx context.Context, req ctrl.Re
 		return subreconciler.RequeueWithError(err)
 	}
 
+	// spec.selector is immutable, so a StatefulSet whose selector differs from the
+	// desired one, such as one created by an older operator version, cannot be
+	// updated and has to be recreated.
+	if !equality.Semantic.DeepEqual(found.Spec.Selector, sts.Spec.Selector) {
+		return r.recreateWorkload(ctx, stlog, found, sts, found.Spec.Selector)
+	}
+
 	// call update with dry run to fill out fields that are also returned via the k8s api
 	if err = r.Update(ctx, sts, client.DryRunAll); err != nil {
 		stlog.WithError(err).Error("Failed to update StatefulSet with dry run")
@@ -150,7 +157,7 @@ func (r *PersesReconciler) createPersesStatefulSet(
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Selector: &metav1.LabelSelector{
-				MatchLabels: ls,
+				MatchLabels: common.SelectorLabelsForPerses(perses.Name, perses),
 			},
 			Replicas: perses.Spec.Replicas,
 			Template: corev1.PodTemplateSpec{
