@@ -74,6 +74,9 @@ func buildCacheByObject(secretSelector labels.Selector, watchAllSecrets bool, tl
 		&corev1.Service{}: {
 			Label: managedBySelector,
 		},
+		&corev1.Pod{}: {
+			Label: managedBySelector,
+		},
 	}
 
 	secretEntry := cache.ByObject{

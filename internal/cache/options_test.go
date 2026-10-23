@@ -146,6 +146,7 @@ func TestBuildCacheByObject_DefaultLabels(t *testing.T) {
 		&appsv1.StatefulSet{},
 		&corev1.ConfigMap{},
 		&corev1.Service{},
+		&corev1.Pod{},
 	}
 
 	for _, obj := range managedTypes {

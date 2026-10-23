@@ -259,8 +259,6 @@ func (r *PersesDatasourceReconciler) findDatasourcesForPod(ctx context.Context, 
 		return nil
 	}
 
-	instanceLabels := common.LabelsForPerses(instance.Name, instance)
-
 	datasources := &persesv1alpha2.PersesDatasourceList{}
 	if err := r.List(ctx, datasources); err != nil {
 		log.WithError(err).Error("Failed to list PersesDatasources for pod")
@@ -270,7 +268,7 @@ func (r *PersesDatasourceReconciler) findDatasourcesForPod(ctx context.Context, 
 	var requests []reconcile.Request
 	for i := range datasources.Items {
 		datasource := &datasources.Items[i]
-		targets, err := common.ResourceTargetsInstance(datasource.Spec.InstanceSelector, instanceLabels)
+		targets, err := common.ResourceTargetsInstance(datasource.Spec.InstanceSelector, instance.Labels)
 		if err != nil {
 			log.WithError(err).Errorf("Invalid instanceSelector on PersesDatasource %s/%s", datasource.Namespace, datasource.Name)
 			continue
