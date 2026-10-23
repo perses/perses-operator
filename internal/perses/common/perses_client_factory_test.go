@@ -97,70 +97,59 @@ func TestConfigFingerprint(t *testing.T) {
 func TestForgetInstance(t *testing.T) {
 	factory := NewWithConfig()
 
-	// Populate the cache with a service client plus two per-pod clients for the
-	// same instance, and an unrelated instance that must survive.
-	factory.cache["default/perses-1"] = clientCacheEntry{
-		client:      nil,
-		fingerprint: "test-fp",
+	factory.cache["default/perses-1"] = map[string]clientCacheEntry{
+		"":         {fingerprint: "test-fp"},
+		"10.0.0.1": {fingerprint: "test-fp"},
+		"10.0.0.2": {fingerprint: "test-fp"},
 	}
-	factory.cache["default/perses-1|10.0.0.1"] = clientCacheEntry{
-		client:      nil,
-		fingerprint: "test-fp",
-	}
-	factory.cache["default/perses-1|10.0.0.2"] = clientCacheEntry{
-		client:      nil,
-		fingerprint: "test-fp",
-	}
-	factory.cache["prod/perses-2"] = clientCacheEntry{
-		client:      nil,
-		fingerprint: "test-fp-2",
+	factory.cache["prod/perses-2"] = map[string]clientCacheEntry{
+		"":         {fingerprint: "test-fp-2"},
+		"10.0.1.1": {fingerprint: "test-fp-2"},
 	}
 
-	assert.Len(t, factory.cache, 4)
+	assert.Len(t, factory.cache, 2)
 
 	factory.ForgetInstance("default/perses-1")
-	assert.Len(t, factory.cache, 1, "the service client and all per-pod clients should be evicted")
+	assert.Len(t, factory.cache, 1)
 
-	for _, k := range []string{"default/perses-1", "default/perses-1|10.0.0.1", "default/perses-1|10.0.0.2"} {
-		_, exists := factory.cache[k]
-		assert.Falsef(t, exists, "entry %q should be removed", k)
-	}
+	_, exists := factory.cache["default/perses-1"]
+	assert.False(t, exists, "Entry should be removed")
 
-	_, exists := factory.cache["prod/perses-2"]
+	_, exists = factory.cache["prod/perses-2"]
 	assert.True(t, exists, "Other instance should remain")
 
-	// A per-pod key must not evict a different instance that shares a name prefix.
-	factory.cache["prod/perses-2|10.0.1.1"] = clientCacheEntry{fingerprint: "test-fp-2"}
 	factory.ForgetInstance("prod/perses")
-	assert.Len(t, factory.cache, 2, "prefix match must respect the key/pod separator boundary")
+	assert.Len(t, factory.cache, 1)
 
 	// Forgetting a non-existent key should not panic
 	factory.ForgetInstance("nonexistent/key")
-	assert.Len(t, factory.cache, 2)
+	assert.Len(t, factory.cache, 1)
 }
 
 func TestCacheHitTTLExpiry(t *testing.T) {
 	factory := NewWithConfig()
 	factory.ttl = 100 * time.Millisecond
 
-	factory.cache["default/perses-1"] = clientCacheEntry{
-		client:      nil,
-		fingerprint: "fp-1",
-		createdAt:   time.Now(),
+	factory.cache["default/perses-1"] = map[string]clientCacheEntry{
+		"": {
+			client:      nil,
+			fingerprint: "fp-1",
+			createdAt:   time.Now(),
+		},
 	}
 
 	// Fresh entry should be a hit
-	cached, ok := factory.cacheHit("default/perses-1", "fp-1")
+	cached, ok := factory.cacheHit("default/perses-1", "", "fp-1")
 	assert.True(t, ok, "Fresh entry should be a cache hit")
 	assert.Nil(t, cached)
 
 	// Wrong fingerprint should miss
-	_, ok = factory.cacheHit("default/perses-1", "fp-different")
+	_, ok = factory.cacheHit("default/perses-1", "", "fp-different")
 	assert.False(t, ok, "Wrong fingerprint should be a cache miss")
 
 	// Wait for TTL to expire
 	time.Sleep(150 * time.Millisecond)
-	_, ok = factory.cacheHit("default/perses-1", "fp-1")
+	_, ok = factory.cacheHit("default/perses-1", "", "fp-1")
 	assert.False(t, ok, "Expired entry should be a cache miss")
 }
 
@@ -168,15 +157,19 @@ func TestSweepExpiredEntries(t *testing.T) {
 	factory := NewWithConfig()
 	factory.ttl = 50 * time.Millisecond
 
-	factory.cache["default/perses-1"] = clientCacheEntry{
-		client:      nil,
-		fingerprint: "fp-1",
-		createdAt:   time.Now(),
+	factory.cache["default/perses-1"] = map[string]clientCacheEntry{
+		"": {
+			client:      nil,
+			fingerprint: "fp-1",
+			createdAt:   time.Now(),
+		},
 	}
-	factory.cache["default/perses-2"] = clientCacheEntry{
-		client:      nil,
-		fingerprint: "fp-2",
-		createdAt:   time.Now(),
+	factory.cache["default/perses-2"] = map[string]clientCacheEntry{
+		"": {
+			client:      nil,
+			fingerprint: "fp-2",
+			createdAt:   time.Now(),
+		},
 	}
 
 	assert.Len(t, factory.cache, 2)
@@ -185,10 +178,12 @@ func TestSweepExpiredEntries(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Add a fresh entry that should survive the sweep
-	factory.cache["default/perses-3"] = clientCacheEntry{
-		client:      nil,
-		fingerprint: "fp-3",
-		createdAt:   time.Now(),
+	factory.cache["default/perses-3"] = map[string]clientCacheEntry{
+		"": {
+			client:      nil,
+			fingerprint: "fp-3",
+			createdAt:   time.Now(),
+		},
 	}
 
 	factory.mtx.Lock()
@@ -206,10 +201,12 @@ func TestSweepSkipsBeforeInterval(t *testing.T) {
 	factory.lastSweep = time.Now()
 
 	// Add an expired entry
-	factory.cache["default/perses-1"] = clientCacheEntry{
-		client:      nil,
-		fingerprint: "fp-1",
-		createdAt:   time.Now().Add(-time.Minute),
+	factory.cache["default/perses-1"] = map[string]clientCacheEntry{
+		"": {
+			client:      nil,
+			fingerprint: "fp-1",
+			createdAt:   time.Now().Add(-time.Minute),
+		},
 	}
 
 	// Sweep should be skipped because lastSweep is recent
@@ -230,10 +227,12 @@ func TestClientCacheConcurrency(t *testing.T) {
 			defer wg.Done()
 			key := "default/perses-1"
 			factory.mtx.Lock()
-			factory.cache[key] = clientCacheEntry{
-				client:      nil,
-				fingerprint: "fp",
-				createdAt:   time.Now(),
+			factory.cache[key] = map[string]clientCacheEntry{
+				"": {
+					client:      nil,
+					fingerprint: "fp",
+					createdAt:   time.Now(),
+				},
 			}
 			factory.mtx.Unlock()
 			factory.ForgetInstance(key)
@@ -1209,12 +1208,12 @@ func TestCreateClientsForAllPods(t *testing.T) {
 		first, err := factory.CreateClientsForAllPods(ctx, reader, perses)
 		require.NoError(t, err)
 		require.Len(t, first, 2)
-		assert.Len(t, factory.cache, 2, "one cache entry per ready pod")
+		assert.Len(t, factory.cache["default/perses-1"], 2)
 
 		second, err := factory.CreateClientsForAllPods(ctx, reader, perses)
 		require.NoError(t, err)
 		require.Len(t, second, 2)
-		assert.Len(t, factory.cache, 2, "second call must not grow the cache")
+		assert.Len(t, factory.cache["default/perses-1"], 2)
 
 		// Same client instances must come back — a fresh build would leak the old ones.
 		firstREST := []*perseshttp.RESTClient{first[0].RESTClient(), first[1].RESTClient()}

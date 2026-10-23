@@ -259,8 +259,6 @@ func (r *PersesGlobalDatasourceReconciler) findGlobalDatasourcesForPod(ctx conte
 		return nil
 	}
 
-	instanceLabels := common.LabelsForPerses(instance.Name, instance)
-
 	globaldatasources := &persesv1alpha2.PersesGlobalDatasourceList{}
 	if err := r.List(ctx, globaldatasources); err != nil {
 		log.WithError(err).Error("Failed to list PersesGlobalDatasources for pod")
@@ -270,7 +268,7 @@ func (r *PersesGlobalDatasourceReconciler) findGlobalDatasourcesForPod(ctx conte
 	var requests []reconcile.Request
 	for i := range globaldatasources.Items {
 		globaldatasource := &globaldatasources.Items[i]
-		targets, err := common.ResourceTargetsInstance(globaldatasource.Spec.InstanceSelector, instanceLabels)
+		targets, err := common.ResourceTargetsInstance(globaldatasource.Spec.InstanceSelector, instance.Labels)
 		if err != nil {
 			log.WithError(err).Errorf("Invalid instanceSelector on PersesGlobalDatasource %s/%s", globaldatasource.Namespace, globaldatasource.Name)
 			continue
