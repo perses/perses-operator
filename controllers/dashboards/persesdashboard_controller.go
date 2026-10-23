@@ -262,8 +262,6 @@ func (r *PersesDashboardReconciler) findDashboardsForPod(ctx context.Context, ob
 		return nil
 	}
 
-	instanceLabels := common.LabelsForPerses(instance.Name, instance)
-
 	dashboards := &persesv1alpha2.PersesDashboardList{}
 	if err := r.List(ctx, dashboards); err != nil {
 		log.WithError(err).Error("Failed to list PersesDashboards for pod")
@@ -273,7 +271,7 @@ func (r *PersesDashboardReconciler) findDashboardsForPod(ctx context.Context, ob
 	var requests []reconcile.Request
 	for i := range dashboards.Items {
 		dashboard := &dashboards.Items[i]
-		targets, err := common.ResourceTargetsInstance(dashboard.Spec.InstanceSelector, instanceLabels)
+		targets, err := common.ResourceTargetsInstance(dashboard.Spec.InstanceSelector, instance.Labels)
 		if err != nil {
 			log.WithError(err).Errorf("Invalid instanceSelector on PersesDashboard %s/%s", dashboard.Namespace, dashboard.Name)
 			continue

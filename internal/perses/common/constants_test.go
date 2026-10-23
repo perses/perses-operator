@@ -143,12 +143,20 @@ func TestPersesInstanceForPod(t *testing.T) {
 func TestPodReadinessPredicateCreate(t *testing.T) {
 	pred := PodReadinessPredicate()
 
-	readyPod := &corev1.Pod{Status: corev1.PodStatus{Conditions: []corev1.PodCondition{{
-		Type: corev1.PodReady, Status: corev1.ConditionTrue,
-	}}}}
-	notReadyPod := &corev1.Pod{Status: corev1.PodStatus{Conditions: []corev1.PodCondition{{
-		Type: corev1.PodReady, Status: corev1.ConditionFalse,
-	}}}}
+	readyPod := &corev1.Pod{Status: corev1.PodStatus{
+		Phase: corev1.PodRunning,
+		PodIP: "10.0.0.1",
+		Conditions: []corev1.PodCondition{{
+			Type: corev1.PodReady, Status: corev1.ConditionTrue,
+		}},
+	}}
+	notReadyPod := &corev1.Pod{Status: corev1.PodStatus{
+		Phase: corev1.PodRunning,
+		PodIP: "10.0.0.1",
+		Conditions: []corev1.PodCondition{{
+			Type: corev1.PodReady, Status: corev1.ConditionFalse,
+		}},
+	}}
 
 	// A pod that is already Ready on its initial-list Create event must resync,
 	// otherwise pods already running when the operator (re)starts are skipped.

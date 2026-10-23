@@ -312,10 +312,13 @@ func PodBecameReady(oldObj, newObj client.Object) bool {
 	if !ok {
 		return false
 	}
-	return !isPodConditionReady(oldPod) && isPodConditionReady(newPod)
+	return !isPodReady(oldPod) && isPodReady(newPod)
 }
 
-func isPodConditionReady(pod *corev1.Pod) bool {
+func isPodReady(pod *corev1.Pod) bool {
+	if pod.Status.Phase != corev1.PodRunning || pod.Status.PodIP == "" {
+		return false
+	}
 	for _, cond := range pod.Status.Conditions {
 		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
 			return true
@@ -340,7 +343,7 @@ func PodReadinessPredicate() predicate.Funcs {
 			if !ok {
 				return false
 			}
-			return isPodConditionReady(pod)
+			return isPodReady(pod)
 		},
 		UpdateFunc: func(e event.UpdateEvent) bool {
 			return PodBecameReady(e.ObjectOld, e.ObjectNew)

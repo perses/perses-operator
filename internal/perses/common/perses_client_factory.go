@@ -63,31 +63,27 @@ type clientCacheEntry struct {
 
 type PersesClientFactoryWithConfig struct {
 	mtx       sync.RWMutex
-	cache     map[string]clientCacheEntry
+	cache     map[string]map[string]clientCacheEntry
 	ttl       time.Duration
 	lastSweep time.Time
 }
 
 func NewWithConfig() *PersesClientFactoryWithConfig {
 	return &PersesClientFactoryWithConfig{
-		cache: make(map[string]clientCacheEntry),
+		cache: make(map[string]map[string]clientCacheEntry),
 		ttl:   defaultClientCacheTTL,
 	}
 }
 
-// ForgetInstance removes all cached clients for the given Perses instance key.
-// The key format is "namespace/name". Because per-pod clients are cached under
-// "namespace/name|podIP" keys, this evicts the bare service client as well as
-// every per-pod client belonging to the instance.
+// ForgetInstance removes all cached clients for the given Perses instance key ("namespace/name").
 func (f *PersesClientFactoryWithConfig) ForgetInstance(key string) {
 	f.mtx.Lock()
-	defer f.mtx.Unlock()
-	podKeyPrefix := key + "|"
-	for k, entry := range f.cache {
-		if k == key || strings.HasPrefix(k, podKeyPrefix) {
-			closeClientConnections(entry.client)
-			delete(f.cache, k)
-		}
+	entries := f.cache[key]
+	delete(f.cache, key)
+	f.mtx.Unlock()
+
+	for _, entry := range entries {
+		closeClientConnections(entry.client)
 	}
 }
 
@@ -99,10 +95,15 @@ func (f *PersesClientFactoryWithConfig) sweepExpiredLocked() {
 	if now.Sub(f.lastSweep) < f.ttl {
 		return
 	}
-	for key, entry := range f.cache {
-		if now.Sub(entry.createdAt) >= f.ttl {
-			closeClientConnections(entry.client)
-			delete(f.cache, key)
+	for instanceKey, subMap := range f.cache {
+		for subKey, entry := range subMap {
+			if now.Sub(entry.createdAt) >= f.ttl {
+				closeClientConnections(entry.client)
+				delete(subMap, subKey)
+			}
+		}
+		if len(subMap) == 0 {
+			delete(f.cache, instanceKey)
 		}
 	}
 	f.lastSweep = now
@@ -152,8 +153,8 @@ func configFingerprint(perses persesv1alpha2.Perses) string {
 
 // cacheHit returns the cached client if it exists, has the matching fingerprint,
 // and has not expired. Caller must hold at least RLock.
-func (f *PersesClientFactoryWithConfig) cacheHit(instanceKey, fingerprint string) (v1.ClientInterface, bool) {
-	entry, ok := f.cache[instanceKey]
+func (f *PersesClientFactoryWithConfig) cacheHit(instanceKey, subKey, fingerprint string) (v1.ClientInterface, bool) {
+	entry, ok := f.cache[instanceKey][subKey]
 	if !ok {
 		return nil, false
 	}
@@ -333,22 +334,22 @@ func (f *PersesClientFactoryWithConfig) CreateClient(ctx context.Context, k8sCli
 	instanceKey := fmt.Sprintf("%s/%s", perses.Namespace, perses.Name)
 	fingerprint := configFingerprint(perses)
 
-	return f.getOrBuildCached(instanceKey, fingerprint, func() (v1.ClientInterface, error) {
+	return f.getOrBuildCached(instanceKey, "", fingerprint, func() (v1.ClientInterface, error) {
 		return f.buildClient(ctx, k8sClient, perses)
 	})
 }
 
-// getOrBuildCached returns the cached client for cacheKey when its fingerprint
-// matches and it has not expired, otherwise it builds a new one via build and
-// stores it. The build runs without any lock held to avoid blocking other
-// controllers during slow operations (TLS cert fetches from the API server).
+// getOrBuildCached returns the cached client for instanceKey/subKey when its
+// fingerprint matches and it has not expired, otherwise it builds a new one via
+// build and stores it. The build runs without any lock held to avoid blocking
+// other controllers during slow operations (TLS cert fetches from the API server).
 //
 // The TTL bounds credential staleness (SA token, TLS certs) so the fingerprint
 // only tracks config shape (Generation, port, TLS flags).
-func (f *PersesClientFactoryWithConfig) getOrBuildCached(cacheKey, fingerprint string, build func() (v1.ClientInterface, error)) (v1.ClientInterface, error) {
+func (f *PersesClientFactoryWithConfig) getOrBuildCached(instanceKey, subKey, fingerprint string, build func() (v1.ClientInterface, error)) (v1.ClientInterface, error) {
 	// Check cache under read lock — no file I/O needed.
 	f.mtx.RLock()
-	if cached, ok := f.cacheHit(cacheKey, fingerprint); ok {
+	if cached, ok := f.cacheHit(instanceKey, subKey, fingerprint); ok {
 		f.mtx.RUnlock()
 		return cached, nil
 	}
@@ -361,14 +362,17 @@ func (f *PersesClientFactoryWithConfig) getOrBuildCached(cacheKey, fingerprint s
 
 	// Store in cache under write lock. Re-check in case another goroutine raced.
 	f.mtx.Lock()
-	if cached, ok := f.cacheHit(cacheKey, fingerprint); ok {
+	if cached, ok := f.cacheHit(instanceKey, subKey, fingerprint); ok {
 		f.mtx.Unlock()
 		return cached, nil
 	}
-	if old, exists := f.cache[cacheKey]; exists {
+	if old, exists := f.cache[instanceKey][subKey]; exists {
 		closeClientConnections(old.client)
 	}
-	f.cache[cacheKey] = clientCacheEntry{
+	if f.cache[instanceKey] == nil {
+		f.cache[instanceKey] = make(map[string]clientCacheEntry)
+	}
+	f.cache[instanceKey][subKey] = clientCacheEntry{
 		client:      newClient,
 		fingerprint: fingerprint,
 		createdAt:   time.Now(),
@@ -425,8 +429,7 @@ func (f *PersesClientFactoryWithConfig) CreateClientsForAllPods(ctx context.Cont
 		}
 		hostPort := net.JoinHostPort(pod.Status.PodIP, strconv.Itoa(int(containerPort)))
 		urlStr := fmt.Sprintf("%s://%s%s", httpProtocol, hostPort, perses.Spec.Config.APIPrefix)
-		cacheKey := instanceKey + "|" + pod.Status.PodIP
-		c, err := f.getOrBuildCached(cacheKey, fingerprint, func() (v1.ClientInterface, error) {
+		c, err := f.getOrBuildCached(instanceKey, pod.Status.PodIP, fingerprint, func() (v1.ClientInterface, error) {
 			return f.createClientForURL(urlStr, baseConfig)
 		})
 		if err != nil {
@@ -440,18 +443,6 @@ func (f *PersesClientFactoryWithConfig) CreateClientsForAllPods(ctx context.Cont
 	}
 
 	return clients, nil
-}
-
-func isPodReady(pod *corev1.Pod) bool {
-	if pod.Status.Phase != corev1.PodRunning || pod.Status.PodIP == "" {
-		return false
-	}
-	for _, cond := range pod.Status.Conditions {
-		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-			return true
-		}
-	}
-	return false
 }
 
 type PersesClientFactoryWithClient struct {
