@@ -17,7 +17,7 @@ import "time"
 
 const (
 	// DefaultPersesVersion is the default image tag for Perses.
-	DefaultPersesVersion = "v0.55.0-rc.1"
+	DefaultPersesVersion = "v0.55.0"
 	// DefaultPersesBaseImage is the base container registry address for Perses.
 	DefaultPersesBaseImage = "docker.io/persesdev/perses"
 	// DefaultPersesImage is the default image used for Perses Deployment or StatefulSet operands.

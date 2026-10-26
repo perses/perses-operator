@@ -66,7 +66,7 @@ metadata:
   labels:
     test.perses.dev/instance: encryption-replay
 spec:
-  image: docker.io/persesdev/perses:v0.55.0-rc.1
+  image: docker.io/persesdev/perses:v0.55.0
   containerPort: 8080
   config:
     database:

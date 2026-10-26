@@ -87,7 +87,7 @@ func encryptionReconciler(t *testing.T) (*PersesReconciler, *v1alpha2.Perses, *e
 }
 func TestManagedEncryptionRuntime(t *testing.T) {
 	r, p, _ := encryptionReconciler(t)
-	r.Config.PersesImage = "docker.io/persesdev/perses:v0.55.0-rc.1"
+	r.Config.PersesImage = "docker.io/persesdev/perses:v0.55.0"
 	ctx := withEncryptionRuntime(withPerses(context.Background(), p), p)
 	result, err := r.reconcileEncryptionKey(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(p)})
 	require.NoError(t, err)
