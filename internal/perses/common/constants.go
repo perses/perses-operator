@@ -315,18 +315,6 @@ func PodBecameReady(oldObj, newObj client.Object) bool {
 	return !isPodReady(oldPod) && isPodReady(newPod)
 }
 
-func isPodReady(pod *corev1.Pod) bool {
-	if pod.Status.Phase != corev1.PodRunning || pod.Status.PodIP == "" {
-		return false
-	}
-	for _, cond := range pod.Status.Conditions {
-		if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
-			return true
-		}
-	}
-	return false
-}
-
 // PodReadinessPredicate returns a predicate that triggers reconciliation
 // when a pod transitions to Ready. This is used to re-sync resources to
 // pods that restarted and lost their in-memory or emptyDir state.
