@@ -82,14 +82,8 @@ func PersesWorkloadReady(ctx context.Context, reader client.Reader, p *v1alpha2.
 			return false, nil
 		}
 		count++
-		ready := false
-		for _, condition := range pod.Status.Conditions {
-			if condition.Type == corev1.PodReady && condition.Status == corev1.ConditionTrue {
-				ready = true
-			}
-		}
 		podOwner := metav1.GetControllerOf(&pod)
-		if !ready || podOwner == nil || podOwner.UID == "" {
+		if !isPodConditionReady(&pod) || podOwner == nil || podOwner.UID == "" {
 			return false, nil
 		}
 		if revision != "" {
@@ -130,4 +124,20 @@ func statefulSetRolledOut(sts *appsv1.StatefulSet, desired int32) bool {
 		sts.Status.ReadyReplicas == desired &&
 		sts.Status.UpdateRevision != "" &&
 		sts.Status.CurrentRevision == sts.Status.UpdateRevision
+}
+
+func isPodConditionReady(pod *corev1.Pod) bool {
+	for _, condition := range pod.Status.Conditions {
+		if condition.Type == corev1.PodReady && condition.Status == corev1.ConditionTrue {
+			return true
+		}
+	}
+	return false
+}
+
+func isPodReady(pod *corev1.Pod) bool {
+	return pod.Status.Phase == corev1.PodRunning &&
+		pod.Status.PodIP != "" &&
+		pod.DeletionTimestamp.IsZero() &&
+		isPodConditionReady(pod)
 }
