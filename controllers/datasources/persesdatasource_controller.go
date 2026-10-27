@@ -19,10 +19,12 @@ import (
 	"time"
 
 	logger "github.com/sirupsen/logrus"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -69,6 +71,7 @@ var log = logger.WithField("module", "perses_datasource_controller")
 // +kubebuilder:rbac:groups=perses.dev,resources=persesdatasources/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=perses.dev,resources=persesdatasources/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=configmaps;secrets,verbs=watch;get
+// +kubebuilder:rbac:groups=core,resources=pods,verbs=get;list;watch
 func (r *PersesDatasourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	start := time.Now()
 	objKey := req.String()
@@ -235,6 +238,50 @@ func (r *PersesDatasourceReconciler) findDatasourcesForPerses(ctx context.Contex
 	return common.MetadataListToRequests(ctx, r.Client, persesv1alpha2.GroupVersion.WithKind("PersesDatasourceList"))
 }
 
+// findDatasourcesForPod returns reconcile requests for the PersesDatasources
+// that target the Perses instance owning a pod, when that pod becomes ready.
+// This re-syncs resources to pods that (re)started and lost their state,
+// without fanning out to every datasource in the cluster: only datasources
+// whose instanceSelector matches the owning instance are enqueued.
+func (r *PersesDatasourceReconciler) findDatasourcesForPod(ctx context.Context, obj client.Object) []reconcile.Request {
+	pod, ok := obj.(*corev1.Pod)
+	if !ok {
+		return nil
+	}
+
+	instance, err := common.PersesInstanceForPod(ctx, r.Client, pod)
+	if err != nil {
+		log.WithError(err).Error("Failed to resolve Perses instance for pod")
+		return nil
+	}
+	if instance == nil {
+		return nil
+	}
+
+	datasources := &persesv1alpha2.PersesDatasourceList{}
+	if err := r.List(ctx, datasources); err != nil {
+		log.WithError(err).Error("Failed to list PersesDatasources for pod")
+		return nil
+	}
+
+	var requests []reconcile.Request
+	for i := range datasources.Items {
+		datasource := &datasources.Items[i]
+		targets, err := common.ResourceTargetsInstance(datasource.Spec.InstanceSelector, instance.Labels)
+		if err != nil {
+			log.WithError(err).Errorf("Invalid instanceSelector on PersesDatasource %s/%s", datasource.Namespace, datasource.Name)
+			continue
+		}
+		if !targets {
+			continue
+		}
+		requests = append(requests, reconcile.Request{
+			NamespacedName: types.NamespacedName{Namespace: datasource.Namespace, Name: datasource.Name},
+		})
+	}
+	return requests
+}
+
 // SetupWithManager sets up the controller with the Manager.
 // It watches PersesDatasource resources and also watches Perses instances
 // to trigger re-reconciliation of all datasources when a Perses instance becomes
@@ -249,6 +296,11 @@ func (r *PersesDatasourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&persesv1alpha2.Perses{},
 			handler.EnqueueRequestsFromMapFunc(r.findDatasourcesForPerses),
 			builder.WithPredicates(common.PersesAvailabilityPredicate()),
+		).
+		Watches(
+			&corev1.Pod{},
+			handler.EnqueueRequestsFromMapFunc(r.findDatasourcesForPod),
+			builder.WithPredicates(common.PodReadinessPredicate()),
 		).
 		Complete(r)
 }
