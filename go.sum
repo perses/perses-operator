@@ -265,10 +265,10 @@ github.com/pb33f/ordered-map/v2 v2.3.1 h1:5319HDO0aw4DA4gzi+zv4FXU9UlSs3xGZ40wcP
 github.com/pb33f/ordered-map/v2 v2.3.1/go.mod h1:qxFQgd0PkVUtOMCkTapqotNgzRhMPL7VvaHKbd1HnmQ=
 github.com/perses/common v0.31.2 h1:klsl0KfWn6wVVG4rDJvsTvFO8Owf5ed4nj2VjbQST60=
 github.com/perses/common v0.31.2/go.mod h1:KgLB0ojBFzg93UwTNK8uAE1yuGexBiwqHiAvTFcHRDI=
-github.com/perses/perses v0.55.0-rc.1 h1:qM48LcGi8jZ9TWUH1xduM5PqID1XN9e7AbhlayVpAB4=
-github.com/perses/perses v0.55.0-rc.1/go.mod h1:+HQNAtHCNJ8YhaXYdmMvidq3rQHw46OuqbNqKasIocY=
-github.com/perses/spec v0.3.0-rc.1 h1:IhtWA8KmDvngdNQ77Zzvihm7Z2J03yYT8nXtUZYJVtk=
-github.com/perses/spec v0.3.0-rc.1/go.mod h1:bbTvfdCprae8P4JHknL2VnIkLkTLXqV4stpOlZyxibo=
+github.com/perses/perses v0.55.0 h1:3XoFbJ6mCRb4k7jT8sTDst9bxZewR51QGw5bUApsOOA=
+github.com/perses/perses v0.55.0/go.mod h1:+HQNAtHCNJ8YhaXYdmMvidq3rQHw46OuqbNqKasIocY=
+github.com/perses/spec v0.3.0 h1:pAkpwX32lQpdz1YLmGmmAMItdgtuVDVrkAQfWEqX6ZI=
+github.com/perses/spec v0.3.0/go.mod h1:bbTvfdCprae8P4JHknL2VnIkLkTLXqV4stpOlZyxibo=
 github.com/pjbgf/sha1cd v0.6.0 h1:3WJ8Wz8gvDz29quX1OcEmkAlUg9diU4GxJHqs0/XiwU=
 github.com/pjbgf/sha1cd v0.6.0/go.mod h1:lhpGlyHLpQZoxMv8HcgXvZEhcGs0PG/vsZnEJ7H0iCM=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
