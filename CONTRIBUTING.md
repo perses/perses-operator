@@ -38,11 +38,9 @@ where `catalog_entry` can be :
 
 This catalog entry will indicate the purpose of your PR.
 
-In the usual workflow, all PRs are squashed. There is two exceptions to this rule:
+PRs targeting `main` are merged through the merge queue using squash and merge.
+Keep each PR focused on a single fix or feature so its commits become one commit
+in the history used to generate the changelog.
 
-1. During the release process, the release branch is merge back in the `main` branch. To avoid to lose the commit
-   message that holds the tag, this kind of PR **MUST** be merged and not squashed.
-
-2. In case your PR contains multiple kind of changes (aka, feature, bugfix ..etc.) and you took care about having
-   different commit following the convention described above, then the PR will be merged and not squashed. Like that we
-   are preserving the works you did and the effort you made when creating meaningful commit.
+Release preparation PRs follow the same process. As described in the
+[release guide](RELEASE.md), create the release tag on `main` after the PR is merged.
