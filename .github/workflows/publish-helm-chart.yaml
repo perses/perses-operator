@@ -1,0 +1,21 @@
+name: Publish helm chart update
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  helm-chart-release:
+    permissions:
+      contents: write
+    uses: ./.github/workflows/helm-chart-release.yaml
+    with:
+      release_ref: ${{ github.event.release.tag_name }}
+    secrets:
+      # NOTE: BOT_TOKEN is a PAT (repo scope) for the persesbot account.
+      # Required to sync and push to persesbot's fork of helm-charts
+      # and to create pull requests against the upstream repository.
+      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
