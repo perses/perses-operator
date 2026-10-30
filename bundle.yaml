@@ -15,7 +15,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     cert-manager.io/inject-ca-from: perses-operator-system/perses-operator-serving-cert
-    controller-gen.kubebuilder.io/version: v0.22.0
+    controller-gen.kubebuilder.io/version: v0.23.0
   name: perses.perses.dev
 spec:
   conversion:
@@ -9713,7 +9713,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     cert-manager.io/inject-ca-from: perses-operator-system/perses-operator-serving-cert
-    controller-gen.kubebuilder.io/version: v0.22.0
+    controller-gen.kubebuilder.io/version: v0.23.0
   name: persesdashboards.perses.dev
 spec:
   conversion:
@@ -10641,7 +10641,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     cert-manager.io/inject-ca-from: perses-operator-system/perses-operator-serving-cert
-    controller-gen.kubebuilder.io/version: v0.22.0
+    controller-gen.kubebuilder.io/version: v0.23.0
   name: persesdatasources.perses.dev
 spec:
   group: perses.dev
@@ -11405,7 +11405,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     cert-manager.io/inject-ca-from: perses-operator-system/perses-operator-serving-cert
-    controller-gen.kubebuilder.io/version: v0.22.0
+    controller-gen.kubebuilder.io/version: v0.23.0
   name: persesglobaldatasources.perses.dev
 spec:
   conversion:
