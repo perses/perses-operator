@@ -127,3 +127,59 @@ func TestValidateSecretFilePath(t *testing.T) {
 		assert.Contains(t, err.Error(), "is not allowed or doesn't exist")
 	})
 }
+
+// Kubernetes Secret/ConfigMap/projected volumes expose files through a relative
+// symlink chain (<key> -> ..data/<key> -> ..<timestamp>/<key>); os.Root must
+// still be able to follow it.
+func TestReadSecretFileKubernetesVolumeLayout(t *testing.T) {
+	mount := t.TempDir()
+	versioned := filepath.Join(mount, "..2026_11_02_09_00_00.000000000")
+	require.NoError(t, os.MkdirAll(versioned, 0700))
+	require.NoError(t, os.WriteFile(filepath.Join(versioned, "token"), []byte("k8s-token"), 0600))
+	require.NoError(t, os.Symlink("..2026_11_02_09_00_00.000000000", filepath.Join(mount, "..data")))
+	require.NoError(t, os.Symlink("..data/token", filepath.Join(mount, "token")))
+
+	data, err := ReadSecretFile(filepath.Join(mount, "token"), []string{mount})
+	require.NoError(t, err)
+	assert.Equal(t, "k8s-token", string(data))
+}
+
+// readFileWithinDir is the second line of defence: even if a symlink is swapped
+// in after ValidateSecretFilePath ran, os.Root must refuse to follow it outside
+// the allowed directory. Exercise it directly, without the pre-validation.
+func TestReadFileWithinDirRefusesEscapes(t *testing.T) {
+	allowedDir := t.TempDir()
+	outsideDir := t.TempDir()
+
+	outsideFile := filepath.Join(outsideDir, "secret")
+	require.NoError(t, os.WriteFile(outsideFile, []byte("outside"), 0600))
+
+	absLink := filepath.Join(allowedDir, "abs-link")
+	require.NoError(t, os.Symlink(outsideFile, absLink))
+
+	relLink := filepath.Join(allowedDir, "rel-link")
+	require.NoError(t, os.Symlink(filepath.Join("..", filepath.Base(outsideDir), "secret"), relLink))
+
+	dirLink := filepath.Join(allowedDir, "dir-link")
+	require.NoError(t, os.Symlink(outsideDir, dirLink))
+
+	for name, path := range map[string]string{
+		"absolute symlink":         absLink,
+		"relative symlink":         relLink,
+		"file under dir symlink":   filepath.Join(dirLink, "secret"),
+		"lexical parent traversal": filepath.Join(allowedDir, "..", filepath.Base(outsideDir), "secret"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := readFileWithinDir(allowedDir, path)
+			require.Error(t, err)
+		})
+	}
+
+	t.Run("regular file still readable", func(t *testing.T) {
+		regular := filepath.Join(allowedDir, "regular")
+		require.NoError(t, os.WriteFile(regular, []byte("ok"), 0600))
+		data, err := readFileWithinDir(allowedDir, regular)
+		require.NoError(t, err)
+		assert.Equal(t, "ok", string(data))
+	})
+}

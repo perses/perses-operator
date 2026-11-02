@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
 	v1 "github.com/perses/perses/pkg/client/api/v1"
@@ -295,13 +294,9 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 					persescommon.ReasonInvalidConfiguration,
 				)
 			}
-			if err := persescommon.ValidateSecretFilePath(*oauth.ClientIDPath, r.AllowedSecretFileDirs); err != nil {
-				err = fmt.Errorf("invalid OAuth client ID file for datasource %s: %w", datasourceName, err)
-				return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonInvalidConfiguration)
-			}
-			clientID, err := os.ReadFile(*oauth.ClientIDPath)
+			clientID, err := persescommon.ReadSecretFile(*oauth.ClientIDPath, r.AllowedSecretFileDirs)
 			if err != nil {
-				err = fmt.Errorf("failed to read the OAuth client ID file %s: %w", *oauth.ClientIDPath, err)
+				err = fmt.Errorf("invalid OAuth client ID file for datasource %s: %w", datasourceName, err)
 				return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonInvalidConfiguration)
 			}
 			oAuthConfig.ClientID = string(clientID)

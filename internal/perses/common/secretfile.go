@@ -16,6 +16,7 @@ package common
 import (
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -101,6 +102,40 @@ func ValidateSecretFilePath(path string, allowedDirs []string) error {
 	}
 
 	return nil
+}
+
+// ReadSecretFile validates path with ValidateSecretFilePath and then reads it
+// through an os.Root opened on the allowed directory that contains it. os.Root
+// enforces containment at open time, so a symlink swapped in between validation
+// and read still cannot escape the allowed directory.
+func ReadSecretFile(path string, allowedDirs []string) ([]byte, error) {
+	if err := ValidateSecretFilePath(path, allowedDirs); err != nil {
+		return nil, err
+	}
+	cleaned := filepath.Clean(path)
+	for _, dir := range allowedDirs {
+		if isPathWithin(cleaned, dir) {
+			return readFileWithinDir(dir, cleaned)
+		}
+	}
+	return nil, fmt.Errorf("file %q is not located in any of the directories listed in --%s", path, SecretFileAllowedDirsFlag)
+}
+
+func readFileWithinDir(dir, path string) ([]byte, error) {
+	rel, err := filepath.Rel(dir, path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file %q: %w", path, err)
+	}
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open allowed directory %q: %w", dir, err)
+	}
+	defer func() { _ = root.Close() }()
+	data, err := root.ReadFile(rel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file %q: %w", path, err)
+	}
+	return data, nil
 }
 
 func isInAllowedDirs(path string, allowedDirs []string, resolveDir bool) bool {
