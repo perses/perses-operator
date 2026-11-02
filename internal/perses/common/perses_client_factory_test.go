@@ -814,24 +814,23 @@ func TestBuildClientOAuthConfigMap(t *testing.T) {
 func TestBuildClientOAuthFile(t *testing.T) {
 	ctx := context.Background()
 
-	// Create temp files for the client ID and secret
-	idFile, err := os.CreateTemp("", "oauth-client-id-*")
+	allowedDir := t.TempDir()
+	// Create temp files for the client ID and secret inside the allowed directory
+	idFile, err := os.CreateTemp(allowedDir, "oauth-client-id-*")
 	require.NoError(t, err)
-	t.Cleanup(func() { _ = os.Remove(idFile.Name()) })
 	_, err = idFile.WriteString("perses-operator")
 	require.NoError(t, err)
 	require.NoError(t, idFile.Close())
 
-	secretFile, err := os.CreateTemp("", "oauth-client-secret-*")
+	secretFile, err := os.CreateTemp(allowedDir, "oauth-client-secret-*")
 	require.NoError(t, err)
-	t.Cleanup(func() { _ = os.Remove(secretFile.Name()) })
 	_, err = secretFile.WriteString("super-secret")
 	require.NoError(t, err)
 	require.NoError(t, secretFile.Close())
 
 	reader := fake.NewClientBuilder().WithScheme(newScheme()).Build()
 
-	t.Run("file type with valid files", func(t *testing.T) {
+	t.Run("file type rejected when allowedDirs not configured", func(t *testing.T) {
 		perses := persesv1alpha2.Perses{
 			ObjectMeta: metav1.ObjectMeta{Name: "perses", Namespace: "perses-system", Generation: 1},
 			Spec: persesv1alpha2.PersesSpec{
@@ -850,6 +849,30 @@ func TestBuildClientOAuthFile(t *testing.T) {
 		}
 
 		factory := NewWithConfig()
+		_, err := factory.buildClient(ctx, reader, perses)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "file references in secrets are disabled")
+	})
+
+	t.Run("file type with valid files inside allowedDirs", func(t *testing.T) {
+		perses := persesv1alpha2.Perses{
+			ObjectMeta: metav1.ObjectMeta{Name: "perses", Namespace: "perses-system", Generation: 1},
+			Spec: persesv1alpha2.PersesSpec{
+				ContainerPort: ptr.To(int32(8080)),
+				Client: &persesv1alpha2.Client{
+					OAuth: &persesv1alpha2.OAuth{
+						SecretSource: persesv1alpha2.SecretSource{
+							Type: persesv1alpha2.SecretSourceTypeFile,
+						},
+						ClientIDPath:     ptr.To(idFile.Name()),
+						ClientSecretPath: ptr.To(secretFile.Name()),
+						TokenURL:         "http://perses.perses-system.svc:8080/token",
+					},
+				},
+			},
+		}
+
+		factory := NewWithConfig(allowedDir)
 		cl, err := factory.buildClient(ctx, reader, perses)
 		require.NoError(t, err)
 		require.NotNil(t, cl)
@@ -877,7 +900,7 @@ func TestBuildClientOAuthFile(t *testing.T) {
 			},
 		}
 
-		factory := NewWithConfig()
+		factory := NewWithConfig(allowedDir)
 		_, err := factory.buildClient(ctx, reader, perses)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "clientIDPath is required when OAuth type is file")
@@ -901,7 +924,7 @@ func TestBuildClientOAuthFile(t *testing.T) {
 			},
 		}
 
-		factory := NewWithConfig()
+		factory := NewWithConfig(allowedDir)
 		_, err := factory.buildClient(ctx, reader, perses)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "clientSecretPath is required when OAuth type is file")
@@ -925,10 +948,10 @@ func TestBuildClientOAuthFile(t *testing.T) {
 			},
 		}
 
-		factory := NewWithConfig()
+		factory := NewWithConfig(allowedDir)
 		_, err := factory.buildClient(ctx, reader, perses)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to read OAuth client ID file")
+		assert.Contains(t, err.Error(), "invalid OAuth client ID file")
 	})
 }
 

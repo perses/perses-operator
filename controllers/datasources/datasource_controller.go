@@ -295,6 +295,10 @@ func (r *PersesDatasourceReconciler) syncPersesSecret(ctx context.Context, perse
 					persescommon.ReasonInvalidConfiguration,
 				)
 			}
+			if err := persescommon.ValidateSecretFilePath(*oauth.ClientIDPath, r.AllowedSecretFileDirs); err != nil {
+				err = fmt.Errorf("invalid OAuth client ID file for datasource %s: %w", datasourceName, err)
+				return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonInvalidConfiguration)
+			}
 			clientID, err := os.ReadFile(*oauth.ClientIDPath)
 			if err != nil {
 				err = fmt.Errorf("failed to read the OAuth client ID file %s: %w", *oauth.ClientIDPath, err)

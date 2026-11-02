@@ -85,6 +85,7 @@ func main() {
 	var tlsClusterProfile bool
 	var tlsConfigureOperands bool
 	var resourceSyncInterval time.Duration
+	var secretFileAllowedDirsFlag string
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8082", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -110,6 +111,8 @@ func main() {
 		"Propagate TLS settings to managed Perses pods. Without this flag, TLS only applies to the operator itself.")
 	flag.DurationVar(&resourceSyncInterval, common.ResourceSyncIntervalFlag, operator.DefaultResourceSyncInterval,
 		"Interval for syncing dashboards and datasources to the Perses API. At 0, only managed credentials sync periodically (every 5 minutes).")
+	flag.StringVar(&secretFileAllowedDirsFlag, common.SecretFileAllowedDirsFlag, "",
+		"Comma-separated list of absolute directory paths from which the operator is allowed to read credential or certificate files when SecretSource type is 'file'. If empty, file secret references read by the operator are disabled.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -121,6 +124,11 @@ func main() {
 	secretSelector, err := internalcache.ParseSecretLabelSelector(watchSecretLabelsFlag)
 	if err != nil {
 		setupLog.Error(err, "invalid --watch-secret-labels value")
+		os.Exit(1)
+	}
+	allowedSecretFileDirs, err := common.ParseSecretFileAllowedDirs(secretFileAllowedDirsFlag)
+	if err != nil {
+		setupLog.Error(err, "invalid --secret-file-allowed-directories value")
 		os.Exit(1)
 	}
 	if watchAllSecrets && watchSecretLabelsFlag != "" {
@@ -238,7 +246,7 @@ func main() {
 	opMetrics := operatormetrics.NewMetrics()
 	reconciliationTracker := operatormetrics.NewReconciliationTracker(ctrlmetrics.Registry)
 
-	persesClientFactory := common.NewWithConfig()
+	persesClientFactory := common.NewWithConfig(allowedSecretFileDirs...)
 
 	if err = (&persescontroller.PersesReconciler{
 		Client:                 mgr.GetClient(),
@@ -279,6 +287,7 @@ func main() {
 		ReconciliationTracker: reconciliationTracker,
 		ClientFactory:         persesClientFactory,
 		SyncInterval:          resourceSyncInterval,
+		AllowedSecretFileDirs: allowedSecretFileDirs,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PersesDatasource")
 		os.Exit(1)
@@ -292,6 +301,7 @@ func main() {
 		ReconciliationTracker: reconciliationTracker,
 		ClientFactory:         persesClientFactory,
 		SyncInterval:          resourceSyncInterval,
+		AllowedSecretFileDirs: allowedSecretFileDirs,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PersesGlobalDatasource")
 		os.Exit(1)
