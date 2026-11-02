@@ -257,7 +257,7 @@ func PersesInstanceForPod(ctx context.Context, r client.Reader, pod *corev1.Pod)
 	}
 	for i := range instances.Items {
 		instance := &instances.Items[i]
-		if LabelsForPerses(instance.Name, instance)["app.kubernetes.io/instance"] == instanceLabel {
+		if SelectorLabelsForPerses(instance.Name, instance)["app.kubernetes.io/instance"] == instanceLabel {
 			return instance, nil
 		}
 	}
