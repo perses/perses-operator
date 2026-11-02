@@ -259,7 +259,7 @@ func (r *PersesDatasourceReconciler) findDatasourcesForPod(ctx context.Context, 
 	}
 
 	datasources := &persesv1alpha2.PersesDatasourceList{}
-	if err := r.List(ctx, datasources); err != nil {
+	if err := r.APIReader.List(ctx, datasources); err != nil {
 		log.WithError(err).Error("Failed to list PersesDatasources for pod")
 		return nil
 	}

@@ -263,7 +263,7 @@ func (r *PersesDashboardReconciler) findDashboardsForPod(ctx context.Context, ob
 	}
 
 	dashboards := &persesv1alpha2.PersesDashboardList{}
-	if err := r.List(ctx, dashboards); err != nil {
+	if err := r.APIReader.List(ctx, dashboards); err != nil {
 		log.WithError(err).Error("Failed to list PersesDashboards for pod")
 		return nil
 	}

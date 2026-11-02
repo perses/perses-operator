@@ -260,7 +260,7 @@ func (r *PersesGlobalDatasourceReconciler) findGlobalDatasourcesForPod(ctx conte
 	}
 
 	globaldatasources := &persesv1alpha2.PersesGlobalDatasourceList{}
-	if err := r.List(ctx, globaldatasources); err != nil {
+	if err := r.APIReader.List(ctx, globaldatasources); err != nil {
 		log.WithError(err).Error("Failed to list PersesGlobalDatasources for pod")
 		return nil
 	}
