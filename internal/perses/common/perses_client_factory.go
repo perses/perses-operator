@@ -433,7 +433,7 @@ func (f *PersesClientFactoryWithConfig) CreateClientsForAllPods(ctx context.Cont
 	podList := &corev1.PodList{}
 	err = k8sClient.List(ctx, podList,
 		client.InNamespace(perses.Namespace),
-		client.MatchingLabels(LabelsForPerses(perses.Name, &perses)),
+		client.MatchingLabels(SelectorLabelsForPerses(perses.Name, &perses)),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list pods for Perses instance %s/%s: %w", perses.Namespace, perses.Name, err)
