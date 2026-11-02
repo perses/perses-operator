@@ -406,7 +406,8 @@ func (f *PersesClientFactoryWithConfig) getOrBuildCached(instanceKey, subKey, fi
 }
 
 func (f *PersesClientFactoryWithConfig) CreateClientsForAllPods(ctx context.Context, k8sClient client.Reader, perses persesv1alpha2.Perses) ([]v1.ClientInterface, error) {
-	if perses.Spec.Config.Database.SQL != nil {
+	serverURLFlag := flag.Lookup(PersesServerURLFlag)
+	if (serverURLFlag != nil && serverURLFlag.Value.String() != "") || perses.Spec.Config.Database.SQL != nil {
 		c, err := f.CreateClient(ctx, k8sClient, perses)
 		if err != nil {
 			return nil, err

@@ -1337,22 +1337,27 @@ func TestCreateClientsForAllPods(t *testing.T) {
 	})
 
 	t.Run("SQL mode returns a single service client", func(t *testing.T) {
-		// A configured server URL flag makes the service client deterministic
-		// and independent of cluster DNS. The flag is normally registered by
-		// main.go, so register it here if the test binary hasn't.
+		sqlPerses := newPersesForPods()
+		sqlPerses.Spec.Config.Database = config.Database{SQL: &config.SQL{}}
+
+		reader := fake.NewClientBuilder().WithScheme(newScheme()).Build()
+
+		clients, err := NewWithConfig().CreateClientsForAllPods(ctx, reader, sqlPerses)
+		require.NoError(t, err)
+		require.Len(t, clients, 1)
+		assert.Equal(t, "http://perses-1.default.svc.cluster.local:8080", clients[0].RESTClient().BaseURL.String())
+	})
+
+	t.Run("server URL flag returns a single client", func(t *testing.T) {
 		if flag.Lookup(PersesServerURLFlag) == nil {
 			flag.String(PersesServerURLFlag, "", "The Perses backend server URL")
 		}
 		require.NoError(t, flag.Set(PersesServerURLFlag, "http://perses.example:8080"))
 		t.Cleanup(func() { _ = flag.Set(PersesServerURLFlag, "") })
 
-		sqlPerses := newPersesForPods()
-		sqlPerses.Spec.Config.Database = config.Database{SQL: &config.SQL{}}
-
-		// No pods exist: SQL mode must not list pods, so this still succeeds.
 		reader := fake.NewClientBuilder().WithScheme(newScheme()).Build()
 
-		clients, err := NewWithConfig().CreateClientsForAllPods(ctx, reader, sqlPerses)
+		clients, err := NewWithConfig().CreateClientsForAllPods(ctx, reader, perses)
 		require.NoError(t, err)
 		require.Len(t, clients, 1)
 		assert.Equal(t, "http://perses.example:8080", clients[0].RESTClient().BaseURL.String())
