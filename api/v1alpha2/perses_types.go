@@ -225,11 +225,21 @@ type BasicAuth struct {
 	PasswordPath string `json:"passwordPath,omitempty"`
 }
 
+// +kubebuilder:validation:XValidation:rule="!(has(self.clientID) && has(self.clientIDPath))",message="clientID and clientIDPath are mutually exclusive"
 type OAuth struct {
 	SecretSource `json:",inline"`
+	// clientID is the OAuth client ID as a literal value.
+	// OAuth client IDs are not confidential (RFC 6749, section 2.2).
+	// Mutually exclusive with clientIDPath. Required instead of clientIDPath for
+	// PersesDatasource and PersesGlobalDatasource when type is "file".
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	ClientID *string `json:"clientID,omitempty"`
 	// clientIDPath specifies the key name within the secret/configmap or filesystem path
 	// (depending on SecretSource.Type) where the OAuth client ID is stored
 	// +optional
+	//
+	// Deprecated: use clientID instead. clientIDPath will be removed in a future API version.
 	ClientIDPath *string `json:"clientIDPath,omitempty"`
 	// clientSecretPath specifies the key name within the secret/configmap or filesystem path
 	// (depending on SecretSource.Type) where the OAuth client secret is stored

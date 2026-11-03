@@ -260,20 +260,12 @@ func (r *PersesGlobalDatasourceReconciler) syncPersesGlobalSecret(ctx context.Co
 			oAuthConfig.ClientID = clientIDData
 			oAuthConfig.ClientSecret = clientSecretData
 		case persesv1alpha2.SecretSourceTypeFile:
-			// the clientID is a Hidden field in perses API,
-			// but doesn't expose it as a file field for it, so we need to read it and use the value
-			if oauth.ClientIDPath == nil {
-				return subreconciler.RequeueWithErrorAndReason(
-					fmt.Errorf("clientIDPath is required when OAuth type is File for globaldatasource %s", datasourceName),
-					persescommon.ReasonInvalidConfiguration,
-				)
-			}
-			clientID, err := persescommon.ReadSecretFile(*oauth.ClientIDPath, r.AllowedSecretFileDirs)
+			// Perses has no client ID file field, so the client ID is set inline.
+			clientID, err := persescommon.DatasourceFileOAuthClientID(oauth, "globaldatasource", datasourceName)
 			if err != nil {
-				err = fmt.Errorf("invalid OAuth client ID file for globaldatasource %s: %w", datasourceName, err)
 				return subreconciler.RequeueWithErrorAndReason(err, persescommon.ReasonInvalidConfiguration)
 			}
-			oAuthConfig.ClientID = string(clientID)
+			oAuthConfig.ClientID = clientID
 			if oauth.ClientSecretPath != nil {
 				oAuthConfig.ClientSecretFile = *oauth.ClientSecretPath
 			}

@@ -191,6 +191,32 @@ var _ = Describe("API Validation", func() {
 				return k8sClient.Delete(ctx, perses)
 			}, time.Minute, time.Second).Should(Succeed())
 		})
+
+		It("should accept Perses OAuth type=file with clientIDPath", func() {
+			perses := &persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "valid-oauth-file-id-path",
+					Namespace: persesNamespace,
+				},
+				Spec: persesv1alpha2.PersesSpec{
+					ContainerPort: ptr.To(int32(8080)),
+					Client: &persesv1alpha2.Client{
+						OAuth: &persesv1alpha2.OAuth{
+							SecretSource:     persesv1alpha2.SecretSource{Type: persesv1alpha2.SecretSourceTypeFile},
+							ClientIDPath:     ptr.To("/etc/perses-creds/client-id"),
+							ClientSecretPath: ptr.To("/etc/perses-creds/client-secret"),
+							TokenURL:         "http://perses.perses-system.svc:8080/api/auth/providers/oidc/my-provider/token",
+						},
+					},
+				},
+			}
+			Expect(k8sClient.Create(ctx, perses)).To(Succeed())
+
+			By("Cleaning up the created resource")
+			Eventually(func() error {
+				return k8sClient.Delete(ctx, perses)
+			}, time.Minute, time.Second).Should(Succeed())
+		})
 	})
 
 	Context("Client auth mutual exclusivity validation", func() {
@@ -1058,6 +1084,64 @@ var _ = Describe("PersesDatasource API Validation", func() {
 			By("Expecting the creation to succeed")
 			err := k8sClient.Create(ctx, datasource)
 			Expect(err).To(Not(HaveOccurred()))
+
+			By("Cleaning up the created resource")
+			Eventually(func() error {
+				return k8sClient.Delete(ctx, datasource)
+			}, time.Minute, time.Second).Should(Succeed())
+		})
+	})
+
+	Context("PersesDatasource OAuth file validation", func() {
+		ctx := context.Background()
+
+		datasourceWithOAuth := func(name string, oauth persesv1alpha2.OAuth) *persesv1alpha2.PersesDatasource {
+			oauth.SecretSource = persesv1alpha2.SecretSource{Type: persesv1alpha2.SecretSourceTypeFile}
+			oauth.ClientSecretPath = ptr.To("/etc/perses/oauth/client-secret")
+			oauth.TokenURL = "https://auth.example.com/token"
+			return &persesv1alpha2.PersesDatasource{
+				ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: persesNamespace},
+				Spec: persesv1alpha2.DatasourceSpec{
+					Config: persesv1alpha2.Datasource{
+						Spec: specdatasource.Spec{
+							Plugin: specplugin.Plugin{Kind: "PrometheusDatasource", Spec: map[string]interface{}{}},
+						},
+					},
+					Client: &persesv1alpha2.Client{OAuth: &oauth},
+				},
+			}
+		}
+
+		It("should reject type=file with clientIDPath (CEL validation)", func() {
+			err := k8sClient.Create(ctx, datasourceWithOAuth("invalid-oauth-file-id-path", persesv1alpha2.OAuth{
+				ClientIDPath: ptr.To("/etc/perses-creds/client-id"),
+			}))
+			Expect(err).To(HaveOccurred())
+			Expect(errors.IsInvalid(err)).To(BeTrue())
+			Expect(err.Error()).To(ContainSubstring("oauth.clientID is required when oauth.type is file"))
+		})
+
+		It("should reject type=file without clientID (CEL validation)", func() {
+			err := k8sClient.Create(ctx, datasourceWithOAuth("invalid-oauth-file-no-id", persesv1alpha2.OAuth{}))
+			Expect(err).To(HaveOccurred())
+			Expect(errors.IsInvalid(err)).To(BeTrue())
+		})
+
+		It("should reject clientID together with clientIDPath (CEL validation)", func() {
+			err := k8sClient.Create(ctx, datasourceWithOAuth("invalid-oauth-file-both-ids", persesv1alpha2.OAuth{
+				ClientID:     ptr.To("my-client-id"),
+				ClientIDPath: ptr.To("/etc/perses-creds/client-id"),
+			}))
+			Expect(err).To(HaveOccurred())
+			Expect(errors.IsInvalid(err)).To(BeTrue())
+			Expect(err.Error()).To(ContainSubstring("clientID and clientIDPath are mutually exclusive"))
+		})
+
+		It("should accept type=file with a literal clientID", func() {
+			datasource := datasourceWithOAuth("valid-oauth-file-client-id", persesv1alpha2.OAuth{
+				ClientID: ptr.To("my-client-id"),
+			})
+			Expect(k8sClient.Create(ctx, datasource)).To(Succeed())
 
 			By("Cleaning up the created resource")
 			Eventually(func() error {

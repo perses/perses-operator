@@ -34,62 +34,45 @@ import (
 
 func TestSyncPersesSecretOAuthFileValidation(t *testing.T) {
 	ctx := context.Background()
-	allowedDir := t.TempDir()
-	outsideDir := t.TempDir()
 
-	allowedIDFile := filepath.Join(allowedDir, "client-id")
-	require.NoError(t, os.WriteFile(allowedIDFile, []byte("my-client-id"), 0600))
-
-	outsideIDFile := filepath.Join(outsideDir, "client-id")
-	require.NoError(t, os.WriteFile(outsideIDFile, []byte("secret-token"), 0600))
-
-	makeDS := func(clientIDPath string) *persesv1alpha2.PersesDatasource {
+	makeDS := func(oauth persesv1alpha2.OAuth) *persesv1alpha2.PersesDatasource {
+		oauth.SecretSource = persesv1alpha2.SecretSource{Type: persesv1alpha2.SecretSourceTypeFile}
+		oauth.ClientSecretPath = ptr.To("/etc/perses/oauth/client-secret")
+		oauth.TokenURL = "https://example.com/token"
 		return &persesv1alpha2.PersesDatasource{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "test-ds",
 				Namespace: "default",
 			},
 			Spec: persesv1alpha2.DatasourceSpec{
-				Client: &persesv1alpha2.Client{
-					OAuth: &persesv1alpha2.OAuth{
-						SecretSource: persesv1alpha2.SecretSource{
-							Type: persesv1alpha2.SecretSourceTypeFile,
-						},
-						ClientIDPath:     ptr.To(clientIDPath),
-						ClientSecretPath: ptr.To("/etc/perses/oauth/client-secret"),
-						TokenURL:         "https://example.com/token",
-					},
-				},
+				Client: &persesv1alpha2.Client{OAuth: &oauth},
 			},
 		}
 	}
 
-	t.Run("rejects file when AllowedSecretFileDirs is empty", func(t *testing.T) {
+	t.Run("rejects clientIDPath without reading the file", func(t *testing.T) {
+		idFile := filepath.Join(t.TempDir(), "client-id")
+		require.NoError(t, os.WriteFile(idFile, []byte("operator-credential"), 0600))
 		r := &PersesDatasourceReconciler{}
-		mockClient := new(internal.MockClient)
 
-		_, reason, err := r.syncPersesSecret(ctx, mockClient, makeDS(allowedIDFile))
+		_, reason, err := r.syncPersesSecret(ctx, new(internal.MockClient), makeDS(persesv1alpha2.OAuth{ClientIDPath: ptr.To(idFile)}))
 		require.Error(t, err)
 		assert.Equal(t, persescommon.ReasonInvalidConfiguration, reason)
-		assert.Contains(t, err.Error(), "file references in secrets are disabled")
+		assert.Contains(t, err.Error(), "oauth.clientIDPath is not supported when oauth.type is file")
+		assert.NotContains(t, err.Error(), "operator-credential")
 	})
 
-	t.Run("rejects file outside AllowedSecretFileDirs", func(t *testing.T) {
-		r := &PersesDatasourceReconciler{
-			AllowedSecretFileDirs: []string{allowedDir},
-		}
-		mockClient := new(internal.MockClient)
+	t.Run("requires clientID", func(t *testing.T) {
+		r := &PersesDatasourceReconciler{}
 
-		_, reason, err := r.syncPersesSecret(ctx, mockClient, makeDS(outsideIDFile))
+		_, reason, err := r.syncPersesSecret(ctx, new(internal.MockClient), makeDS(persesv1alpha2.OAuth{}))
 		require.Error(t, err)
 		assert.Equal(t, persescommon.ReasonInvalidConfiguration, reason)
-		assert.Contains(t, err.Error(), "is not allowed or doesn't exist")
+		assert.Contains(t, err.Error(), "oauth.clientID is required when oauth.type is file")
 	})
 
-	t.Run("allows file inside AllowedSecretFileDirs", func(t *testing.T) {
-		r := &PersesDatasourceReconciler{
-			AllowedSecretFileDirs: []string{allowedDir},
-		}
+	t.Run("uses the literal clientID", func(t *testing.T) {
+		r := &PersesDatasourceReconciler{}
 		mockClient := new(internal.MockClient)
 		mockSecret := new(internal.MockSecret)
 		mockClient.On("Secret", "default").Return(mockSecret)
@@ -108,7 +91,7 @@ func TestSyncPersesSecretOAuthFileValidation(t *testing.T) {
 			},
 		}).Return(&persesv1.Secret{}, nil)
 
-		_, reason, err := r.syncPersesSecret(ctx, mockClient, makeDS(allowedIDFile))
+		_, reason, err := r.syncPersesSecret(ctx, mockClient, makeDS(persesv1alpha2.OAuth{ClientID: ptr.To("my-client-id")}))
 		require.NoError(t, err)
 		assert.Empty(t, reason)
 		mockSecret.AssertExpectations(t)

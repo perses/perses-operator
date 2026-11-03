@@ -4160,8 +4160,13 @@
                             "format": "int32",
                             "type": "integer"
                           },
+                          "clientID": {
+                            "description": "clientID is the OAuth client ID as a literal value.\nOAuth client IDs are not confidential (RFC 6749, section 2.2).\nMutually exclusive with clientIDPath. Required instead of clientIDPath for\nPersesDatasource and PersesGlobalDatasource when type is \"file\".",
+                            "minLength": 1,
+                            "type": "string"
+                          },
                           "clientIDPath": {
-                            "description": "clientIDPath specifies the key name within the secret/configmap or filesystem path\n(depending on SecretSource.Type) where the OAuth client ID is stored",
+                            "description": "clientIDPath specifies the key name within the secret/configmap or filesystem path\n(depending on SecretSource.Type) where the OAuth client ID is stored\n\nDeprecated: use clientID instead. clientIDPath will be removed in a future API version.",
                             "type": "string"
                           },
                           "clientSecretPath": {
@@ -4217,6 +4222,10 @@
                         ],
                         "type": "object",
                         "x-kubernetes-validations": [
+                          {
+                            "message": "clientID and clientIDPath are mutually exclusive",
+                            "rule": "!(has(self.clientID) && has(self.clientIDPath))"
+                          },
                           {
                             "message": "name is required when type is secret or configmap",
                             "rule": "self.type != 'secret' && self.type != 'configmap' || has(self.name)"

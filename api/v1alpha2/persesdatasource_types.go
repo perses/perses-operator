@@ -39,6 +39,7 @@ type DatasourceSpec struct {
 	// client specifies authentication and TLS configuration for the datasource
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// +optional
+	// +kubebuilder:validation:XValidation:rule="!has(self.oauth) || self.oauth.type != 'file' || has(self.oauth.clientID)",message="oauth.clientID is required when oauth.type is file; clientIDPath is not supported for datasources"
 	Client *Client `json:"client,omitempty"`
 	// instanceSelector selects Perses instances where this datasource will be created
 	// +operator-sdk:csv:customresourcedefinitions:type=spec

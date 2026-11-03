@@ -9,11 +9,11 @@ stringData:
   # Credentials for the human-facing OIDC provider configured on the Perses server.
   CLIENT_ID: perses
   CLIENT_SECRET: some-random-client-secret
-  # Credentials the operator uses for the OAuth 2.0 client_credentials flow. These must be
-  # valid for the client_credentials grant at your identity provider. They can be the same
-  # OIDC application as above or a dedicated service account client. Perses exchanges them
-  # with the IdP, reads the resulting user info, and issues its own Perses token.
-  OPERATOR_CLIENT_ID: perses-operator
+  # The client secret the operator uses for the OAuth 2.0 client_credentials flow. It must be
+  # valid for the client_credentials grant at your identity provider, together with the client ID
+  # set inline on the Perses CR below. They can be the same OIDC application as above or a
+  # dedicated service account client. Perses exchanges them with the IdP, reads the resulting user
+  # info, and issues its own Perses token.
   OPERATOR_CLIENT_SECRET: some-random-operator-client-secret
   # The encryption key is used by the Perses server to sign its own tokens.
   ENCRYPTION_KEY: some-random-encryption-key
@@ -88,7 +88,8 @@ spec:
       type: secret
       name: perses-config
       namespace: perses-system
-      clientIDPath: OPERATOR_CLIENT_ID
+      # OAuth client IDs aren't confidential, so the client ID is set inline.
+      clientID: perses-operator
       clientSecretPath: OPERATOR_CLIENT_SECRET
       # Perses's native provider token endpoint for the configured OIDC provider slug.
       # Format: <perses-url>/api/auth/providers/<oidc|oauth>/<slug_id>/token

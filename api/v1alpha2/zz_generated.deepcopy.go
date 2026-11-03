@@ -194,6 +194,11 @@ func (in *Metadata) DeepCopy() *Metadata {
 func (in *OAuth) DeepCopyInto(out *OAuth) {
 	*out = *in
 	in.SecretSource.DeepCopyInto(&out.SecretSource)
+	if in.ClientID != nil {
+		in, out := &in.ClientID, &out.ClientID
+		*out = new(string)
+		**out = **in
+	}
 	if in.ClientIDPath != nil {
 		in, out := &in.ClientIDPath, &out.ClientIDPath
 		*out = new(string)

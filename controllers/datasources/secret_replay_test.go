@@ -11,6 +11,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -24,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
@@ -253,6 +256,71 @@ func TestManagedSecretReplayInterval(t *testing.T) {
 				}
 			}
 			require.True(t, available)
+		})
+	}
+}
+
+func TestReconcileRejectedOAuthFileSetsDegraded(t *testing.T) {
+	idFile := filepath.Join(t.TempDir(), "client-id")
+	require.NoError(t, os.WriteFile(idFile, []byte("operator-credential"), 0600))
+
+	for _, tc := range []struct {
+		name    string
+		oauth   v1alpha2.OAuth
+		wantMsg string
+	}{
+		{"clientIDPath", v1alpha2.OAuth{ClientIDPath: ptr.To(idFile)}, "oauth.clientIDPath is not supported"},
+		{"missing clientID", v1alpha2.OAuth{}, "oauth.clientID is required"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			scheme := runtime.NewScheme()
+			require.NoError(t, v1alpha2.AddToScheme(scheme))
+			require.NoError(t, corev1.AddToScheme(scheme))
+			require.NoError(t, appsv1.AddToScheme(scheme))
+			p := &v1alpha2.Perses{ObjectMeta: metav1.ObjectMeta{Name: "backend", Namespace: "test", UID: "backend"}}
+			require.NoError(t, json.Unmarshal([]byte(`{"database":{"file":{"folder":"/perses"}}}`), &p.Spec.Config))
+			p.Status.Conditions = []metav1.Condition{{Type: common.TypeAvailablePerses, Status: metav1.ConditionTrue}}
+			sts := &appsv1.StatefulSet{ObjectMeta: metav1.ObjectMeta{Name: p.Name, Namespace: p.Namespace, UID: "workload", Generation: 2, OwnerReferences: []metav1.OwnerReference{{Kind: "Perses", UID: p.UID, Controller: ptr.To(true)}}}, Spec: appsv1.StatefulSetSpec{Replicas: ptr.To[int32](1), Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"app": "backend"}}}, Status: appsv1.StatefulSetStatus{ObservedGeneration: 2, Replicas: 1, UpdatedReplicas: 1, ReadyReplicas: 1, CurrentRevision: "new", UpdateRevision: "new"}}
+			pod := &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "backend-0", Namespace: p.Namespace, Labels: map[string]string{"app": "backend", "controller-revision-hash": "new"}, OwnerReferences: []metav1.OwnerReference{{Kind: "StatefulSet", UID: sts.UID, Controller: ptr.To(true)}}}, Status: corev1.PodStatus{Phase: corev1.PodRunning, Conditions: []corev1.PodCondition{{Type: corev1.PodReady, Status: corev1.ConditionTrue}}}}
+			ds := &v1alpha2.PersesDatasource{ObjectMeta: metav1.ObjectMeta{Name: "example", Namespace: "test"}}
+			require.NoError(t, json.Unmarshal([]byte(`{"plugin":{"kind":"Prometheus","spec":{"directUrl":"http://example.com"}}}`), &ds.Spec.Config.Spec))
+			oauth := tc.oauth
+			oauth.SecretSource = v1alpha2.SecretSource{Type: v1alpha2.SecretSourceTypeFile}
+			oauth.ClientSecretPath = ptr.To("/etc/perses/client-secret")
+			oauth.TokenURL = "http://idp.example.com/token"
+			ds.Spec.Client = &v1alpha2.Client{OAuth: &oauth}
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				switch {
+				case req.Method == "GET" && strings.HasSuffix(req.URL.Path, "/projects/test"):
+					_, _ = w.Write([]byte(`{"kind":"Project","metadata":{"name":"test"}}`))
+				case req.Method == "GET" && strings.HasSuffix(req.URL.Path, "/datasources/example"):
+					_ = json.NewEncoder(w).Encode(&model.Datasource{Kind: model.KindDatasource, Metadata: model.ProjectMetadata{Metadata: model.Metadata{Name: ds.Name}}, Spec: ds.Spec.Config.Spec})
+				default:
+					t.Errorf("unexpected request %s %s", req.Method, req.URL.Path)
+					w.WriteHeader(500)
+				}
+			}))
+			defer server.Close()
+			url, err := speccommon.ParseURL(server.URL)
+			require.NoError(t, err)
+			rest, err := clientconfig.NewRESTClient(clientconfig.RestConfigClient{URL: url})
+			require.NoError(t, err)
+			kube := fake.NewClientBuilder().WithScheme(scheme).WithStatusSubresource(ds).WithObjects(p, sts, pod, ds).Build()
+			r := &PersesDatasourceReconciler{Client: kube, APIReader: kube, ClientFactory: common.NewWithClient(v1.NewWithClient(rest))}
+
+			_, err = r.Reconcile(ctx, ctrl.Request{NamespacedName: client.ObjectKeyFromObject(ds)})
+			require.Error(t, err)
+
+			fresh := &v1alpha2.PersesDatasource{}
+			require.NoError(t, kube.Get(ctx, client.ObjectKeyFromObject(ds), fresh))
+			degraded := meta.FindStatusCondition(fresh.Status.Conditions, common.TypeDegradedPerses)
+			require.NotNil(t, degraded)
+			require.Equal(t, metav1.ConditionTrue, degraded.Status)
+			require.Equal(t, string(common.ReasonInvalidConfiguration), degraded.Reason)
+			require.Contains(t, degraded.Message, tc.wantMsg)
+			require.NotContains(t, degraded.Message, "operator-credential")
 		})
 	}
 }

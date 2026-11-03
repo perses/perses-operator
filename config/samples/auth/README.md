@@ -62,31 +62,34 @@ spec:
       type: secret
       name: perses-config
       namespace: perses-system
-      clientIDPath: OPERATOR_CLIENT_ID
+      clientID: perses-operator
       clientSecretPath: OPERATOR_CLIENT_SECRET
       tokenURL: http://perses.perses-system.svc.cluster.local:8080/api/auth/providers/oidc/oidc-provider/token
 ```
 
+`clientID` is the client ID as a literal value; client IDs aren't confidential
+([RFC 6749, section 2.2](https://datatracker.ietf.org/doc/html/rfc6749#section-2.2)).
+`clientIDPath`, which reads it from the Secret, ConfigMap or file instead, is deprecated and will
+be removed in a future API version. The two are mutually exclusive.
+
 #### `type: configmap`
 
-Same as `secret` but reads the client ID/secret from a ConfigMap. Suitable for development
+Same as `secret` but reads the client secret from a ConfigMap. Suitable for development
 environments only — do not store secrets in ConfigMaps in production.
 
 #### `type: file`
 
-Reads the client ID from `clientIDPath` and the client secret from `clientSecretPath` directly
-from files mounted into the operator pod. Both paths are required and must be located inside a
-directory explicitly allowed via the operator's `--secret-file-allowed-directories` flag (file
-references are disabled by default). This avoids storing credentials in Kubernetes
-Secrets/ConfigMaps and is useful when the operator runs alongside an external secrets manager that
-populates files.
+Reads the client secret from `clientSecretPath`, a file mounted into the operator pod, inside a
+directory allowed by the operator's `--secret-file-allowed-directories` flag (disabled by default).
+Useful with external secrets managers that populate files. See the
+[user guide](../../../docs/user-guide.md#reading-credentials-from-files-in-the-operator-pod) for setup.
 
 ```yaml
 spec:
   client:
     oauth:
       type: file
-      clientIDPath: /etc/perses-creds/oauth-client-id
+      clientID: perses-operator
       clientSecretPath: /etc/perses-creds/oauth-client-secret
       tokenURL: http://perses.perses-system.svc.cluster.local:8080/api/auth/providers/oidc/oidc-provider/token
 ```

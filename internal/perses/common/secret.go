@@ -75,10 +75,14 @@ func GetBasicAuthData(ctx context.Context, client client.Reader, namespace strin
 	return "", nil
 }
 
-// GetOAuthData get basic auth from a OAuth resource
+// GetOAuthData get basic auth from a OAuth resource. A literal oauth.ClientID
+// takes the place of clientIDPath.
 func GetOAuthData(ctx context.Context, client client.Reader, namespace string, name string, oauth *v1alpha2.OAuth) (string, string, error) {
 	var clientIDData string
 	var clientSecretData string
+	if oauth.ClientID != nil {
+		clientIDData = *oauth.ClientID
+	}
 
 	if oauth.Type == v1alpha2.SecretSourceTypeSecret || oauth.Type == v1alpha2.SecretSourceTypeConfigMap {
 		if oauth.Name == nil || len(*oauth.Name) == 0 {
@@ -103,7 +107,7 @@ func GetOAuthData(ctx context.Context, client client.Reader, namespace string, n
 				return "", "", err
 			}
 
-			if oauth.ClientIDPath != nil {
+			if oauth.ClientIDPath != nil && oauth.ClientID == nil {
 				clientIDData = string(secret.Data[*oauth.ClientIDPath])
 			}
 			if oauth.ClientSecretPath != nil {
@@ -117,7 +121,7 @@ func GetOAuthData(ctx context.Context, client client.Reader, namespace string, n
 				return "", "", err
 			}
 
-			if oauth.ClientIDPath != nil {
+			if oauth.ClientIDPath != nil && oauth.ClientID == nil {
 				clientIDData = cm.Data[*oauth.ClientIDPath]
 			}
 			if oauth.ClientSecretPath != nil {
@@ -145,6 +149,20 @@ func GetOAuthData(ctx context.Context, client client.Reader, namespace string, n
 	}
 
 	return "", "", nil
+}
+
+// DatasourceFileOAuthClientID returns the literal client ID of a file-type
+// datasource OAuth config. Perses has no client ID file field, and the operator
+// never reads datasource files from its own pod. kind labels the resource
+// (e.g. "datasource") in error messages.
+func DatasourceFileOAuthClientID(oauth *v1alpha2.OAuth, kind, name string) (string, error) {
+	if oauth.ClientIDPath != nil {
+		return "", fmt.Errorf("oauth.clientIDPath is not supported when oauth.type is file for %s %s; set oauth.clientID instead", kind, name)
+	}
+	if oauth.ClientID == nil || *oauth.ClientID == "" {
+		return "", fmt.Errorf("oauth.clientID is required when oauth.type is file for %s %s", kind, name)
+	}
+	return *oauth.ClientID, nil
 }
 
 // GetTLSCertData get tls certs from a Certificate resource

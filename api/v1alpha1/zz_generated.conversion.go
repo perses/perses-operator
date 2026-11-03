@@ -580,6 +580,7 @@ func autoConvert_v1alpha2_OAuth_To_v1alpha1_OAuth(in *v1alpha2.OAuth, out *OAuth
 	if err := Convert_v1alpha2_SecretSource_To_v1alpha1_SecretSource(&in.SecretSource, &out.SecretSource, s); err != nil {
 		return err
 	}
+	// WARNING: in.ClientID requires manual conversion: does not exist in peer-type
 	if err := v1.Convert_Pointer_string_To_string(&in.ClientIDPath, &out.ClientIDPath, s); err != nil {
 		return err
 	}

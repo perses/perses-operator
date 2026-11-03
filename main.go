@@ -19,6 +19,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -111,8 +112,7 @@ func main() {
 		"Propagate TLS settings to managed Perses pods. Without this flag, TLS only applies to the operator itself.")
 	flag.DurationVar(&resourceSyncInterval, common.ResourceSyncIntervalFlag, operator.DefaultResourceSyncInterval,
 		"Interval for syncing dashboards and datasources to the Perses API. At 0, only managed credentials sync periodically (every 5 minutes).")
-	flag.StringVar(&secretFileAllowedDirsFlag, common.SecretFileAllowedDirsFlag, "",
-		"Comma-separated list of absolute directory paths from which the operator is allowed to read credential or certificate files when SecretSource type is 'file'. If empty, file secret references read by the operator are disabled.")
+	registerSecretFileFlags(flag.CommandLine, &secretFileAllowedDirsFlag)
 	opts := zap.Options{
 		Development: true,
 	}
@@ -126,9 +126,9 @@ func main() {
 		setupLog.Error(err, "invalid --watch-secret-labels value")
 		os.Exit(1)
 	}
-	allowedSecretFileDirs, err := common.ParseSecretFileAllowedDirs(secretFileAllowedDirsFlag)
+	persesClientFactory, err := newPersesClientFactory(secretFileAllowedDirsFlag, certDir)
 	if err != nil {
-		setupLog.Error(err, "invalid --secret-file-allowed-directories value")
+		setupLog.Error(err, "invalid secret file configuration")
 		os.Exit(1)
 	}
 	if watchAllSecrets && watchSecretLabelsFlag != "" {
@@ -246,8 +246,6 @@ func main() {
 	opMetrics := operatormetrics.NewMetrics()
 	reconciliationTracker := operatormetrics.NewReconciliationTracker(ctrlmetrics.Registry)
 
-	persesClientFactory := common.NewWithConfig(allowedSecretFileDirs...)
-
 	if err = (&persescontroller.PersesReconciler{
 		Client:                 mgr.GetClient(),
 		APIReader:              mgr.GetAPIReader(),
@@ -287,7 +285,6 @@ func main() {
 		ReconciliationTracker: reconciliationTracker,
 		ClientFactory:         persesClientFactory,
 		SyncInterval:          resourceSyncInterval,
-		AllowedSecretFileDirs: allowedSecretFileDirs,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PersesDatasource")
 		os.Exit(1)
@@ -301,7 +298,6 @@ func main() {
 		ReconciliationTracker: reconciliationTracker,
 		ClientFactory:         persesClientFactory,
 		SyncInterval:          resourceSyncInterval,
-		AllowedSecretFileDirs: allowedSecretFileDirs,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PersesGlobalDatasource")
 		os.Exit(1)
@@ -345,4 +341,30 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+// registerSecretFileFlags registers the allow-list flag, defaulting to its env var.
+func registerSecretFileFlags(fs *flag.FlagSet, operatorDirs *string) {
+	fs.StringVar(operatorDirs, common.SecretFileAllowedDirsFlag, os.Getenv(common.SecretFileAllowedDirsEnv),
+		"Comma-separated absolute directories the operator may read Perses spec.client 'file' references from. Empty disables them. "+
+			"Defaults to $"+common.SecretFileAllowedDirsEnv+".")
+}
+
+// newPersesClientFactory parses the allow-list, protecting certDir (the
+// webhook serving key), and builds the Perses client factory that uses it.
+func newPersesClientFactory(raw, certDir string) (*common.PersesClientFactoryWithConfig, error) {
+	absCertDir, err := filepath.Abs(certDir)
+	if err != nil {
+		return nil, fmt.Errorf("unable to resolve protected directory %q: %w", certDir, err)
+	}
+	allowed, err := common.ParseAllowedSecretFileDirs(common.SecretFileAllowedDirsFlag, raw, absCertDir)
+	if err != nil {
+		return nil, fmt.Errorf("invalid --%s value: %w", common.SecretFileAllowedDirsFlag, err)
+	}
+	for _, dir := range allowed.Dirs() {
+		if info, statErr := os.Stat(dir); statErr != nil || !info.IsDir() {
+			setupLog.Info("WARNING: directory listed in --"+common.SecretFileAllowedDirsFlag+" is not accessible; file references in it will fail", "directory", dir)
+		}
+	}
+	return common.NewWithConfig(allowed), nil
 }

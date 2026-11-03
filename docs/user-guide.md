@@ -11,6 +11,9 @@ This documentation provides information on how to use the Perses Operator custom
 - [Examples](#examples)
 - [Project Management](#project-management)
 - [Tags](#tags)
+- [Secrets](#secrets)
+  - [OAuth client ID](#oauth-client-id)
+  - [Reading credentials from files in the operator pod](#reading-credentials-from-files-in-the-operator-pod)
 - [Cache and Watch Filtering](#cache-and-watch-filtering)
 - [Troubleshooting](#troubleshooting)
 
@@ -316,9 +319,10 @@ when using those types.
 > [!NOTE]
 > To use the `file` type, you must mount the file into the Perses pod
 > using `spec.volumes` and `spec.volumeMounts` on the `Perses` CR.
+> The operator never reads datasource files from its own pod.
 
 ```yaml
-apiVersion: perses.dev/v1alpha1
+apiVersion: perses.dev/v1alpha2
 kind: PersesDatasource
 metadata:
   name: prometheus-through-proxy
@@ -337,7 +341,7 @@ spec:
       type: secret
       name: k8s-oauth-secret-name
       # namespace: monitoring
-      clientIDPath: client-id-key-in-secret
+      clientID: my-client-id # see "OAuth client ID" below
       clientSecretPath: client-secret-key-in-secret
       tokenURL: https://auth.example.com/token
       scopes:
@@ -360,6 +364,126 @@ spec:
 
 > [!NOTE]
 > The `basicAuth` and `oauth` fields are mutually exclusive.
+
+### OAuth client ID
+
+OAuth client IDs aren't confidential ([RFC 6749, section 2.2](https://datatracker.ietf.org/doc/html/rfc6749#section-2.2)),
+so `oauth.clientID` (`perses.dev/v1alpha2`) takes the client ID as a literal value. It works with
+every `type` on `Perses`, `PersesDatasource` and `PersesGlobalDatasource`.
+
+> [!WARNING]
+> `oauth.clientIDPath` is deprecated and will be removed in a future API version; use `clientID`
+> instead. The two are mutually exclusive.
+
+Perses can read the client secret from a file, but not the client ID. So, with `oauth.type: file`,
+`PersesDatasource` and `PersesGlobalDatasource` must set `clientID`, and `clientIDPath` is
+rejected. `clientSecretPath` is a path in the Perses pod, read by the Perses server:
+
+```yaml
+apiVersion: perses.dev/v1alpha2
+kind: PersesDatasource
+metadata:
+  name: prometheus-oauth
+  namespace: monitoring
+spec:
+  config: ...
+  client:
+    oauth:
+      type: file
+      clientID: my-perses-client
+      clientSecretPath: /etc/perses/oauth/client-secret # mounted via the Perses CR spec.volumes
+      tokenURL: https://auth.example.com/token
+```
+
+> [!IMPORTANT]
+> Breaking change: the API server rejects new or changed datasources that use `oauth.type: file`
+> with `clientIDPath`. Existing ones report `Degraded` with reason `InvalidConfiguration` until they
+> switch to `clientID`.
+
+### Reading credentials from files in the operator pod
+
+The operator reads the `type: file` references of the `Perses` CR's own client (used to connect to
+the Perses API) from its own pod, only from directories allowed by
+`--secret-file-allowed-directories`. It takes comma-separated absolute paths, is empty (disabled)
+by default, and can also be set by the `SECRET_FILE_ALLOWED_DIRECTORIES` environment variable (the
+flag wins). It covers `spec.client.oauth.clientSecretPath` (and the deprecated `clientIDPath`),
+`spec.client.tls.caCert.certPath`, and `spec.client.tls.userCert.certPath` and `privateKeyPath`.
+
+Datasource file paths are read by the Perses server and aren't affected.
+
+> [!IMPORTANT]
+> Breaking change: these fields fail with `file references in secrets are disabled` until the
+> flag is configured.
+
+> [!WARNING]
+> Anyone who can create or update a `Perses` resource can have the operator read any file in the
+> allowed directories and send it to an OAuth `tokenURL` of their choice. Only let trusted users
+> manage `Perses` resources.
+
+Files must resolve, after symlinks, to a regular file of at most 1 MiB inside an allowed directory;
+mounted Secret and ConfigMap volumes work as-is. The operator won't start if an allowed directory is,
+contains, or is inside `/var/run/secrets`, `/run/secrets`, `/proc`, `/sys`, `/etc/kubernetes`, or
+`--webhook-cert-dir` (default `/tmp/k8s-webhook-server/serving-certs`), including via symlinks.
+
+Mount the files and set the flag. This patch replaces `args`, so keep the existing ones; dropping
+`--metrics-bind-address` would expose unauthenticated metrics:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: perses-operator-controller-manager
+  namespace: perses-operator-system
+spec:
+  template:
+    spec:
+      containers:
+        - name: manager
+          args:
+            - --health-probe-bind-address=:8081
+            - --metrics-bind-address=127.0.0.1:8082
+            - --leader-elect
+            - --secret-file-allowed-directories=/etc/perses-creds
+          volumeMounts:
+            - name: perses-creds
+              mountPath: /etc/perses-creds
+              readOnly: true
+      volumes:
+        - name: perses-creds
+          secret:
+            secretName: perses-operator-creds
+```
+
+For OLM, which can't set args durably, use the environment variable in the `Subscription` config:
+
+```yaml
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: perses-operator
+  namespace: openshift-operators
+spec:
+  # ...existing channel, name, source and sourceNamespace
+  config:
+    env:
+      - name: SECRET_FILE_ALLOWED_DIRECTORIES
+        value: /etc/perses-creds
+    volumeMounts:
+      - name: perses-creds
+        mountPath: /etc/perses-creds
+        readOnly: true
+    volumes:
+      - name: perses-creds
+        secret:
+          secretName: perses-operator-creds
+```
+
+Notes:
+
+- Files are re-read when the operator's cached client expires (5 minutes) or the `Perses` resource
+  changes, not on every request.
+- On OpenShift, use `type: configmap` with the `openshift-service-ca.crt` ConfigMap (key
+  `service-ca.crt`) for the service CA, since `/var/run/secrets` can't be allowed.
 
 ## Examples
 

@@ -51,18 +51,18 @@ type clientCacheEntry struct {
 }
 
 type PersesClientFactoryWithConfig struct {
-	mtx         sync.RWMutex
-	cache       map[string]clientCacheEntry
-	ttl         time.Duration
-	lastSweep   time.Time
-	allowedDirs []string
+	mtx            sync.RWMutex
+	cache          map[string]clientCacheEntry
+	ttl            time.Duration
+	lastSweep      time.Time
+	secretFileDirs AllowedSecretFileDirs
 }
 
-func NewWithConfig(allowedDirs ...string) *PersesClientFactoryWithConfig {
+func NewWithConfig(secretFileDirs AllowedSecretFileDirs) *PersesClientFactoryWithConfig {
 	return &PersesClientFactoryWithConfig{
-		cache:       make(map[string]clientCacheEntry),
-		ttl:         defaultClientCacheTTL,
-		allowedDirs: allowedDirs,
+		cache:          make(map[string]clientCacheEntry),
+		ttl:            defaultClientCacheTTL,
+		secretFileDirs: secretFileDirs,
 	}
 }
 
@@ -127,7 +127,11 @@ func configFingerprint(perses persesv1alpha2.Perses) string {
 		if oauth.ClientIDPath != nil {
 			clientIDPath = *oauth.ClientIDPath
 		}
-		fmt.Fprintf(&b, "oauth=type:%s,name:%s,ns:%s,tokenURL:%s,idPath:%s,", oauth.Type, oauthName, oauthNS, oauth.TokenURL, clientIDPath)
+		clientID := ""
+		if oauth.ClientID != nil {
+			clientID = *oauth.ClientID
+		}
+		fmt.Fprintf(&b, "oauth=type:%s,name:%s,ns:%s,tokenURL:%s,idPath:%s,id:%s,", oauth.Type, oauthName, oauthNS, oauth.TokenURL, clientIDPath, clientID)
 	}
 	serverURLFlag := flag.Lookup(PersesServerURLFlag)
 	if serverURLFlag != nil {
@@ -260,7 +264,7 @@ func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, client 
 
 				tlsConfig.CA = caData
 			case persesv1alpha2.SecretSourceTypeFile:
-				caData, err := ReadSecretFile(tls.CaCert.CertPath, f.allowedDirs)
+				caData, err := f.secretFileDirs.ReadFile(tls.CaCert.CertPath)
 				if err != nil {
 					return nil, fmt.Errorf("invalid CA cert file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
 				}
@@ -279,11 +283,19 @@ func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, client 
 				tlsConfig.Cert = cert
 				tlsConfig.Key = key
 			case persesv1alpha2.SecretSourceTypeFile:
-				cert, err := ReadSecretFile(tls.UserCert.CertPath, f.allowedDirs)
+				if tls.UserCert.PrivateKeyPath == nil {
+					return nil, fmt.Errorf("privateKeyPath is required for user cert of type file for Perses %s/%s", perses.Namespace, perses.Name)
+				}
+				cert, err := f.secretFileDirs.ReadFile(tls.UserCert.CertPath)
 				if err != nil {
 					return nil, fmt.Errorf("invalid user cert file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
 				}
+				key, err := f.secretFileDirs.ReadFile(*tls.UserCert.PrivateKeyPath)
+				if err != nil {
+					return nil, fmt.Errorf("invalid user cert private key file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
+				}
 				tlsConfig.Cert = string(cert)
+				tlsConfig.Key = string(key)
 			}
 		}
 
@@ -319,18 +331,22 @@ func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, client 
 			oauthConfig.ClientID = clientID
 			oauthConfig.ClientSecret = clientSecret
 		case persesv1alpha2.SecretSourceTypeFile:
-			if oauthCfg.ClientIDPath == nil {
-				return nil, fmt.Errorf("clientIDPath is required when OAuth type is file for Perses %s/%s", perses.Namespace, perses.Name)
-			}
 			if oauthCfg.ClientSecretPath == nil {
 				return nil, fmt.Errorf("clientSecretPath is required when OAuth type is file for Perses %s/%s", perses.Namespace, perses.Name)
 			}
-			clientID, err := ReadSecretFile(*oauthCfg.ClientIDPath, f.allowedDirs)
-			if err != nil {
-				return nil, fmt.Errorf("invalid OAuth client ID file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
+			switch {
+			case oauthCfg.ClientID != nil:
+				oauthConfig.ClientID = *oauthCfg.ClientID
+			case oauthCfg.ClientIDPath != nil:
+				clientID, err := f.secretFileDirs.ReadFile(*oauthCfg.ClientIDPath)
+				if err != nil {
+					return nil, fmt.Errorf("invalid OAuth client ID file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
+				}
+				oauthConfig.ClientID = string(clientID)
+			default:
+				return nil, fmt.Errorf("clientID or clientIDPath is required when OAuth type is file for Perses %s/%s", perses.Namespace, perses.Name)
 			}
-			oauthConfig.ClientID = string(clientID)
-			clientSecret, err := ReadSecretFile(*oauthCfg.ClientSecretPath, f.allowedDirs)
+			clientSecret, err := f.secretFileDirs.ReadFile(*oauthCfg.ClientSecretPath)
 			if err != nil {
 				return nil, fmt.Errorf("invalid OAuth client secret file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
 			}

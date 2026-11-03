@@ -54,6 +54,7 @@ const (
 	TLSConfigureOperandsFlag  = "tls-configure-operands"
 	ResourceSyncIntervalFlag  = "resource-sync-interval"
 	SecretFileAllowedDirsFlag = "secret-file-allowed-directories"
+	SecretFileAllowedDirsEnv  = "SECRET_FILE_ALLOWED_DIRECTORIES"
 
 	// Volume names
 	configVolumeName  = "config"

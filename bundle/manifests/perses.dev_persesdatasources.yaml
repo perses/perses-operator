@@ -414,10 +414,20 @@ spec:
                           The zero value means to auto-detect
                         format: int32
                         type: integer
+                      clientID:
+                        description: |-
+                          clientID is the OAuth client ID as a literal value.
+                          OAuth client IDs are not confidential (RFC 6749, section 2.2).
+                          Mutually exclusive with clientIDPath. Required instead of clientIDPath for
+                          PersesDatasource and PersesGlobalDatasource when type is "file".
+                        minLength: 1
+                        type: string
                       clientIDPath:
                         description: |-
                           clientIDPath specifies the key name within the secret/configmap or filesystem path
                           (depending on SecretSource.Type) where the OAuth client ID is stored
+
+                          Deprecated: use clientID instead. clientIDPath will be removed in a future API version.
                         type: string
                       clientSecretPath:
                         description: |-
@@ -470,6 +480,8 @@ spec:
                     - type
                     type: object
                     x-kubernetes-validations:
+                    - message: clientID and clientIDPath are mutually exclusive
+                      rule: '!(has(self.clientID) && has(self.clientIDPath))'
                     - message: name is required when type is secret or configmap
                       rule: self.type != 'secret' && self.type != 'configmap' || has(self.name)
                     - message: namespace is required when type is secret or configmap
@@ -584,6 +596,9 @@ spec:
                     type: object
                 type: object
                 x-kubernetes-validations:
+                - message: oauth.clientID is required when oauth.type is file; clientIDPath
+                    is not supported for datasources
+                  rule: '!has(self.oauth) || self.oauth.type != ''file'' || has(self.oauth.clientID)'
                 - message: kubernetesAuth and oauth are mutually exclusive; both cannot
                     be enabled simultaneously
                   rule: '!(has(self.kubernetesAuth) && has(self.kubernetesAuth.enable)

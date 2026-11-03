@@ -280,6 +280,29 @@ func TestGetOAuthData(t *testing.T) {
 		assert.Contains(t, err.Error(), "no client secret data found")
 	})
 
+	t.Run("literal client ID with secret from Secret", func(t *testing.T) {
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "oauth-secret", Namespace: "default"},
+			Data:       map[string][]byte{"client-secret": []byte("my-client-secret")},
+		}
+		reader := fake.NewClientBuilder().WithScheme(newScheme()).WithObjects(secret).Build()
+
+		oauth := &v1alpha2.OAuth{
+			SecretSource: v1alpha2.SecretSource{
+				Type: v1alpha2.SecretSourceTypeSecret,
+				Name: ptr.To("oauth-secret"),
+			},
+			ClientID:         ptr.To("my-client-id"),
+			ClientSecretPath: ptr.To("client-secret"),
+			TokenURL:         "https://auth.example.com/token",
+		}
+
+		clientID, clientSecret, err := GetOAuthData(ctx, reader, "default", "test-ds", oauth)
+		require.NoError(t, err)
+		assert.Equal(t, "my-client-id", clientID)
+		assert.Equal(t, "my-client-secret", clientSecret)
+	})
+
 	t.Run("returns empty strings for file type", func(t *testing.T) {
 		reader := fake.NewClientBuilder().WithScheme(newScheme()).Build()
 
