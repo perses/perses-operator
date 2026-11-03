@@ -16,13 +16,19 @@ package common
 import (
 	"errors"
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
+	"syscall"
 )
 
-// forbiddenSecretFileDirs lists directories that can never be used as allowed
-// secret file directories in the operator container, even if explicitly configured.
+// maxSecretFileSize fits large CA bundles while bounding operator memory use.
+const maxSecretFileSize = 1 << 20 // 1 MiB
+
+// forbiddenSecretFileDirs can never be allowed or read.
 var forbiddenSecretFileDirs = []string{
 	"/var/run/secrets",
 	"/run/secrets",
@@ -31,120 +37,71 @@ var forbiddenSecretFileDirs = []string{
 	"/etc/kubernetes",
 }
 
-// ParseSecretFileAllowedDirs parses and validates a comma-separated list of
-// allowed directories from which the operator may read credential or certificate files.
-func ParseSecretFileAllowedDirs(raw string) ([]string, error) {
-	if strings.TrimSpace(raw) == "" {
-		return nil, nil
+// AllowedSecretFileDirs is a validated set of directories the operator may read
+// secret files from. The zero value disables reads.
+type AllowedSecretFileDirs struct {
+	flag string // for error messages
+	dirs []string
+	// protected extends forbiddenSecretFileDirs, in configured and resolved form.
+	protected []string
+}
+
+// ParseAllowedSecretFileDirs parses the comma-separated directories set by
+// flagName. Files under extraProtected can never be read.
+func ParseAllowedSecretFileDirs(flagName, raw string, extraProtected ...string) (AllowedSecretFileDirs, error) {
+	allowed := AllowedSecretFileDirs{flag: flagName}
+	for _, dir := range extraProtected {
+		if !filepath.IsAbs(dir) {
+			return AllowedSecretFileDirs{}, fmt.Errorf("protected directory %q must be an absolute path", dir)
+		}
+		cleaned := filepath.Clean(dir)
+		allowed.protected = append(allowed.protected, cleaned)
+		if resolved, err := filepath.EvalSymlinks(cleaned); err == nil && resolved != cleaned {
+			allowed.protected = append(allowed.protected, resolved)
+		}
 	}
 
-	parts := strings.Split(raw, ",")
-	dirs := make([]string, 0, len(parts))
-	for _, part := range parts {
+	// Dedupe by resolved path when the directory exists.
+	seen := map[string]bool{}
+	for part := range strings.SplitSeq(raw, ",") {
 		dir := strings.TrimSpace(part)
 		if dir == "" {
 			continue
 		}
 		if !filepath.IsAbs(dir) {
-			return nil, fmt.Errorf("%s: %q must be an absolute path", SecretFileAllowedDirsFlag, dir)
+			return AllowedSecretFileDirs{}, fmt.Errorf("%s: %q must be an absolute path", flagName, dir)
 		}
 		cleaned := filepath.Clean(dir)
-		if cleaned == string(filepath.Separator) {
-			return nil, fmt.Errorf("%s: the root directory is not allowed", SecretFileAllowedDirsFlag)
+		if err := allowed.checkAllowedDir(cleaned); err != nil {
+			return AllowedSecretFileDirs{}, fmt.Errorf("%s: directory %q %w", flagName, dir, err)
 		}
-		for _, forbidden := range forbiddenSecretFileDirs {
-			if cleaned == forbidden || isPathWithin(cleaned, forbidden) || isPathWithin(forbidden, cleaned) {
-				return nil, fmt.Errorf("%s: directory %q overlaps with protected path %q", SecretFileAllowedDirsFlag, dir, forbidden)
+		key := cleaned
+		// Reads use the resolved directory; missing ones are re-checked on read.
+		if resolved, err := filepath.EvalSymlinks(cleaned); err == nil {
+			if err := allowed.checkAllowedDir(resolved); err != nil {
+				return AllowedSecretFileDirs{}, fmt.Errorf("%s: directory %q resolves to %q, which %w", flagName, dir, resolved, err)
 			}
+			key = resolved
 		}
-		dirs = append(dirs, cleaned)
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		allowed.dirs = append(allowed.dirs, cleaned)
 	}
-	return dirs, nil
+	return allowed, nil
 }
 
-// ValidateSecretFilePath ensures that a file path referenced by a secret source
-// with type "file" is located (both lexically and after symlink resolution) inside
-// one of the operator's allowed directories.
-func ValidateSecretFilePath(path string, allowedDirs []string) error {
-	if len(allowedDirs) == 0 {
-		return errors.New("file references in secrets are disabled; ask your administrator to configure --" + SecretFileAllowedDirsFlag)
-	}
-
-	notAllowed := fmt.Errorf("file %q is not allowed or doesn't exist; it must be located in one of the directories listed in --%s", path, SecretFileAllowedDirsFlag)
-	if !filepath.IsAbs(path) {
-		return fmt.Errorf("file %q must be an absolute path", path)
-	}
-
-	cleaned := filepath.Clean(path)
-	for _, forbidden := range forbiddenSecretFileDirs {
-		if cleaned == forbidden || isPathWithin(cleaned, forbidden) {
-			return notAllowed
-		}
-	}
-
-	// Lexical check before touching the filesystem.
-	if !isInAllowedDirs(cleaned, allowedDirs, false) {
-		return notAllowed
-	}
-
-	// Resolve symlinks so a symlink inside an allowed directory cannot point outside it.
-	resolved, err := filepath.EvalSymlinks(cleaned)
-	if err != nil {
-		return notAllowed
-	}
-	for _, forbidden := range forbiddenSecretFileDirs {
-		if resolved == forbidden || isPathWithin(resolved, forbidden) {
-			return notAllowed
-		}
-	}
-	if !isInAllowedDirs(resolved, allowedDirs, true) {
-		return notAllowed
-	}
-
-	return nil
+// Dirs returns the allowed directories.
+func (a AllowedSecretFileDirs) Dirs() []string {
+	return slices.Clone(a.dirs)
 }
 
-// ReadSecretFile validates path with ValidateSecretFilePath and then reads it
-// through an os.Root opened on the allowed directory that contains it. os.Root
-// enforces containment at open time, so a symlink swapped in between validation
-// and read still cannot escape the allowed directory.
-func ReadSecretFile(path string, allowedDirs []string) ([]byte, error) {
-	if err := ValidateSecretFilePath(path, allowedDirs); err != nil {
-		return nil, err
-	}
-	cleaned := filepath.Clean(path)
-	for _, dir := range allowedDirs {
-		if isPathWithin(cleaned, dir) {
-			return readFileWithinDir(dir, cleaned)
-		}
-	}
-	return nil, fmt.Errorf("file %q is not located in any of the directories listed in --%s", path, SecretFileAllowedDirsFlag)
-}
-
-func readFileWithinDir(dir, path string) ([]byte, error) {
-	rel, err := filepath.Rel(dir, path)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file %q: %w", path, err)
-	}
-	root, err := os.OpenRoot(dir)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open allowed directory %q: %w", dir, err)
-	}
-	defer func() { _ = root.Close() }()
-	data, err := root.ReadFile(rel)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read file %q: %w", path, err)
-	}
-	return data, nil
-}
-
-func isInAllowedDirs(path string, allowedDirs []string, resolveDir bool) bool {
-	for _, dir := range allowedDirs {
-		if isPathWithin(path, dir) {
-			return true
-		}
-		if resolveDir {
-			if resolvedDir, err := filepath.EvalSymlinks(dir); err == nil && isPathWithin(path, resolvedDir) {
+// Overlaps reports whether any configured directories are equal or nested.
+func (a AllowedSecretFileDirs) Overlaps(other AllowedSecretFileDirs) bool {
+	for _, dir := range a.dirs {
+		for _, otherDir := range other.dirs {
+			if pathsOverlap(dir, otherDir) {
 				return true
 			}
 		}
@@ -152,14 +109,178 @@ func isInAllowedDirs(path string, allowedDirs []string, resolveDir bool) bool {
 	return false
 }
 
+func (a AllowedSecretFileDirs) protectedDirs() []string {
+	return slices.Concat(forbiddenSecretFileDirs, a.protected)
+}
+
+// checkAllowedDir rejects "/" and directories overlapping protected ones.
+func (a AllowedSecretFileDirs) checkAllowedDir(dir string) error {
+	if dir == string(filepath.Separator) {
+		return errors.New("is the root directory, which is not allowed")
+	}
+	for _, forbidden := range a.protectedDirs() {
+		if pathsOverlap(dir, forbidden) {
+			return fmt.Errorf("overlaps with protected path %q", forbidden)
+		}
+	}
+	return nil
+}
+
+func (a AllowedSecretFileDirs) isForbiddenPath(path string) bool {
+	for _, forbidden := range a.protectedDirs() {
+		if path == forbidden || isPathWithin(path, forbidden) {
+			return true
+		}
+	}
+	return false
+}
+
+// resolve validates path and returns it and its allowed directory, both
+// symlink-resolved.
+func (a AllowedSecretFileDirs) resolve(path string) (resolved, rootDir string, err error) {
+	if len(a.dirs) == 0 {
+		msg := "file references in secrets are disabled"
+		if a.flag != "" {
+			msg += "; ask your administrator to configure --" + a.flag
+		}
+		return "", "", errors.New(msg)
+	}
+
+	notAllowed := fmt.Errorf("file %q is not allowed or doesn't exist; it must be located in one of the directories listed in --%s", path, a.flag)
+	if !filepath.IsAbs(path) {
+		return "", "", fmt.Errorf("file %q must be an absolute path", path)
+	}
+
+	cleaned := filepath.Clean(path)
+	if a.isForbiddenPath(cleaned) {
+		return "", "", notAllowed
+	}
+
+	// Empty entries are directories that can't currently be resolved.
+	resolvedDirs := make([]string, len(a.dirs))
+	for i, dir := range a.dirs {
+		if resolvedDir, err := filepath.EvalSymlinks(dir); err == nil {
+			resolvedDirs[i] = resolvedDir
+		}
+	}
+
+	// Check lexically before touching the file, so paths outside the allowed
+	// directories can't probe for existence.
+	lexicallyAllowed := false
+	for i, dir := range a.dirs {
+		if isPathWithin(cleaned, dir) || (resolvedDirs[i] != "" && isPathWithin(cleaned, resolvedDirs[i])) {
+			lexicallyAllowed = true
+			break
+		}
+	}
+	if !lexicallyAllowed {
+		return "", "", notAllowed
+	}
+
+	resolved, err = filepath.EvalSymlinks(cleaned)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			// Safe to reveal inside an allowed directory; wrapping lets ReadFile
+			// retry a Kubernetes "..data" rotation race.
+			return "", "", fmt.Errorf("file %q does not exist: %w", path, fs.ErrNotExist)
+		}
+		return "", "", notAllowed
+	}
+	if a.isForbiddenPath(resolved) {
+		return "", "", notAllowed
+	}
+	for _, resolvedDir := range resolvedDirs {
+		if resolvedDir == "" || a.checkAllowedDir(resolvedDir) != nil {
+			continue
+		}
+		if isPathWithin(resolved, resolvedDir) {
+			return resolved, resolvedDir, nil
+		}
+	}
+	return "", "", notAllowed
+}
+
+// ReadFile validates path and reads it through an os.Root on its allowed
+// directory, so a symlink swapped in after validation can't escape.
+func (a AllowedSecretFileDirs) ReadFile(path string) ([]byte, error) {
+	data, err := a.resolveAndReadFile(path)
+	if errors.Is(err, fs.ErrNotExist) {
+		// Kubelet may have swapped "..data" mid-read.
+		data, err = a.resolveAndReadFile(path)
+	}
+	return data, err
+}
+
+func (a AllowedSecretFileDirs) resolveAndReadFile(path string) ([]byte, error) {
+	resolved, rootDir, err := a.resolve(path)
+	if err != nil {
+		return nil, err
+	}
+	data, err := readFileWithinDir(rootDir, resolved)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file %q: %w", path, err)
+	}
+	return data, nil
+}
+
+// readFileWithinDir reads a regular file of at most maxSecretFileSize from dir.
+// Errors omit paths since they may surface in resource status.
+func readFileWithinDir(dir, path string) ([]byte, error) {
+	rel, err := filepath.Rel(dir, path)
+	if err != nil {
+		return nil, errors.New("could not determine file location within the allowed directory")
+	}
+	root, err := os.OpenRoot(dir)
+	if err != nil {
+		return nil, pathErrorCause(err)
+	}
+	defer func() { _ = root.Close() }()
+
+	// O_NONBLOCK keeps a FIFO from blocking the open.
+	f, err := root.OpenFile(rel, os.O_RDONLY|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return nil, pathErrorCause(err)
+	}
+	defer func() { _ = f.Close() }()
+
+	info, err := f.Stat()
+	if err != nil {
+		return nil, pathErrorCause(err)
+	}
+	if !info.Mode().IsRegular() {
+		return nil, errors.New("not a regular file")
+	}
+	// Bound the bytes actually read rather than trusting a racy stat size.
+	data, err := io.ReadAll(io.LimitReader(f, maxSecretFileSize+1))
+	if err != nil {
+		return nil, pathErrorCause(err)
+	}
+	if len(data) > maxSecretFileSize {
+		return nil, fmt.Errorf("file exceeds the maximum size of %d bytes", maxSecretFileSize)
+	}
+	if len(data) == 0 {
+		return nil, errors.New("file is empty")
+	}
+	return data, nil
+}
+
+// pathErrorCause drops the path from an *os.PathError.
+func pathErrorCause(err error) error {
+	var pathErr *os.PathError
+	if errors.As(err, &pathErr) {
+		return pathErr.Err
+	}
+	return err
+}
+
+// pathsOverlap reports whether a and b are equal or one contains the other.
+func pathsOverlap(a, b string) bool {
+	return a == b || isPathWithin(a, b) || isPathWithin(b, a)
+}
+
 // isPathWithin returns true if path is strictly inside dir.
 func isPathWithin(path, dir string) bool {
 	rel, err := filepath.Rel(dir, path)
-	if err != nil {
-		return false
-	}
-	if rel == "." || rel == ".." || filepath.IsAbs(rel) || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-		return false
-	}
-	return true
+	// IsLocal(".") is true, so exclude dir itself.
+	return err == nil && rel != "." && filepath.IsLocal(rel)
 }

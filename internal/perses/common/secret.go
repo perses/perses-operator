@@ -147,6 +147,20 @@ func GetOAuthData(ctx context.Context, client client.Reader, namespace string, n
 	return "", "", nil
 }
 
+// ReadOAuthClientIDFile reads the OAuth clientID for a file-type secret source,
+// restricted to the operator's allowed directories. kind labels the resource
+// (e.g. "datasource") in error messages.
+func ReadOAuthClientIDFile(dirs AllowedSecretFileDirs, oauth *v1alpha2.OAuth, kind, name string) (string, error) {
+	if oauth.ClientIDPath == nil {
+		return "", fmt.Errorf("clientIDPath is required when OAuth type is File for %s %s", kind, name)
+	}
+	clientID, err := dirs.ReadFile(*oauth.ClientIDPath)
+	if err != nil {
+		return "", fmt.Errorf("invalid OAuth client ID file for %s %s: %w", kind, name, err)
+	}
+	return string(clientID), nil
+}
+
 // GetTLSCertData get tls certs from a Certificate resource
 func GetTLSCertData(ctx context.Context, client client.Reader, namespace string, name string, cert *v1alpha2.Certificate) (string, string, error) {
 	var certData string

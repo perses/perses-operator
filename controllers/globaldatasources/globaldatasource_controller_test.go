@@ -43,6 +43,11 @@ func TestSyncPersesGlobalSecretOAuthFileValidation(t *testing.T) {
 	outsideIDFile := filepath.Join(outsideDir, "client-id")
 	require.NoError(t, os.WriteFile(outsideIDFile, []byte("secret-token"), 0600))
 
+	allowed, err := persescommon.ParseAllowedSecretFileDirs(persescommon.DatasourceSecretFileAllowedDirsFlag, allowedDir)
+	require.NoError(t, err)
+	disabled, err := persescommon.ParseAllowedSecretFileDirs(persescommon.DatasourceSecretFileAllowedDirsFlag, "")
+	require.NoError(t, err)
+
 	makeGDS := func(clientIDPath string) *persesv1alpha2.PersesGlobalDatasource {
 		return &persesv1alpha2.PersesGlobalDatasource{
 			ObjectMeta: metav1.ObjectMeta{
@@ -64,18 +69,21 @@ func TestSyncPersesGlobalSecretOAuthFileValidation(t *testing.T) {
 	}
 
 	t.Run("rejects file when AllowedSecretFileDirs is empty", func(t *testing.T) {
-		r := &PersesGlobalDatasourceReconciler{}
+		r := &PersesGlobalDatasourceReconciler{
+			AllowedSecretFileDirs: disabled,
+		}
 		mockClient := new(internal.MockClient)
 
 		_, reason, err := r.syncPersesGlobalSecret(ctx, mockClient, makeGDS(allowedIDFile))
 		require.Error(t, err)
 		assert.Equal(t, persescommon.ReasonInvalidConfiguration, reason)
 		assert.Contains(t, err.Error(), "file references in secrets are disabled")
+		assert.Contains(t, err.Error(), "--"+persescommon.DatasourceSecretFileAllowedDirsFlag)
 	})
 
 	t.Run("rejects file outside AllowedSecretFileDirs", func(t *testing.T) {
 		r := &PersesGlobalDatasourceReconciler{
-			AllowedSecretFileDirs: []string{allowedDir},
+			AllowedSecretFileDirs: allowed,
 		}
 		mockClient := new(internal.MockClient)
 
@@ -87,7 +95,7 @@ func TestSyncPersesGlobalSecretOAuthFileValidation(t *testing.T) {
 
 	t.Run("allows file inside AllowedSecretFileDirs", func(t *testing.T) {
 		r := &PersesGlobalDatasourceReconciler{
-			AllowedSecretFileDirs: []string{allowedDir},
+			AllowedSecretFileDirs: allowed,
 		}
 		mockClient := new(internal.MockClient)
 		mockGlobalSecret := new(internal.MockGlobalSecret)

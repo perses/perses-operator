@@ -15,7 +15,18 @@ package common
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"math/big"
+	"net/http"
+	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -91,7 +102,7 @@ func TestConfigFingerprint(t *testing.T) {
 }
 
 func TestForgetInstance(t *testing.T) {
-	factory := NewWithConfig()
+	factory := NewWithConfig(AllowedSecretFileDirs{})
 
 	// Manually populate cache
 	factory.cache["default/perses-1"] = clientCacheEntry{
@@ -120,7 +131,7 @@ func TestForgetInstance(t *testing.T) {
 }
 
 func TestCacheHitTTLExpiry(t *testing.T) {
-	factory := NewWithConfig()
+	factory := NewWithConfig(AllowedSecretFileDirs{})
 	factory.ttl = 100 * time.Millisecond
 
 	factory.cache["default/perses-1"] = clientCacheEntry{
@@ -145,7 +156,7 @@ func TestCacheHitTTLExpiry(t *testing.T) {
 }
 
 func TestSweepExpiredEntries(t *testing.T) {
-	factory := NewWithConfig()
+	factory := NewWithConfig(AllowedSecretFileDirs{})
 	factory.ttl = 50 * time.Millisecond
 
 	factory.cache["default/perses-1"] = clientCacheEntry{
@@ -181,7 +192,7 @@ func TestSweepExpiredEntries(t *testing.T) {
 }
 
 func TestSweepSkipsBeforeInterval(t *testing.T) {
-	factory := NewWithConfig()
+	factory := NewWithConfig(AllowedSecretFileDirs{})
 	factory.ttl = 50 * time.Millisecond
 	factory.lastSweep = time.Now()
 
@@ -201,7 +212,7 @@ func TestSweepSkipsBeforeInterval(t *testing.T) {
 }
 
 func TestClientCacheConcurrency(t *testing.T) {
-	factory := NewWithConfig()
+	factory := NewWithConfig(AllowedSecretFileDirs{})
 
 	var wg sync.WaitGroup
 	for i := range 10 {
@@ -288,7 +299,7 @@ func TestBuildClientWithOAuth(t *testing.T) {
 		},
 	}
 
-	factory := NewWithConfig()
+	factory := NewWithConfig(AllowedSecretFileDirs{})
 	client, err := factory.buildClient(ctx, reader, perses)
 	require.NoError(t, err)
 	require.NotNil(t, client)
@@ -326,7 +337,7 @@ func TestBuildClientOAuthMissingSecret(t *testing.T) {
 		},
 	}
 
-	factory := NewWithConfig()
+	factory := NewWithConfig(AllowedSecretFileDirs{})
 	_, err := factory.buildClient(ctx, reader, perses)
 	require.Error(t, err)
 }
@@ -727,7 +738,7 @@ func TestBuildClientErrorPaths(t *testing.T) {
 				builder = builder.WithRuntimeObjects(obj)
 			}
 			reader := builder.Build()
-			factory := NewWithConfig()
+			factory := NewWithConfig(AllowedSecretFileDirs{})
 			_, err := factory.buildClient(ctx, reader, tt.perses)
 			require.Error(t, err)
 			if tt.errSubstr != "" {
@@ -764,7 +775,7 @@ func TestBuildClientKubernetesAuthError(t *testing.T) {
 		},
 	}
 
-	factory := NewWithConfig()
+	factory := NewWithConfig(AllowedSecretFileDirs{})
 	_, err := factory.buildClient(ctx, reader, perses)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to read service account token")
@@ -801,7 +812,7 @@ func TestBuildClientOAuthConfigMap(t *testing.T) {
 		},
 	}
 
-	factory := NewWithConfig()
+	factory := NewWithConfig(AllowedSecretFileDirs{})
 	cl, err := factory.buildClient(ctx, reader, perses)
 	require.NoError(t, err)
 	require.NotNil(t, cl)
@@ -848,7 +859,7 @@ func TestBuildClientOAuthFile(t *testing.T) {
 			},
 		}
 
-		factory := NewWithConfig()
+		factory := NewWithConfig(AllowedSecretFileDirs{})
 		_, err := factory.buildClient(ctx, reader, perses)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "file references in secrets are disabled")
@@ -872,7 +883,7 @@ func TestBuildClientOAuthFile(t *testing.T) {
 			},
 		}
 
-		factory := NewWithConfig(allowedDir)
+		factory := NewWithConfig(testAllowedDirs(allowedDir))
 		cl, err := factory.buildClient(ctx, reader, perses)
 		require.NoError(t, err)
 		require.NotNil(t, cl)
@@ -900,7 +911,7 @@ func TestBuildClientOAuthFile(t *testing.T) {
 			},
 		}
 
-		factory := NewWithConfig(allowedDir)
+		factory := NewWithConfig(testAllowedDirs(allowedDir))
 		_, err := factory.buildClient(ctx, reader, perses)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "clientIDPath is required when OAuth type is file")
@@ -924,7 +935,7 @@ func TestBuildClientOAuthFile(t *testing.T) {
 			},
 		}
 
-		factory := NewWithConfig(allowedDir)
+		factory := NewWithConfig(testAllowedDirs(allowedDir))
 		_, err := factory.buildClient(ctx, reader, perses)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "clientSecretPath is required when OAuth type is file")
@@ -948,10 +959,282 @@ func TestBuildClientOAuthFile(t *testing.T) {
 			},
 		}
 
-		factory := NewWithConfig(allowedDir)
+		factory := NewWithConfig(testAllowedDirs(allowedDir))
 		_, err := factory.buildClient(ctx, reader, perses)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid OAuth client ID file")
+	})
+
+	outsideSecret := filepath.Join(t.TempDir(), "client-secret")
+	require.NoError(t, os.WriteFile(outsideSecret, []byte("super-secret"), 0600))
+	for name, secretPath := range map[string]string{
+		"outside allowedDirs": outsideSecret,
+		"missing":             filepath.Join(allowedDir, "missing-secret"),
+	} {
+		t.Run("file type ClientSecretPath "+name, func(t *testing.T) {
+			perses := persesv1alpha2.Perses{
+				ObjectMeta: metav1.ObjectMeta{Name: "perses", Namespace: "perses-system", Generation: 1},
+				Spec: persesv1alpha2.PersesSpec{
+					ContainerPort: ptr.To(int32(8080)),
+					Client: &persesv1alpha2.Client{
+						OAuth: &persesv1alpha2.OAuth{
+							SecretSource:     persesv1alpha2.SecretSource{Type: persesv1alpha2.SecretSourceTypeFile},
+							ClientIDPath:     ptr.To(idFile.Name()),
+							ClientSecretPath: ptr.To(secretPath),
+							TokenURL:         "http://perses.perses-system.svc:8080/token",
+						},
+					},
+				},
+			}
+
+			factory := NewWithConfig(testAllowedDirs(allowedDir))
+			_, err := factory.buildClient(ctx, reader, perses)
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "invalid OAuth client secret file")
+		})
+	}
+}
+
+// writeSelfSignedCert writes a PEM cert and key into dir and returns their paths.
+func writeSelfSignedCert(t *testing.T, dir string) (certPath, keyPath string) {
+	t.Helper()
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	tmpl := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "perses-operator-test"},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		IsCA:                  true,
+		BasicConstraintsValid: true,
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
+	require.NoError(t, err)
+	keyDER, err := x509.MarshalECPrivateKey(key)
+	require.NoError(t, err)
+
+	certPath = filepath.Join(dir, "tls.crt")
+	keyPath = filepath.Join(dir, "tls.key")
+	require.NoError(t, os.WriteFile(certPath, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), 0600))
+	require.NoError(t, os.WriteFile(keyPath, pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER}), 0600))
+	return certPath, keyPath
+}
+
+func TestBuildClientTLSFile(t *testing.T) {
+	ctx := context.Background()
+	reader := fake.NewClientBuilder().WithScheme(newScheme()).Build()
+
+	allowedDir := t.TempDir()
+	certPath, keyPath := writeSelfSignedCert(t, allowedDir)
+	outsideCertPath, outsideKeyPath := writeSelfSignedCert(t, t.TempDir())
+
+	fileCert := func(certPath string, keyPath *string) *persesv1alpha2.Certificate {
+		return &persesv1alpha2.Certificate{
+			SecretSource:   persesv1alpha2.SecretSource{Type: persesv1alpha2.SecretSourceTypeFile},
+			CertPath:       certPath,
+			PrivateKeyPath: keyPath,
+		}
+	}
+	persesWithTLS := func(tls *persesv1alpha2.TLS) persesv1alpha2.Perses {
+		tls.Enable = ptr.To(true)
+		return persesv1alpha2.Perses{
+			ObjectMeta: metav1.ObjectMeta{Name: "perses", Namespace: "perses-system", Generation: 1},
+			Spec: persesv1alpha2.PersesSpec{
+				ContainerPort: ptr.To(int32(8080)),
+				Client:        &persesv1alpha2.Client{TLS: tls},
+			},
+		}
+	}
+
+	tests := []struct {
+		name        string
+		allowedDirs []string
+		tls         *persesv1alpha2.TLS
+		errSubstr   string
+	}{
+		{
+			name:      "CA cert rejected when allowedDirs not configured",
+			tls:       &persesv1alpha2.TLS{CaCert: fileCert(certPath, nil)},
+			errSubstr: "file references in secrets are disabled",
+		},
+		{
+			name:        "CA cert outside allowedDirs is rejected",
+			allowedDirs: []string{allowedDir},
+			tls:         &persesv1alpha2.TLS{CaCert: fileCert(outsideCertPath, nil)},
+			errSubstr:   "invalid CA cert file",
+		},
+		{
+			name:        "CA cert inside allowedDirs",
+			allowedDirs: []string{allowedDir},
+			tls:         &persesv1alpha2.TLS{CaCert: fileCert(certPath, nil)},
+		},
+		{
+			name:      "user cert rejected when allowedDirs not configured",
+			tls:       &persesv1alpha2.TLS{UserCert: fileCert(certPath, ptr.To(keyPath))},
+			errSubstr: "file references in secrets are disabled",
+		},
+		{
+			name:        "user cert outside allowedDirs is rejected",
+			allowedDirs: []string{allowedDir},
+			tls:         &persesv1alpha2.TLS{UserCert: fileCert(outsideCertPath, ptr.To(keyPath))},
+			errSubstr:   "invalid user cert file",
+		},
+		{
+			name:        "user cert private key outside allowedDirs is rejected",
+			allowedDirs: []string{allowedDir},
+			tls:         &persesv1alpha2.TLS{UserCert: fileCert(certPath, ptr.To(outsideKeyPath))},
+			errSubstr:   "invalid user cert private key file",
+		},
+		{
+			name:        "user cert without private key path is rejected",
+			allowedDirs: []string{allowedDir},
+			tls:         &persesv1alpha2.TLS{UserCert: fileCert(certPath, nil)},
+			errSubstr:   "privateKeyPath is required",
+		},
+		{
+			name:        "user cert and private key inside allowedDirs",
+			allowedDirs: []string{allowedDir},
+			tls: &persesv1alpha2.TLS{
+				CaCert:   fileCert(certPath, nil),
+				UserCert: fileCert(certPath, ptr.To(keyPath)),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			factory := NewWithConfig(testAllowedDirs(tt.allowedDirs...))
+			cl, err := factory.buildClient(ctx, reader, persesWithTLS(tt.tls))
+			if tt.errSubstr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errSubstr)
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, cl)
+		})
+	}
+}
+
+func TestBuildClientFileCredentialsReachTokenEndpoint(t *testing.T) {
+	dir := t.TempDir()
+	idPath := filepath.Join(dir, "client-id")
+	secretPath := filepath.Join(dir, "client-secret")
+	require.NoError(t, os.WriteFile(idPath, []byte("perses-operator"), 0600))
+	require.NoError(t, os.WriteFile(secretPath, []byte("super-secret"), 0600))
+
+	var mu sync.Mutex
+	var gotID, gotSecret, gotAuthorization string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		if r.URL.Path != "/token" {
+			gotAuthorization = r.Header.Get("Authorization")
+			return
+		}
+		id, secret, ok := r.BasicAuth()
+		if !ok {
+			_ = r.ParseForm()
+			id, secret = r.PostForm.Get("client_id"), r.PostForm.Get("client_secret")
+		}
+		gotID, gotSecret = id, secret
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"access_token":"tok","token_type":"bearer"}`))
+	}))
+	defer server.Close()
+
+	perses := persesv1alpha2.Perses{
+		ObjectMeta: metav1.ObjectMeta{Name: "perses", Namespace: "perses-system", Generation: 1},
+		Spec: persesv1alpha2.PersesSpec{
+			Client: &persesv1alpha2.Client{
+				OAuth: &persesv1alpha2.OAuth{
+					SecretSource:     persesv1alpha2.SecretSource{Type: persesv1alpha2.SecretSourceTypeFile},
+					ClientIDPath:     ptr.To(idPath),
+					ClientSecretPath: ptr.To(secretPath),
+					TokenURL:         server.URL + "/token",
+				},
+			},
+		},
+	}
+	reader := fake.NewClientBuilder().WithScheme(newScheme()).Build()
+	cl, err := NewWithConfig(testAllowedDirs(dir)).buildClient(context.Background(), reader, perses)
+	require.NoError(t, err)
+
+	resp, err := cl.RESTClient().Client.Get(server.URL + "/api")
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	mu.Lock()
+	defer mu.Unlock()
+	assert.Equal(t, "perses-operator", gotID)
+	assert.Equal(t, "super-secret", gotSecret)
+	assert.Equal(t, "Bearer tok", gotAuthorization)
+}
+
+func TestBuildClientFileCredentialsReachTLSServer(t *testing.T) {
+	dir := t.TempDir()
+	certPath, keyPath := writeSelfSignedCert(t, dir)
+	clientCertPEM, err := os.ReadFile(certPath)
+	require.NoError(t, err)
+	clientCAs := x509.NewCertPool()
+	require.True(t, clientCAs.AppendCertsFromPEM(clientCertPEM))
+
+	var mu sync.Mutex
+	var peerCN string
+	server := httptest.NewUnstartedServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		mu.Lock()
+		defer mu.Unlock()
+		peerCN = r.TLS.PeerCertificates[0].Subject.CommonName
+	}))
+	server.TLS = &tls.Config{ClientAuth: tls.RequireAndVerifyClientCert, ClientCAs: clientCAs}
+	server.StartTLS()
+	defer server.Close()
+
+	// The client can only trust the server through this CA file.
+	caPath := filepath.Join(dir, "ca.crt")
+	require.NoError(t, os.WriteFile(caPath, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw}), 0600))
+
+	fileCert := func(certPath string, keyPath *string) *persesv1alpha2.Certificate {
+		return &persesv1alpha2.Certificate{
+			SecretSource:   persesv1alpha2.SecretSource{Type: persesv1alpha2.SecretSourceTypeFile},
+			CertPath:       certPath,
+			PrivateKeyPath: keyPath,
+		}
+	}
+	get := func(userCert *persesv1alpha2.Certificate) error {
+		perses := persesv1alpha2.Perses{
+			ObjectMeta: metav1.ObjectMeta{Name: "perses", Namespace: "perses-system", Generation: 1},
+			Spec: persesv1alpha2.PersesSpec{
+				Client: &persesv1alpha2.Client{TLS: &persesv1alpha2.TLS{
+					Enable:   ptr.To(true),
+					CaCert:   fileCert(caPath, nil),
+					UserCert: userCert,
+				}},
+			},
+		}
+		reader := fake.NewClientBuilder().WithScheme(newScheme()).Build()
+		cl, err := NewWithConfig(testAllowedDirs(dir)).buildClient(context.Background(), reader, perses)
+		if err != nil {
+			return err
+		}
+		resp, err := cl.RESTClient().Client.Get(server.URL)
+		if err != nil {
+			return err
+		}
+		return resp.Body.Close()
+	}
+
+	t.Run("cert and key reach the server", func(t *testing.T) {
+		require.NoError(t, get(fileCert(certPath, ptr.To(keyPath))))
+		mu.Lock()
+		defer mu.Unlock()
+		assert.Equal(t, "perses-operator-test", peerCN)
+	})
+
+	t.Run("swapped cert and key fail", func(t *testing.T) {
+		require.Error(t, get(fileCert(keyPath, ptr.To(certPath))))
 	})
 }
 
@@ -979,7 +1262,7 @@ func TestBuildClientKubernetesAuthAndOAuthConflict(t *testing.T) {
 		},
 	}
 
-	factory := NewWithConfig()
+	factory := NewWithConfig(AllowedSecretFileDirs{})
 	_, err := factory.buildClient(ctx, reader, perses)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "mutually exclusive")

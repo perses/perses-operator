@@ -19,6 +19,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -86,6 +87,7 @@ func main() {
 	var tlsConfigureOperands bool
 	var resourceSyncInterval time.Duration
 	var secretFileAllowedDirsFlag string
+	var datasourceSecretFileAllowedDirsFlag string
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8082", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -111,8 +113,7 @@ func main() {
 		"Propagate TLS settings to managed Perses pods. Without this flag, TLS only applies to the operator itself.")
 	flag.DurationVar(&resourceSyncInterval, common.ResourceSyncIntervalFlag, operator.DefaultResourceSyncInterval,
 		"Interval for syncing dashboards and datasources to the Perses API. At 0, only managed credentials sync periodically (every 5 minutes).")
-	flag.StringVar(&secretFileAllowedDirsFlag, common.SecretFileAllowedDirsFlag, "",
-		"Comma-separated list of absolute directory paths from which the operator is allowed to read credential or certificate files when SecretSource type is 'file'. If empty, file secret references read by the operator are disabled.")
+	registerSecretFileFlags(flag.CommandLine, &secretFileAllowedDirsFlag, &datasourceSecretFileAllowedDirsFlag)
 	opts := zap.Options{
 		Development: true,
 	}
@@ -126,10 +127,14 @@ func main() {
 		setupLog.Error(err, "invalid --watch-secret-labels value")
 		os.Exit(1)
 	}
-	allowedSecretFileDirs, err := common.ParseSecretFileAllowedDirs(secretFileAllowedDirsFlag)
+	secretFiles, err := setupSecretFileReaders(secretFileAllowedDirsFlag, datasourceSecretFileAllowedDirsFlag, certDir)
 	if err != nil {
-		setupLog.Error(err, "invalid --secret-file-allowed-directories value")
+		setupLog.Error(err, "invalid secret file configuration")
 		os.Exit(1)
+	}
+	if secretFiles.overlap {
+		setupLog.Info("WARNING: --" + common.DatasourceSecretFileAllowedDirsFlag + " overlaps with --" + common.SecretFileAllowedDirsFlag +
+			"; datasource authors can read the operator's own credentials")
 	}
 	if watchAllSecrets && watchSecretLabelsFlag != "" {
 		setupLog.Info("--watch-all-secrets is set, --watch-secret-labels will be ignored")
@@ -246,7 +251,7 @@ func main() {
 	opMetrics := operatormetrics.NewMetrics()
 	reconciliationTracker := operatormetrics.NewReconciliationTracker(ctrlmetrics.Registry)
 
-	persesClientFactory := common.NewWithConfig(allowedSecretFileDirs...)
+	persesClientFactory := secretFiles.clientFactory
 
 	if err = (&persescontroller.PersesReconciler{
 		Client:                 mgr.GetClient(),
@@ -287,7 +292,7 @@ func main() {
 		ReconciliationTracker: reconciliationTracker,
 		ClientFactory:         persesClientFactory,
 		SyncInterval:          resourceSyncInterval,
-		AllowedSecretFileDirs: allowedSecretFileDirs,
+		AllowedSecretFileDirs: secretFiles.datasourceDirs,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PersesDatasource")
 		os.Exit(1)
@@ -301,7 +306,7 @@ func main() {
 		ReconciliationTracker: reconciliationTracker,
 		ClientFactory:         persesClientFactory,
 		SyncInterval:          resourceSyncInterval,
-		AllowedSecretFileDirs: allowedSecretFileDirs,
+		AllowedSecretFileDirs: secretFiles.datasourceDirs,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PersesGlobalDatasource")
 		os.Exit(1)
@@ -345,4 +350,58 @@ func main() {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}
+}
+
+// registerSecretFileFlags registers the allow-list flags, defaulting to their env vars.
+func registerSecretFileFlags(fs *flag.FlagSet, operatorDirs, datasourceDirs *string) {
+	fs.StringVar(operatorDirs, common.SecretFileAllowedDirsFlag, os.Getenv(common.SecretFileAllowedDirsEnv),
+		"Comma-separated absolute directories the operator may read Perses spec.client 'file' references from. Empty disables them. "+
+			"Defaults to $"+common.SecretFileAllowedDirsEnv+".")
+	fs.StringVar(datasourceDirs, common.DatasourceSecretFileAllowedDirsFlag, os.Getenv(common.DatasourceSecretFileAllowedDirsEnv),
+		"Comma-separated absolute directories the operator may read (global) datasource OAuth clientIDPath files from. Empty disables them. "+
+			"Defaults to $"+common.DatasourceSecretFileAllowedDirsEnv+".")
+}
+
+// secretFileReaders holds the consumers of each allow-list. Building the
+// factory here leaves main only datasourceDirs to pass to the reconcilers.
+type secretFileReaders struct {
+	clientFactory  *common.PersesClientFactoryWithConfig
+	datasourceDirs common.AllowedSecretFileDirs
+	overlap        bool
+}
+
+// setupSecretFileReaders parses both allow-lists, protecting certDir (the
+// webhook serving key) in each.
+func setupSecretFileReaders(operatorRaw, datasourceRaw, certDir string) (secretFileReaders, error) {
+	absCertDir, err := filepath.Abs(certDir)
+	if err != nil {
+		return secretFileReaders{}, fmt.Errorf("unable to resolve protected directory %q: %w", certDir, err)
+	}
+	operatorDirs, err := parseAllowedSecretFileDirs(common.SecretFileAllowedDirsFlag, operatorRaw, absCertDir)
+	if err != nil {
+		return secretFileReaders{}, err
+	}
+	datasourceDirs, err := parseAllowedSecretFileDirs(common.DatasourceSecretFileAllowedDirsFlag, datasourceRaw, absCertDir)
+	if err != nil {
+		return secretFileReaders{}, err
+	}
+	return secretFileReaders{
+		clientFactory:  common.NewWithConfig(operatorDirs),
+		datasourceDirs: datasourceDirs,
+		overlap:        datasourceDirs.Overlaps(operatorDirs),
+	}, nil
+}
+
+// parseAllowedSecretFileDirs parses an allow-list and warns about inaccessible directories.
+func parseAllowedSecretFileDirs(flagName, raw, protectedDir string) (common.AllowedSecretFileDirs, error) {
+	allowed, err := common.ParseAllowedSecretFileDirs(flagName, raw, protectedDir)
+	if err != nil {
+		return common.AllowedSecretFileDirs{}, fmt.Errorf("invalid --%s value: %w", flagName, err)
+	}
+	for _, dir := range allowed.Dirs() {
+		if info, statErr := os.Stat(dir); statErr != nil || !info.IsDir() {
+			setupLog.Info("WARNING: directory listed in --"+flagName+" is not accessible; file references in it will fail", "directory", dir)
+		}
+	}
+	return allowed, nil
 }

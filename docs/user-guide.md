@@ -11,6 +11,8 @@ This documentation provides information on how to use the Perses Operator custom
 - [Examples](#examples)
 - [Project Management](#project-management)
 - [Tags](#tags)
+- [Secrets](#secrets)
+  - [Reading credentials from files in the operator pod](#reading-credentials-from-files-in-the-operator-pod)
 - [Cache and Watch Filtering](#cache-and-watch-filtering)
 - [Troubleshooting](#troubleshooting)
 
@@ -316,6 +318,8 @@ when using those types.
 > [!NOTE]
 > To use the `file` type, you must mount the file into the Perses pod
 > using `spec.volumes` and `spec.volumeMounts` on the `Perses` CR.
+> The one exception is `oauth.clientIDPath`, which the operator reads from its own pod (see
+> [below](#reading-credentials-from-files-in-the-operator-pod)).
 
 ```yaml
 apiVersion: perses.dev/v1alpha1
@@ -360,6 +364,95 @@ spec:
 
 > [!NOTE]
 > The `basicAuth` and `oauth` fields are mutually exclusive.
+
+### Reading credentials from files in the operator pod
+
+The operator reads some `type: file` references itself, only from allowed directories. Each setting
+takes comma-separated absolute paths, is empty (disabled) by default, and can also be set by an
+environment variable (the flag wins):
+
+- `--secret-file-allowed-directories` (`SECRET_FILE_ALLOWED_DIRECTORIES`): `Perses`
+  `spec.client.oauth.clientIDPath` and `clientSecretPath`, `spec.client.tls.caCert.certPath`, and
+  `spec.client.tls.userCert.certPath` and `privateKeyPath`.
+- `--datasource-secret-file-allowed-directories` (`DATASOURCE_SECRET_FILE_ALLOWED_DIRECTORIES`):
+  `PersesDatasource` and `PersesGlobalDatasource` `spec.client.oauth.clientIDPath`.
+
+Other datasource file paths are read by the Perses server and aren't affected.
+
+> [!IMPORTANT]
+> Breaking change: these fields fail with `file references in secrets are disabled` until the
+> matching setting is configured.
+
+> [!WARNING]
+> Anyone who can create or update a resource can have the operator read any file in that kind's
+> allowed directories and send it to an OAuth `tokenURL` of their choice. Keep the two settings on
+> separate directories (the operator warns if they overlap), and only let trusted users manage
+> `Perses` resources.
+
+Files must resolve, after symlinks, to a regular file of at most 1 MiB inside an allowed directory;
+mounted Secret and ConfigMap volumes work as-is. The operator won't start if an allowed directory is,
+contains, or is inside `/var/run/secrets`, `/run/secrets`, `/proc`, `/sys`, `/etc/kubernetes`, or
+`--webhook-cert-dir` (default `/tmp/k8s-webhook-server/serving-certs`), including via symlinks.
+
+Mount the files and set the flag. This patch replaces `args`, so keep the existing ones; dropping
+`--metrics-bind-address` would expose unauthenticated metrics:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: perses-operator-controller-manager
+  namespace: perses-operator-system
+spec:
+  template:
+    spec:
+      containers:
+        - name: manager
+          args:
+            - --health-probe-bind-address=:8081
+            - --metrics-bind-address=127.0.0.1:8082
+            - --leader-elect
+            - --secret-file-allowed-directories=/etc/perses-creds
+          volumeMounts:
+            - name: perses-creds
+              mountPath: /etc/perses-creds
+              readOnly: true
+      volumes:
+        - name: perses-creds
+          secret:
+            secretName: perses-operator-creds
+```
+
+For OLM, which can't set args durably, use the environment variable in the `Subscription` config:
+
+```yaml
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: perses-operator
+  namespace: openshift-operators
+spec:
+  # ...existing channel, name, source and sourceNamespace
+  config:
+    env:
+      - name: SECRET_FILE_ALLOWED_DIRECTORIES
+        value: /etc/perses-creds
+    volumeMounts:
+      - name: perses-creds
+        mountPath: /etc/perses-creds
+        readOnly: true
+    volumes:
+      - name: perses-creds
+        secret:
+          secretName: perses-operator-creds
+```
+
+Notes:
+
+- Files are re-read when the operator's cached client expires (5 minutes) or the `Perses` resource
+  changes, not on every request.
+- On OpenShift, use `type: configmap` with the `openshift-service-ca.crt` ConfigMap (key
+  `service-ca.crt`) for the service CA, since `/var/run/secrets` can't be allowed.
 
 ## Examples
 

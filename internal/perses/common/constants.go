@@ -45,15 +45,18 @@ const (
 	TypeDegradedPerses        = "Degraded"
 
 	// Flags
-	PersesServerURLFlag       = "perses-server-url"
-	WatchSecretLabelsFlag     = "watch-secret-labels"
-	WatchAllSecretsFlag       = "watch-all-secrets"
-	TLSMinVersionFlag         = "tls-min-version"
-	TLSCipherSuitesFlag       = "tls-cipher-suites"
-	TLSClusterProfileFlag     = "tls-cluster-profile"
-	TLSConfigureOperandsFlag  = "tls-configure-operands"
-	ResourceSyncIntervalFlag  = "resource-sync-interval"
-	SecretFileAllowedDirsFlag = "secret-file-allowed-directories"
+	PersesServerURLFlag                 = "perses-server-url"
+	WatchSecretLabelsFlag               = "watch-secret-labels"
+	WatchAllSecretsFlag                 = "watch-all-secrets"
+	TLSMinVersionFlag                   = "tls-min-version"
+	TLSCipherSuitesFlag                 = "tls-cipher-suites"
+	TLSClusterProfileFlag               = "tls-cluster-profile"
+	TLSConfigureOperandsFlag            = "tls-configure-operands"
+	ResourceSyncIntervalFlag            = "resource-sync-interval"
+	SecretFileAllowedDirsFlag           = "secret-file-allowed-directories"
+	DatasourceSecretFileAllowedDirsFlag = "datasource-secret-file-allowed-directories"
+	SecretFileAllowedDirsEnv            = "SECRET_FILE_ALLOWED_DIRECTORIES"
+	DatasourceSecretFileAllowedDirsEnv  = "DATASOURCE_SECRET_FILE_ALLOWED_DIRECTORIES"
 
 	// Volume names
 	configVolumeName  = "config"

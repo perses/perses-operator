@@ -74,12 +74,10 @@ environments only — do not store secrets in ConfigMaps in production.
 
 #### `type: file`
 
-Reads the client ID from `clientIDPath` and the client secret from `clientSecretPath` directly
-from files mounted into the operator pod. Both paths are required and must be located inside a
-directory explicitly allowed via the operator's `--secret-file-allowed-directories` flag (file
-references are disabled by default). This avoids storing credentials in Kubernetes
-Secrets/ConfigMaps and is useful when the operator runs alongside an external secrets manager that
-populates files.
+Reads the client ID and secret from files mounted into the operator pod. Both paths are required
+and must be inside a directory allowed by the operator's `--secret-file-allowed-directories` flag
+(disabled by default). Useful with external secrets managers that populate files. See the
+[user guide](../../../docs/user-guide.md#reading-credentials-from-files-in-the-operator-pod) for setup.
 
 ```yaml
 spec:
