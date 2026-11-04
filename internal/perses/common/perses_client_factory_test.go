@@ -15,7 +15,15 @@ package common
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
+	"math/big"
 	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -953,6 +961,136 @@ func TestBuildClientOAuthFile(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid OAuth client ID file")
 	})
+}
+
+// writeSelfSignedCertPair writes a PEM-encoded self-signed certificate and its
+// private key into dir and returns their paths.
+func writeSelfSignedCertPair(t *testing.T, dir string) (certPath, keyPath string) {
+	t.Helper()
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	tmpl := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "perses-operator-test"},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+	der, err := x509.CreateCertificate(rand.Reader, tmpl, tmpl, &key.PublicKey, key)
+	require.NoError(t, err)
+	keyDER, err := x509.MarshalECPrivateKey(key)
+	require.NoError(t, err)
+
+	certPath = filepath.Join(dir, "tls.crt")
+	keyPath = filepath.Join(dir, "tls.key")
+	require.NoError(t, os.WriteFile(certPath, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), 0o600))
+	require.NoError(t, os.WriteFile(keyPath, pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER}), 0o600))
+	return certPath, keyPath
+}
+
+func TestBuildClientTLSFile(t *testing.T) {
+	ctx := context.Background()
+	reader := fake.NewClientBuilder().WithScheme(newScheme()).Build()
+
+	allowedDir := t.TempDir()
+	certPath, keyPath := writeSelfSignedCertPair(t, allowedDir)
+
+	outsideDir := t.TempDir()
+	outsideCertPath, outsideKeyPath := writeSelfSignedCertPair(t, outsideDir)
+
+	persesWithClientTLS := func(tls *persesv1alpha2.TLS) persesv1alpha2.Perses {
+		return persesv1alpha2.Perses{
+			ObjectMeta: metav1.ObjectMeta{Name: "perses", Namespace: "perses-system", Generation: 1},
+			Spec: persesv1alpha2.PersesSpec{
+				ContainerPort: ptr.To(int32(8080)),
+				Client:        &persesv1alpha2.Client{TLS: tls},
+			},
+		}
+	}
+	fileCert := func(certPath string, keyPath *string) *persesv1alpha2.Certificate {
+		return &persesv1alpha2.Certificate{
+			SecretSource:   persesv1alpha2.SecretSource{Type: persesv1alpha2.SecretSourceTypeFile},
+			CertPath:       certPath,
+			PrivateKeyPath: keyPath,
+		}
+	}
+
+	tests := []struct {
+		name        string
+		allowedDirs []string
+		tls         *persesv1alpha2.TLS
+		errSubstr   string
+	}{
+		{
+			name:        "CA file inside allowed dir",
+			allowedDirs: []string{allowedDir},
+			tls:         &persesv1alpha2.TLS{Enable: ptr.To(true), CaCert: fileCert(certPath, nil)},
+		},
+		{
+			name:        "CA file outside allowed dir",
+			allowedDirs: []string{allowedDir},
+			tls:         &persesv1alpha2.TLS{Enable: ptr.To(true), CaCert: fileCert(outsideCertPath, nil)},
+			errSubstr:   "invalid CA cert file",
+		},
+		{
+			name:        "CA file rejected when file references disabled",
+			allowedDirs: nil,
+			tls:         &persesv1alpha2.TLS{Enable: ptr.To(true), CaCert: fileCert(certPath, nil)},
+			errSubstr:   "file references in secrets are disabled",
+		},
+		{
+			name:        "user cert and key inside allowed dir",
+			allowedDirs: []string{allowedDir},
+			tls: &persesv1alpha2.TLS{
+				Enable:   ptr.To(true),
+				CaCert:   fileCert(certPath, nil),
+				UserCert: fileCert(certPath, ptr.To(keyPath)),
+			},
+		},
+		{
+			name:        "user cert outside allowed dir",
+			allowedDirs: []string{allowedDir},
+			tls:         &persesv1alpha2.TLS{Enable: ptr.To(true), UserCert: fileCert(outsideCertPath, ptr.To(keyPath))},
+			errSubstr:   "invalid user cert file",
+		},
+		{
+			name:        "user cert private key outside allowed dir",
+			allowedDirs: []string{allowedDir},
+			tls:         &persesv1alpha2.TLS{Enable: ptr.To(true), UserCert: fileCert(certPath, ptr.To(outsideKeyPath))},
+			errSubstr:   "invalid user cert private key file",
+		},
+		{
+			name:        "user cert missing private key path",
+			allowedDirs: []string{allowedDir},
+			tls:         &persesv1alpha2.TLS{Enable: ptr.To(true), UserCert: fileCert(certPath, nil)},
+			errSubstr:   "privateKeyPath is required",
+		},
+		{
+			name:        "user cert empty private key path",
+			allowedDirs: []string{allowedDir},
+			tls:         &persesv1alpha2.TLS{Enable: ptr.To(true), UserCert: fileCert(certPath, ptr.To(""))},
+			errSubstr:   "privateKeyPath is required",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			factory := NewWithConfig(tt.allowedDirs...)
+			cl, err := factory.buildClient(ctx, reader, persesWithClientTLS(tt.tls))
+			if tt.errSubstr != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errSubstr)
+				return
+			}
+			require.NoError(t, err)
+			require.NotNil(t, cl)
+		})
+	}
 }
 
 func TestBuildClientKubernetesAuthAndOAuthConflict(t *testing.T) {

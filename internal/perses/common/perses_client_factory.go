@@ -279,11 +279,19 @@ func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, client 
 				tlsConfig.Cert = cert
 				tlsConfig.Key = key
 			case persesv1alpha2.SecretSourceTypeFile:
+				if tls.UserCert.PrivateKeyPath == nil || *tls.UserCert.PrivateKeyPath == "" {
+					return nil, fmt.Errorf("privateKeyPath is required when user cert type is file for Perses %s/%s", perses.Namespace, perses.Name)
+				}
 				cert, err := ReadSecretFile(tls.UserCert.CertPath, f.allowedDirs)
 				if err != nil {
 					return nil, fmt.Errorf("invalid user cert file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
 				}
+				key, err := ReadSecretFile(*tls.UserCert.PrivateKeyPath, f.allowedDirs)
+				if err != nil {
+					return nil, fmt.Errorf("invalid user cert private key file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
+				}
 				tlsConfig.Cert = string(cert)
+				tlsConfig.Key = string(key)
 			}
 		}
 
