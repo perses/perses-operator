@@ -62,7 +62,8 @@ type PersesGlobalDatasourceReconciler struct {
 	Metrics               *operatormetrics.Metrics
 	ReconciliationTracker *operatormetrics.ReconciliationTracker
 	// SyncInterval sets drift checks; managed credentials retain a nonzero interval.
-	SyncInterval time.Duration
+	SyncInterval          time.Duration
+	AllowedSecretFileDirs []string
 }
 
 var log = logger.WithField("module", "perses_globaldatasource_controller")

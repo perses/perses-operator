@@ -65,16 +65,18 @@ type clientCacheEntry struct {
 }
 
 type PersesClientFactoryWithConfig struct {
-	mtx       sync.RWMutex
-	cache     map[string]map[string]clientCacheEntry
-	ttl       time.Duration
-	lastSweep time.Time
+	mtx         sync.RWMutex
+	cache       map[string]map[string]clientCacheEntry
+	ttl         time.Duration
+	lastSweep   time.Time
+	allowedDirs []string
 }
 
-func NewWithConfig() *PersesClientFactoryWithConfig {
+func NewWithConfig(allowedDirs ...string) *PersesClientFactoryWithConfig {
 	return &PersesClientFactoryWithConfig{
-		cache: make(map[string]map[string]clientCacheEntry),
-		ttl:   defaultClientCacheTTL,
+		cache:       make(map[string]map[string]clientCacheEntry),
+		ttl:         defaultClientCacheTTL,
+		allowedDirs: allowedDirs,
 	}
 }
 
@@ -224,7 +226,11 @@ func (f *PersesClientFactoryWithConfig) buildBaseConfig(ctx context.Context, k8s
 				}
 				tlsConfig.CA = caData
 			case persesv1alpha2.SecretSourceTypeFile:
-				tlsConfig.CAFile = tls.CaCert.CertPath
+				caData, err := ReadSecretFile(tls.CaCert.CertPath, f.allowedDirs)
+				if err != nil {
+					return config, fmt.Errorf("invalid CA cert file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
+				}
+				tlsConfig.CA = string(caData)
 			}
 		}
 
@@ -238,7 +244,19 @@ func (f *PersesClientFactoryWithConfig) buildBaseConfig(ctx context.Context, k8s
 				tlsConfig.Cert = cert
 				tlsConfig.Key = key
 			case persesv1alpha2.SecretSourceTypeFile:
-				tlsConfig.CertFile = tls.UserCert.CertPath
+				if tls.UserCert.PrivateKeyPath == nil || *tls.UserCert.PrivateKeyPath == "" {
+					return config, fmt.Errorf("privateKeyPath is required when user cert type is file for Perses %s/%s", perses.Namespace, perses.Name)
+				}
+				cert, err := ReadSecretFile(tls.UserCert.CertPath, f.allowedDirs)
+				if err != nil {
+					return config, fmt.Errorf("invalid user cert file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
+				}
+				key, err := ReadSecretFile(*tls.UserCert.PrivateKeyPath, f.allowedDirs)
+				if err != nil {
+					return config, fmt.Errorf("invalid user cert private key file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
+				}
+				tlsConfig.Cert = string(cert)
+				tlsConfig.Key = string(key)
 			}
 		}
 
@@ -277,15 +295,19 @@ func (f *PersesClientFactoryWithConfig) buildBaseConfig(ctx context.Context, k8s
 			if oauthCfg.ClientIDPath == nil {
 				return config, fmt.Errorf("clientIDPath is required when OAuth type is file for Perses %s/%s", perses.Namespace, perses.Name)
 			}
-			clientIDBytes, err := os.ReadFile(*oauthCfg.ClientIDPath)
-			if err != nil {
-				return config, fmt.Errorf("failed to read OAuth client ID file %s for Perses %s/%s: %w", *oauthCfg.ClientIDPath, perses.Namespace, perses.Name, err)
-			}
-			oauthConfig.ClientID = string(clientIDBytes)
 			if oauthCfg.ClientSecretPath == nil {
 				return config, fmt.Errorf("clientSecretPath is required when OAuth type is file for Perses %s/%s", perses.Namespace, perses.Name)
 			}
-			oauthConfig.ClientSecretFile = *oauthCfg.ClientSecretPath
+			clientID, err := ReadSecretFile(*oauthCfg.ClientIDPath, f.allowedDirs)
+			if err != nil {
+				return config, fmt.Errorf("invalid OAuth client ID file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
+			}
+			oauthConfig.ClientID = string(clientID)
+			clientSecret, err := ReadSecretFile(*oauthCfg.ClientSecretPath, f.allowedDirs)
+			if err != nil {
+				return config, fmt.Errorf("invalid OAuth client secret file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
+			}
+			oauthConfig.ClientSecret = string(clientSecret)
 		default:
 			return config, fmt.Errorf("unsupported OAuth source type %q for Perses %s/%s", oauthCfg.Type, perses.Namespace, perses.Name)
 		}
