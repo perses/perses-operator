@@ -427,11 +427,10 @@ func (r *PersesGlobalDatasourceReconciler) deleteGlobalDatasource(ctx context.Co
 	clients, err := r.ClientFactory.CreateClientsForAllPods(ctx, r.APIReader, perses)
 	if err != nil {
 		if errors.Is(err, persescommon.ErrNoReadyPods) {
-			// No ready pods means there is nowhere left to delete from — the
-			// pods that held the file-based state are already gone. Treat this
-			// as done instead of requeueing in a tight error loop.
-			gdlog.WithError(err).Info("No ready pods to delete from, nothing to do")
-			return subreconciler.ContinueReconciling()
+			// No ready pod can be reached now, but unready pods or retained
+			// volumes can still contain the resource, so pending cleanup must retry.
+			gdlog.WithError(err).Info("No ready pods to delete from, waiting and retrying")
+			return subreconciler.RequeueWithDelay(30 * time.Second)
 		}
 		gdlog.WithError(err).Error("Failed to create perses rest clients")
 		return subreconciler.RequeueWithError(err)
