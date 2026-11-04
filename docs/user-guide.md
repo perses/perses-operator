@@ -11,6 +11,8 @@ This documentation provides information on how to use the Perses Operator custom
 - [Examples](#examples)
 - [Project Management](#project-management)
 - [Tags](#tags)
+- [Secrets](#secrets)
+  - [Secret files](#secret-files)
 - [Cache and Watch Filtering](#cache-and-watch-filtering)
 - [Troubleshooting](#troubleshooting)
 
@@ -307,15 +309,17 @@ The api supports three types of secret sources:
 
 - `secret`: Kubernetes Secret
 - `configmap`: Kubernetes ConfigMap
-- `file`: File mounted in the perses pod
+- `file`: File mounted into a pod (see [Secret files](#secret-files) for which pod)
 
 The api for these types are the same
 but the keys ending in `Path` refer to a key within a secret or configmap
 when using those types.
 
 > [!NOTE]
-> To use the `file` type, you must mount the file into the Perses pod
-> using `spec.volumes` and `spec.volumeMounts` on the `Perses` CR.
+> Most `file` references on datasources are read by the Perses server, so the file must be
+> mounted into the Perses pod using `spec.volumes` and `spec.volumeMounts` on the `Perses` CR.
+> The exception is `client.oauth.clientIDPath`, which is read by the operator. See
+> [Secret files](#secret-files).
 
 ```yaml
 apiVersion: perses.dev/v1alpha1
@@ -360,6 +364,71 @@ spec:
 
 > [!NOTE]
 > The `basicAuth` and `oauth` fields are mutually exclusive.
+
+### Secret files
+
+When a secret source uses `type: file`, the file is read either by the Perses server or by the
+operator, depending on the field:
+
+| Resource                                      | Field                                                        | Read by       |
+|-----------------------------------------------|--------------------------------------------------------------|---------------|
+| `Perses`                                      | `spec.client.tls.caCert`                                     | operator      |
+| `Perses`                                      | `spec.client.tls.userCert` (`certPath` and `privateKeyPath`) | operator      |
+| `Perses`                                      | `spec.client.oauth` (`clientIDPath` and `clientSecretPath`)  | operator      |
+| `PersesDatasource` / `PersesGlobalDatasource` | `client.oauth.clientIDPath`                                  | operator      |
+| `PersesDatasource` / `PersesGlobalDatasource` | `client.oauth.clientSecretPath`                              | Perses server |
+| `PersesDatasource` / `PersesGlobalDatasource` | `client.basicAuth.passwordPath`                              | Perses server |
+| `PersesDatasource` / `PersesGlobalDatasource` | `client.tls.caCert` / `client.tls.userCert`                  | Perses server |
+
+Files read by the **Perses server** must be mounted into the Perses pod using `spec.volumes` and
+`spec.volumeMounts` on the `Perses` CR.
+
+Files read by the **operator** must be mounted into the operator pod **and** be located inside a
+directory listed in the operator's `--secret-file-allowed-directories` flag. The flag takes a
+comma-separated list of absolute directory paths. It is empty by default, which means operator-side
+file references are **disabled** and any resource using them fails reconciliation with:
+
+```
+file references in secrets are disabled; ask your administrator to configure --secret-file-allowed-directories
+```
+
+The operator enforces the following rules:
+
+- Paths must be absolute and, after resolving symlinks, stay inside an allowed directory. Symlinks
+  inside an allowed directory that point outside of it are rejected. Kubernetes Secret and
+  projected volume mounts (which use `..data` symlinks) work as expected.
+- The root directory `/` cannot be allowed.
+- The following protected paths (and their parents, such as `/var` or `/etc`) cannot be allowed
+  and are never read: `/var/run/secrets`, `/run/secrets`, `/proc`, `/sys`, `/etc/kubernetes`.
+- Invalid flag values stop the operator at startup.
+- For `spec.client.tls.userCert` with `type: file`, both `certPath` and `privateKeyPath` are required.
+
+Example patch for the operator Deployment that mounts a Secret and allows the operator to read it:
+
+```yaml
+spec:
+  template:
+    spec:
+      containers:
+        - name: manager
+          args:
+            - --leader-elect
+            - --secret-file-allowed-directories=/etc/perses-creds
+          volumeMounts:
+            - name: perses-creds
+              mountPath: /etc/perses-creds
+              readOnly: true
+      volumes:
+        - name: perses-creds
+          secret:
+            secretName: perses-operator-creds
+```
+
+> [!IMPORTANT]
+> **Upgrading from earlier versions:** previous versions read operator-side `file` references
+> from any path in the operator container. After upgrading, set
+> `--secret-file-allowed-directories` to the directories where those files are mounted, or switch
+> the affected fields to `type: secret` / `type: configmap`.
 
 ## Examples
 
