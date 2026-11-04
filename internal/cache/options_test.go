@@ -429,4 +429,3 @@ func TestBuildCacheByObject_SecretTransformStripsManagedFields(t *testing.T) {
 		t.Error("expected ManagedFields to be nil after Transform")
 	}
 }
-
