@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: perses-oauth-tls
+status:
+  readyReplicas: 1
+---
+apiVersion: perses.dev/v1alpha2
+kind: Perses
+metadata:
+  name: perses-oauth-tls
+status:
+  conditions:
+    - type: Available
+      status: "True"
+      reason: Reconciled
+    - type: Degraded
+      status: "False"
+      reason: Reconciled
