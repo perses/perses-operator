@@ -19,6 +19,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -161,4 +162,38 @@ func TestDeletionStillSurfacesOtherClientFactoryErrors(t *testing.T) {
 	require.ErrorContains(t, err, "pod list unavailable")
 	require.NotErrorIs(t, err, common.ErrNoReadyPods)
 	require.Empty(t, f.requestLog())
+}
+
+// sortedPersesList makes the instance order deterministic so the test can put
+// the instance without pods first.
+type sortedPersesList struct{ client.Client }
+
+func (s sortedPersesList) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+	if err := s.Client.List(ctx, list, opts...); err != nil {
+		return err
+	}
+	if perses, ok := list.(*v1alpha2.PersesList); ok {
+		sort.Slice(perses.Items, func(i, j int) bool { return perses.Items[i].Name < perses.Items[j].Name })
+	}
+	return nil
+}
+
+func TestDeletionWithoutReadyPodsDoesNotBlockOtherInstances(t *testing.T) {
+	f := newDeletionFixture(t, true)
+	ready := f.pod.DeepCopy()
+	require.NoError(t, f.kube.Get(context.Background(), client.ObjectKeyFromObject(ready), ready))
+	ready.Status.Conditions[0].Status = corev1.ConditionTrue
+	require.NoError(t, f.kube.Status().Update(context.Background(), ready))
+
+	// Sorts before "backend", so it is visited first and asks for a retry.
+	scaledDown := &v1alpha2.Perses{ObjectMeta: metav1.ObjectMeta{Name: "alpha-scaled-down", Namespace: "test"}}
+	scaledDown.Spec.Config.Database = config.Database{File: &config.File{Folder: "/perses"}}
+	require.NoError(t, f.kube.Create(context.Background(), scaledDown))
+	f.kube = sortedPersesList{Client: f.kube}
+
+	result, err := f.reconcile()
+	require.NoError(t, err)
+	require.Equal(t, 30*time.Second, result.RequeueAfter, "the scaled-down instance still needs a retry")
+	require.Contains(t, f.requestLog(), "DELETE /api/v1/projects/test/datasources/example",
+		"the healthy instance must be cleaned up even though an earlier instance has no ready pods")
 }

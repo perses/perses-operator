@@ -433,12 +433,22 @@ func (r *PersesDatasourceReconciler) deleteDatasourceInAllInstances(ctx context.
 		return subreconciler.DoNotRequeue()
 	}
 
+	// An instance without ready pods asks for a retry; keep going so the other
+	// instances are still cleaned up now, then requeue once at the end.
+	var retry *ctrl.Result
 	for _, persesInstance := range persesInstances.Items {
-		if r, err := r.deleteDatasource(ctx, persesInstance, datasourceNamespace, datasourceName); subreconciler.ShouldHaltOrRequeue(r, err) {
-			return r, err
+		res, err := r.deleteDatasource(ctx, persesInstance, datasourceNamespace, datasourceName)
+		if err != nil {
+			return res, err
+		}
+		if res != nil && res.RequeueAfter > 0 {
+			retry = res
 		}
 	}
 
+	if retry != nil {
+		return retry, nil
+	}
 	return subreconciler.DoNotRequeue()
 }
 

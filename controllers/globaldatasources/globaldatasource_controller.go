@@ -413,13 +413,23 @@ func (r *PersesGlobalDatasourceReconciler) deleteGlobalDatasourceInAllInstances(
 		return subreconciler.DoNotRequeue()
 	}
 
+	// An instance without ready pods asks for a retry; keep going so the other
+	// instances are still cleaned up now, then requeue once at the end.
+	var retry *ctrl.Result
 	for _, persesInstance := range persesInstances.Items {
 		gdlog.Infof("Deleting perses instance: %s", persesInstance.Name)
-		if r, err := r.deleteGlobalDatasource(ctx, persesInstance, datasourceName); subreconciler.ShouldHaltOrRequeue(r, err) {
-			return r, err
+		res, err := r.deleteGlobalDatasource(ctx, persesInstance, datasourceName)
+		if err != nil {
+			return res, err
+		}
+		if res != nil && res.RequeueAfter > 0 {
+			retry = res
 		}
 	}
 
+	if retry != nil {
+		return retry, nil
+	}
 	return subreconciler.DoNotRequeue()
 }
 
