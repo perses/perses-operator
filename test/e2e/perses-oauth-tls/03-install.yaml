@@ -1,0 +1,166 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: oauth-token-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: oauth-token-proxy
+  template:
+    metadata:
+      labels:
+        app: oauth-token-proxy
+    spec:
+      containers:
+        - name: nginx
+          image: docker.io/library/nginx:1.28-alpine
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: NGINX_ENVSUBST_FILTER
+              value: NAMESPACE
+          ports:
+            - name: idp
+              containerPort: 8080
+            - name: token
+              containerPort: 8443
+          readinessProbe:
+            tcpSocket:
+              port: token
+          volumeMounts:
+            - name: config
+              mountPath: /etc/nginx/templates
+              readOnly: true
+            - name: tls
+              mountPath: /tls
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: oauth-fixture
+        - name: tls
+          secret:
+            secretName: oauth-token-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: oauth-token-proxy
+spec:
+  selector:
+    app: oauth-token-proxy
+  ports:
+    - name: idp
+      port: 8080
+      targetPort: idp
+    - name: token
+      port: 8443
+      targetPort: token
+---
+apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  name: oauth-tls-dashboard
+spec:
+  instanceSelector:
+    matchLabels:
+      test.perses.dev/instance: oauth-tls
+  config:
+    display:
+      name: OAuth TLS transport regression
+    duration: 5m
+    panels: {}
+    layouts: []
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verify-oauth-tls
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 240
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: verify
+          image: docker.io/library/python:3.13-alpine
+          env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          command:
+            - python3
+            - -u
+            - -c
+            - |
+              import base64
+              import json
+              import os
+              import ssl
+              import time
+              import urllib.error
+              import urllib.parse
+              import urllib.request
+
+              namespace = os.environ["NAMESPACE"]
+              api = f"https://perses-oauth-tls.{namespace}.svc.cluster.local:8443"
+              token_url = f"https://oauth-token-proxy.{namespace}.svc.cluster.local:8443/api/auth/providers/oauth/fixture/token"
+              dashboard_url = f"{api}/api/v1/projects/{namespace}/dashboards/oauth-tls-dashboard"
+              tls = ssl.create_default_context(cafile="/tls/ca.crt")
+              basic = base64.b64encode(b"fixture-client:fixture-secret").decode()
+
+              def request(url, data=None, headers=None):
+                  req = urllib.request.Request(url, data=data, headers=headers or {})
+                  with urllib.request.urlopen(req, context=tls, timeout=5) as response:
+                      return json.load(response)
+
+              # An authenticated read must not silently pass against an auth-disabled server.
+              def expect_rejected(status, headers=None):
+                  try:
+                      request(dashboard_url, headers=headers)
+                  except urllib.error.HTTPError as error:
+                      if error.code == status:
+                          return
+                      raise AssertionError(f"Expected HTTP {status}, got {error.code}") from error
+                  raise AssertionError("Perses accepted an unauthenticated/invalid-token API request")
+
+
+              for attempt in range(60):
+                  try:
+                      token = request(
+                          token_url,
+                          data=urllib.parse.urlencode({"grant_type": "client_credentials"}).encode(),
+                          headers={"Authorization": f"Basic {basic}"},
+                      )["access_token"]
+                      if not token or token == "fixture-upstream-token":
+                          raise AssertionError("Expected an access token issued by Perses, not the fake IdP")
+                      dashboard = request(dashboard_url, headers={"Authorization": f"Bearer {token}"})
+                      if dashboard["metadata"]["name"] != "oauth-tls-dashboard":
+                          raise AssertionError(f"Unexpected dashboard: {dashboard}")
+                      if dashboard["spec"]["display"]["name"] != "OAuth TLS transport regression":
+                          raise AssertionError(f"Unexpected dashboard content: {dashboard}")
+                      expect_rejected(401)
+                      expect_rejected(401, {"Authorization": "Bearer fixture-upstream-token"})
+                      print("Verified native OAuth authentication and dashboard sync over distinct TLS endpoints")
+                      break
+                  except (urllib.error.URLError, TimeoutError) as error:
+                      print(f"Waiting for OAuth/dashboard reconciliation: {error}")
+                      if attempt == 59:
+                          raise
+                      time.sleep(2)
+          volumeMounts:
+            - name: ca
+              mountPath: /tls
+              readOnly: true
+      volumes:
+        - name: ca
+          secret:
+            secretName: oauth-ca
+            items:
+              - key: tls.crt
+                path: ca.crt

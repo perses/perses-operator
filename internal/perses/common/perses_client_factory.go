@@ -19,12 +19,15 @@ import (
 	"flag"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -332,6 +335,64 @@ func (f *PersesClientFactoryWithConfig) createClientForURL(urlStr string, baseCo
 	return v1.NewWithClient(restClient), nil
 }
 
+// podOAuthTransport owns both connection pools. oauth2.Transport alone does not
+// forward CloseIdleConnections, which the client cache uses on eviction.
+type podOAuthTransport struct {
+	*oauth2.Transport
+	tokenTransport http.RoundTripper
+}
+
+func (t *podOAuthTransport) CloseIdleConnections() {
+	for _, transport := range []http.RoundTripper{t.Base, t.tokenTransport} {
+		if closer, ok := transport.(interface{ CloseIdleConnections() }); ok {
+			closer.CloseIdleConnections()
+		}
+	}
+}
+
+func (f *PersesClientFactoryWithConfig) createPodClientForURL(urlStr string, baseConfig clientConfig.RestConfigClient, tokenTLSConfig *secret.TLSConfig) (v1.ClientInterface, error) {
+	oauth := baseConfig.OAuth
+	if oauth == nil {
+		return f.createClientForURL(urlStr, baseConfig)
+	}
+	clientSecret, err := oauth.GetClientSecret()
+	if err != nil {
+		return nil, err
+	}
+
+	// Keep upstream REST construction, but do not let its OAuth setup share the
+	// API transport's service-name pin with requests to the native token URL.
+	baseConfig.OAuth = nil
+	c, err := f.createClientForURL(urlStr, baseConfig)
+	if err != nil {
+		return nil, err
+	}
+	httpClient := c.RESTClient().Client
+	tokenTransport, err := clientConfig.NewRoundTripper(httpClient.Timeout, tokenTLSConfig)
+	if err != nil {
+		httpClient.CloseIdleConnections()
+		return nil, err
+	}
+	tokenClient := &http.Client{Transport: tokenTransport, Timeout: httpClient.Timeout}
+	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, tokenClient)
+	oauthConfig := &clientcredentials.Config{
+		ClientID:     oauth.ClientID,
+		ClientSecret: clientSecret,
+		TokenURL:     oauth.TokenURL,
+		Scopes:       oauth.Scopes,
+		AuthStyle:    oauth2.AuthStyle(oauth.AuthStyle),
+		// Perses v0.55.0 NewRESTClient does not forward EndpointParams.
+	}
+	httpClient.Transport = &podOAuthTransport{
+		Transport: &oauth2.Transport{
+			Base:   httpClient.Transport,
+			Source: oauthConfig.TokenSource(ctx),
+		},
+		tokenTransport: tokenTransport,
+	}
+	return c, nil
+}
+
 func (f *PersesClientFactoryWithConfig) getServiceURL(perses *persesv1alpha2.Perses) string {
 	httpProtocol, containerPort := f.getProtocolAndPort(perses)
 
@@ -420,14 +481,16 @@ func (f *PersesClientFactoryWithConfig) CreateClientsForAllPods(ctx context.Cont
 		return nil, err
 	}
 
-	// Pods are dialed by IP, but the server cert is issued for the Service DNS
-	// name. Pin ServerName so the cert is verified against the Service FQDN
-	// rather than the pod IP.
+	// Preserve the original TLS settings for the token URL. Only API requests
+	// dial pods by IP while verifying the Service FQDN.
+	tokenTLSConfig := baseConfig.TLSConfig
 	if isTLSEnabled(&perses) {
-		if baseConfig.TLSConfig == nil {
-			baseConfig.TLSConfig = &secret.TLSConfig{}
+		apiTLSConfig := secret.TLSConfig{}
+		if baseConfig.TLSConfig != nil {
+			apiTLSConfig = *baseConfig.TLSConfig
 		}
-		baseConfig.TLSConfig.ServerName = fmt.Sprintf("%s.%s.svc.cluster.local", perses.Name, perses.Namespace)
+		apiTLSConfig.ServerName = fmt.Sprintf("%s.%s.svc.cluster.local", perses.Name, perses.Namespace)
+		baseConfig.TLSConfig = &apiTLSConfig
 	}
 
 	podList := &corev1.PodList{}
@@ -453,7 +516,7 @@ func (f *PersesClientFactoryWithConfig) CreateClientsForAllPods(ctx context.Cont
 		hostPort := net.JoinHostPort(pod.Status.PodIP, strconv.Itoa(int(containerPort)))
 		urlStr := fmt.Sprintf("%s://%s%s", httpProtocol, hostPort, perses.Spec.Config.APIPrefix)
 		c, err := f.getOrBuildCached(instanceKey, pod.Status.PodIP, fingerprint, func() (v1.ClientInterface, error) {
-			return f.createClientForURL(urlStr, baseConfig)
+			return f.createPodClientForURL(urlStr, baseConfig, tokenTLSConfig)
 		})
 		if err != nil {
 			return nil, err

@@ -1,0 +1,65 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: oauth-credentials
+stringData:
+  client-id: fixture-client
+  client-secret: fixture-secret
+  role.yaml: |
+    kind: GlobalRole
+    metadata:
+      name: oauth-fixture
+    spec:
+      permissions:
+        - actions: ["*"]
+          scopes: ["*"]
+  binding.yaml: |
+    kind: GlobalRoleBinding
+    metadata:
+      name: oauth-fixture
+    spec:
+      role: oauth-fixture
+      subjects:
+        - kind: User
+          name: oauth-fixture
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: oauth-fixture
+data:
+  default.conf.template: |
+    # Only the upstream IdP is faked. The TLS proxy forwards native token
+    # requests unchanged; Perses itself signs and validates the access token.
+    server {
+        listen 8080;
+        location = /token {
+            if ($http_authorization != "Basic Zml4dHVyZS1jbGllbnQ6Zml4dHVyZS1zZWNyZXQ=") {
+                return 401;
+            }
+            default_type application/json;
+            return 200 '{"access_token":"fixture-upstream-token","token_type":"Bearer","expires_in":3600}';
+        }
+        location = /userinfo {
+            if ($http_authorization != "Bearer fixture-upstream-token") {
+                return 401;
+            }
+            default_type application/json;
+            return 200 '{"login":"oauth-fixture","email":"oauth-fixture@example.invalid"}';
+        }
+    }
+    server {
+        listen 8443 ssl;
+        ssl_certificate /tls/tls.crt;
+        ssl_certificate_key /tls/tls.key;
+        location = /api/auth/providers/oauth/fixture/token {
+            proxy_pass https://perses-oauth-tls.${NAMESPACE}.svc.cluster.local:8443;
+            proxy_ssl_server_name on;
+            proxy_ssl_name perses-oauth-tls.${NAMESPACE}.svc.cluster.local;
+            proxy_ssl_verify on;
+            proxy_ssl_trusted_certificate /tls/ca.crt;
+        }
+        location / {
+            return 404;
+        }
+    }
