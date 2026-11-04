@@ -231,11 +231,10 @@ func (r *PersesDashboardReconciler) deleteDashboard(ctx context.Context, perses 
 	clients, err := r.ClientFactory.CreateClientsForAllPods(ctx, r.APIReader, perses)
 	if err != nil {
 		if errors.Is(err, common.ErrNoReadyPods) {
-			// No ready pods means there is nowhere left to delete from — the
-			// pods that held the file-based state are already gone. Treat this
-			// as done instead of requeueing in a tight error loop.
-			dlog.WithError(err).Info("No ready pods to delete from, nothing to do")
-			return subreconciler.ContinueReconciling()
+			// No ready pod can be reached now, but unready pods or retained
+			// volumes can still contain the resource, so pending cleanup must retry.
+			dlog.WithError(err).Info("No ready pods to delete from, waiting and retrying")
+			return subreconciler.RequeueWithDelay(30 * time.Second)
 		}
 		dlog.WithError(err).Error("Failed to create perses rest clients")
 		return subreconciler.RequeueWithError(err)
