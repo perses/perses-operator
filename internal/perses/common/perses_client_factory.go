@@ -15,13 +15,20 @@ package common
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"net"
+	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
+	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/perses/perses/pkg/client/api/v1"
@@ -34,8 +41,15 @@ import (
 
 const tokenPath = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 
+// ErrNoReadyPods is returned by CreateClientsForAllPods when a Perses instance
+// has no ready pods to sync to. Callers use errors.Is to distinguish "nothing
+// to act on" (e.g. scaled to zero, or a delete after the pods are gone) from a
+// genuine failure that warrants an errored requeue.
+var ErrNoReadyPods = errors.New("no ready pods found for Perses instance")
+
 type PersesClientFactory interface {
 	CreateClient(ctx context.Context, client client.Reader, perses persesv1alpha2.Perses) (v1.ClientInterface, error)
+	CreateClientsForAllPods(ctx context.Context, k8sClient client.Reader, perses persesv1alpha2.Perses) ([]v1.ClientInterface, error)
 }
 
 type PersesClientCacheInvalidator interface {
@@ -52,7 +66,7 @@ type clientCacheEntry struct {
 
 type PersesClientFactoryWithConfig struct {
 	mtx         sync.RWMutex
-	cache       map[string]clientCacheEntry
+	cache       map[string]map[string]clientCacheEntry
 	ttl         time.Duration
 	lastSweep   time.Time
 	allowedDirs []string
@@ -60,21 +74,22 @@ type PersesClientFactoryWithConfig struct {
 
 func NewWithConfig(allowedDirs ...string) *PersesClientFactoryWithConfig {
 	return &PersesClientFactoryWithConfig{
-		cache:       make(map[string]clientCacheEntry),
+		cache:       make(map[string]map[string]clientCacheEntry),
 		ttl:         defaultClientCacheTTL,
 		allowedDirs: allowedDirs,
 	}
 }
 
-// ForgetInstance removes the cached client for the given Perses instance key.
-// The key format is "namespace/name".
+// ForgetInstance removes all cached clients for the given Perses instance key ("namespace/name").
 func (f *PersesClientFactoryWithConfig) ForgetInstance(key string) {
 	f.mtx.Lock()
-	defer f.mtx.Unlock()
-	if entry, exists := f.cache[key]; exists {
+	entries := f.cache[key]
+	delete(f.cache, key)
+	f.mtx.Unlock()
+
+	for _, entry := range entries {
 		closeClientConnections(entry.client)
 	}
-	delete(f.cache, key)
 }
 
 // sweepExpiredLocked removes cache entries whose TTL has elapsed.
@@ -85,10 +100,15 @@ func (f *PersesClientFactoryWithConfig) sweepExpiredLocked() {
 	if now.Sub(f.lastSweep) < f.ttl {
 		return
 	}
-	for key, entry := range f.cache {
-		if now.Sub(entry.createdAt) >= f.ttl {
-			closeClientConnections(entry.client)
-			delete(f.cache, key)
+	for instanceKey, subMap := range f.cache {
+		for subKey, entry := range subMap {
+			if now.Sub(entry.createdAt) >= f.ttl {
+				closeClientConnections(entry.client)
+				delete(subMap, subKey)
+			}
+		}
+		if len(subMap) == 0 {
+			delete(f.cache, instanceKey)
 		}
 	}
 	f.lastSweep = now
@@ -138,8 +158,8 @@ func configFingerprint(perses persesv1alpha2.Perses) string {
 
 // cacheHit returns the cached client if it exists, has the matching fingerprint,
 // and has not expired. Caller must hold at least RLock.
-func (f *PersesClientFactoryWithConfig) cacheHit(instanceKey, fingerprint string) (v1.ClientInterface, bool) {
-	entry, ok := f.cache[instanceKey]
+func (f *PersesClientFactoryWithConfig) cacheHit(instanceKey, subKey, fingerprint string) (v1.ClientInterface, bool) {
+	entry, ok := f.cache[instanceKey][subKey]
 	if !ok {
 		return nil, false
 	}
@@ -152,93 +172,40 @@ func (f *PersesClientFactoryWithConfig) cacheHit(instanceKey, fingerprint string
 	return entry.client, true
 }
 
-func (f *PersesClientFactoryWithConfig) CreateClient(ctx context.Context, client client.Reader, perses persesv1alpha2.Perses) (v1.ClientInterface, error) {
-	instanceKey := fmt.Sprintf("%s/%s", perses.Namespace, perses.Name)
-	fingerprint := configFingerprint(perses)
-
-	// Check cache under read lock — no file I/O needed.
-	// The TTL bounds credential staleness (SA token, TLS certs) so the
-	// fingerprint only tracks config shape (Generation, port, TLS flags).
-	f.mtx.RLock()
-	if cached, ok := f.cacheHit(instanceKey, fingerprint); ok {
-		f.mtx.RUnlock()
-		return cached, nil
-	}
-	f.mtx.RUnlock()
-
-	// Build the client without holding any lock to avoid blocking other
-	// controllers during slow operations (TLS cert fetches from API server).
-	newClient, err := f.buildClient(ctx, client, perses)
-	if err != nil {
-		return nil, err
-	}
-
-	// Store in cache under write lock. Re-check in case another goroutine raced.
-	f.mtx.Lock()
-	if cached, ok := f.cacheHit(instanceKey, fingerprint); ok {
-		f.mtx.Unlock()
-		return cached, nil
-	}
-	if old, exists := f.cache[instanceKey]; exists {
-		closeClientConnections(old.client)
-	}
-	f.cache[instanceKey] = clientCacheEntry{
-		client:      newClient,
-		fingerprint: fingerprint,
-		createdAt:   time.Now(),
-	}
-	f.sweepExpiredLocked()
-	f.mtx.Unlock()
-
-	return newClient, nil
-}
-
-func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, client client.Reader, perses persesv1alpha2.Perses) (v1.ClientInterface, error) {
-	var urlStr string
-
+func (f *PersesClientFactoryWithConfig) getProtocolAndPort(perses *persesv1alpha2.Perses) (string, int32) {
 	httpProtocol := "http"
-	if isTLSEnabled(&perses) {
+	if isTLSEnabled(perses) {
 		httpProtocol = "https"
 	}
-
-	serverURLFlag := flag.Lookup(PersesServerURLFlag)
-	if serverURLFlag != nil && serverURLFlag.Value.String() != "" {
-		urlStr = serverURLFlag.Value.String()
-	} else {
-		containerPort := DefaultContainerPort
-		if perses.Spec.ContainerPort != nil {
-			containerPort = *perses.Spec.ContainerPort
-		}
-		urlStr = fmt.Sprintf("%s://%s.%s.svc.cluster.local:%d%s", httpProtocol, perses.Name, perses.Namespace, containerPort, perses.Spec.Config.APIPrefix)
+	containerPort := DefaultContainerPort
+	if perses.Spec.ContainerPort != nil {
+		containerPort = *perses.Spec.ContainerPort
 	}
-	parsedURL, err := speccommon.ParseURL(urlStr)
-	if err != nil {
-		return nil, err
+	return httpProtocol, containerPort
+}
+
+func (f *PersesClientFactoryWithConfig) buildBaseConfig(ctx context.Context, k8sClient client.Reader, perses *persesv1alpha2.Perses) (clientConfig.RestConfigClient, error) {
+	config := clientConfig.RestConfigClient{}
+
+	if isKubernetesAuthEnabled(perses) && isClientOAuthEnabled(perses) {
+		return config, fmt.Errorf("kubernetesAuth and oauth are mutually exclusive; cannot configure both for Perses %s/%s", perses.Namespace, perses.Name)
 	}
 
-	config := clientConfig.RestConfigClient{
-		URL: parsedURL,
-	}
-
-	if isKubernetesAuthEnabled(&perses) && isClientOAuthEnabled(&perses) {
-		return nil, fmt.Errorf("kubernetesAuth and oauth are mutually exclusive; cannot configure both for Perses %s/%s", perses.Namespace, perses.Name)
-	}
-
-	if isKubernetesAuthEnabled(&perses) {
+	if isKubernetesAuthEnabled(perses) {
 		tokenBytes, err := os.ReadFile(tokenPath)
 		if err != nil {
-			return nil, fmt.Errorf("failed to read service account token from %s: %w", tokenPath, err)
+			return config, fmt.Errorf("failed to read service account token from %s: %w", tokenPath, err)
 		}
 		saToken := string(tokenBytes)
 		if saToken == "" {
-			return nil, fmt.Errorf("service account token is empty, ensure the Perses operator has the correct permissions")
+			return config, fmt.Errorf("service account token is empty, ensure the Perses operator has the correct permissions")
 		}
 		config.Headers = map[string]string{
 			"Authorization": "Bearer " + saToken,
 		}
 	}
 
-	if isClientTLSEnabled(&perses) {
+	if isClientTLSEnabled(perses) {
 		tls := perses.Spec.Client.TLS
 
 		insecureSkipVerify := false
@@ -253,16 +220,15 @@ func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, client 
 		if tls.CaCert != nil {
 			switch tls.CaCert.Type {
 			case persesv1alpha2.SecretSourceTypeSecret, persesv1alpha2.SecretSourceTypeConfigMap:
-				caData, _, err := GetTLSCertData(ctx, client, perses.Namespace, perses.Name, tls.CaCert)
+				caData, _, err := GetTLSCertData(ctx, k8sClient, perses.Namespace, perses.Name, tls.CaCert)
 				if err != nil {
-					return nil, err
+					return config, err
 				}
-
 				tlsConfig.CA = caData
 			case persesv1alpha2.SecretSourceTypeFile:
 				caData, err := ReadSecretFile(tls.CaCert.CertPath, f.allowedDirs)
 				if err != nil {
-					return nil, fmt.Errorf("invalid CA cert file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
+					return config, fmt.Errorf("invalid CA cert file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
 				}
 				tlsConfig.CA = string(caData)
 			}
@@ -271,24 +237,23 @@ func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, client 
 		if tls.UserCert != nil {
 			switch tls.UserCert.Type {
 			case persesv1alpha2.SecretSourceTypeSecret, persesv1alpha2.SecretSourceTypeConfigMap:
-				cert, key, err := GetTLSCertData(ctx, client, perses.Namespace, perses.Name, tls.UserCert)
+				cert, key, err := GetTLSCertData(ctx, k8sClient, perses.Namespace, perses.Name, tls.UserCert)
 				if err != nil {
-					return nil, err
+					return config, err
 				}
-
 				tlsConfig.Cert = cert
 				tlsConfig.Key = key
 			case persesv1alpha2.SecretSourceTypeFile:
 				if tls.UserCert.PrivateKeyPath == nil || *tls.UserCert.PrivateKeyPath == "" {
-					return nil, fmt.Errorf("privateKeyPath is required when user cert type is file for Perses %s/%s", perses.Namespace, perses.Name)
+					return config, fmt.Errorf("privateKeyPath is required when user cert type is file for Perses %s/%s", perses.Namespace, perses.Name)
 				}
 				cert, err := ReadSecretFile(tls.UserCert.CertPath, f.allowedDirs)
 				if err != nil {
-					return nil, fmt.Errorf("invalid user cert file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
+					return config, fmt.Errorf("invalid user cert file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
 				}
 				key, err := ReadSecretFile(*tls.UserCert.PrivateKeyPath, f.allowedDirs)
 				if err != nil {
-					return nil, fmt.Errorf("invalid user cert private key file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
+					return config, fmt.Errorf("invalid user cert private key file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
 				}
 				tlsConfig.Cert = string(cert)
 				tlsConfig.Key = string(key)
@@ -303,7 +268,7 @@ func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, client 
 	// Perses exchanges these credentials with the external identity provider, syncs
 	// the user, and issues its own token. The underlying REST client fetches and
 	// auto-refreshes that token, so tokens are always minted by Perses itself.
-	if isClientOAuthEnabled(&perses) {
+	if isClientOAuthEnabled(perses) {
 		oauthCfg := perses.Spec.Client.OAuth
 
 		authStyle := 0
@@ -320,35 +285,47 @@ func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, client 
 
 		switch oauthCfg.Type {
 		case persesv1alpha2.SecretSourceTypeSecret, persesv1alpha2.SecretSourceTypeConfigMap:
-			clientID, clientSecret, err := GetOAuthData(ctx, client, perses.Namespace, perses.Name, oauthCfg)
+			clientID, clientSecret, err := GetOAuthData(ctx, k8sClient, perses.Namespace, perses.Name, oauthCfg)
 			if err != nil {
-				return nil, err
+				return config, err
 			}
 			oauthConfig.ClientID = clientID
 			oauthConfig.ClientSecret = clientSecret
 		case persesv1alpha2.SecretSourceTypeFile:
 			if oauthCfg.ClientIDPath == nil {
-				return nil, fmt.Errorf("clientIDPath is required when OAuth type is file for Perses %s/%s", perses.Namespace, perses.Name)
+				return config, fmt.Errorf("clientIDPath is required when OAuth type is file for Perses %s/%s", perses.Namespace, perses.Name)
 			}
 			if oauthCfg.ClientSecretPath == nil {
-				return nil, fmt.Errorf("clientSecretPath is required when OAuth type is file for Perses %s/%s", perses.Namespace, perses.Name)
+				return config, fmt.Errorf("clientSecretPath is required when OAuth type is file for Perses %s/%s", perses.Namespace, perses.Name)
 			}
 			clientID, err := ReadSecretFile(*oauthCfg.ClientIDPath, f.allowedDirs)
 			if err != nil {
-				return nil, fmt.Errorf("invalid OAuth client ID file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
+				return config, fmt.Errorf("invalid OAuth client ID file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
 			}
 			oauthConfig.ClientID = string(clientID)
 			clientSecret, err := ReadSecretFile(*oauthCfg.ClientSecretPath, f.allowedDirs)
 			if err != nil {
-				return nil, fmt.Errorf("invalid OAuth client secret file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
+				return config, fmt.Errorf("invalid OAuth client secret file for Perses %s/%s: %w", perses.Namespace, perses.Name, err)
 			}
 			oauthConfig.ClientSecret = string(clientSecret)
 		default:
-			return nil, fmt.Errorf("unsupported OAuth source type %q for Perses %s/%s", oauthCfg.Type, perses.Namespace, perses.Name)
+			return config, fmt.Errorf("unsupported OAuth source type %q for Perses %s/%s", oauthCfg.Type, perses.Namespace, perses.Name)
 		}
 
 		config.OAuth = oauthConfig
 	}
+
+	return config, nil
+}
+
+func (f *PersesClientFactoryWithConfig) createClientForURL(urlStr string, baseConfig clientConfig.RestConfigClient) (v1.ClientInterface, error) {
+	parsedURL, err := speccommon.ParseURL(urlStr)
+	if err != nil {
+		return nil, err
+	}
+
+	config := baseConfig
+	config.URL = parsedURL
 
 	restClient, err := clientConfig.NewRESTClient(config)
 	if err != nil {
@@ -356,6 +333,202 @@ func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, client 
 	}
 
 	return v1.NewWithClient(restClient), nil
+}
+
+// podOAuthTransport owns both connection pools. oauth2.Transport alone does not
+// forward CloseIdleConnections, which the client cache uses on eviction.
+type podOAuthTransport struct {
+	*oauth2.Transport
+	tokenTransport http.RoundTripper
+}
+
+func (t *podOAuthTransport) CloseIdleConnections() {
+	for _, transport := range []http.RoundTripper{t.Base, t.tokenTransport} {
+		if closer, ok := transport.(interface{ CloseIdleConnections() }); ok {
+			closer.CloseIdleConnections()
+		}
+	}
+}
+
+func (f *PersesClientFactoryWithConfig) createPodClientForURL(urlStr string, baseConfig clientConfig.RestConfigClient, tokenTLSConfig *secret.TLSConfig) (v1.ClientInterface, error) {
+	oauth := baseConfig.OAuth
+	if oauth == nil {
+		return f.createClientForURL(urlStr, baseConfig)
+	}
+	clientSecret, err := oauth.GetClientSecret()
+	if err != nil {
+		return nil, err
+	}
+
+	// Keep upstream REST construction, but do not let its OAuth setup share the
+	// API transport's service-name pin with requests to the native token URL.
+	baseConfig.OAuth = nil
+	c, err := f.createClientForURL(urlStr, baseConfig)
+	if err != nil {
+		return nil, err
+	}
+	httpClient := c.RESTClient().Client
+	tokenTransport, err := clientConfig.NewRoundTripper(httpClient.Timeout, tokenTLSConfig)
+	if err != nil {
+		httpClient.CloseIdleConnections()
+		return nil, err
+	}
+	tokenClient := &http.Client{Transport: tokenTransport, Timeout: httpClient.Timeout}
+	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, tokenClient)
+	oauthConfig := &clientcredentials.Config{
+		ClientID:     oauth.ClientID,
+		ClientSecret: clientSecret,
+		TokenURL:     oauth.TokenURL,
+		Scopes:       oauth.Scopes,
+		AuthStyle:    oauth2.AuthStyle(oauth.AuthStyle),
+		// Perses v0.55.0 NewRESTClient does not forward EndpointParams.
+	}
+	httpClient.Transport = &podOAuthTransport{
+		Transport: &oauth2.Transport{
+			Base:   httpClient.Transport,
+			Source: oauthConfig.TokenSource(ctx),
+		},
+		tokenTransport: tokenTransport,
+	}
+	return c, nil
+}
+
+func (f *PersesClientFactoryWithConfig) getServiceURL(perses *persesv1alpha2.Perses) string {
+	httpProtocol, containerPort := f.getProtocolAndPort(perses)
+
+	serverURLFlag := flag.Lookup(PersesServerURLFlag)
+	if serverURLFlag != nil && serverURLFlag.Value.String() != "" {
+		return serverURLFlag.Value.String()
+	}
+
+	return fmt.Sprintf("%s://%s.%s.svc.cluster.local:%d%s", httpProtocol, perses.Name, perses.Namespace, containerPort, perses.Spec.Config.APIPrefix)
+}
+
+// buildClient builds a single REST client targeting the Perses Service URL.
+func (f *PersesClientFactoryWithConfig) buildClient(ctx context.Context, k8sClient client.Reader, perses persesv1alpha2.Perses) (v1.ClientInterface, error) {
+	baseConfig, err := f.buildBaseConfig(ctx, k8sClient, &perses)
+	if err != nil {
+		return nil, err
+	}
+	return f.createClientForURL(f.getServiceURL(&perses), baseConfig)
+}
+
+func (f *PersesClientFactoryWithConfig) CreateClient(ctx context.Context, k8sClient client.Reader, perses persesv1alpha2.Perses) (v1.ClientInterface, error) {
+	instanceKey := fmt.Sprintf("%s/%s", perses.Namespace, perses.Name)
+	fingerprint := configFingerprint(perses)
+
+	return f.getOrBuildCached(instanceKey, "", fingerprint, func() (v1.ClientInterface, error) {
+		return f.buildClient(ctx, k8sClient, perses)
+	})
+}
+
+// getOrBuildCached returns the cached client for instanceKey/subKey when its
+// fingerprint matches and it has not expired, otherwise it builds a new one via
+// build and stores it. The build runs without any lock held to avoid blocking
+// other controllers during slow operations (TLS cert fetches from the API server).
+//
+// The TTL bounds credential staleness (SA token, TLS certs) so the fingerprint
+// only tracks config shape (Generation, port, TLS flags).
+func (f *PersesClientFactoryWithConfig) getOrBuildCached(instanceKey, subKey, fingerprint string, build func() (v1.ClientInterface, error)) (v1.ClientInterface, error) {
+	// Check cache under read lock — no file I/O needed.
+	f.mtx.RLock()
+	if cached, ok := f.cacheHit(instanceKey, subKey, fingerprint); ok {
+		f.mtx.RUnlock()
+		return cached, nil
+	}
+	f.mtx.RUnlock()
+
+	newClient, err := build()
+	if err != nil {
+		return nil, err
+	}
+
+	// Store in cache under write lock. Re-check in case another goroutine raced.
+	f.mtx.Lock()
+	if cached, ok := f.cacheHit(instanceKey, subKey, fingerprint); ok {
+		f.mtx.Unlock()
+		return cached, nil
+	}
+	if old, exists := f.cache[instanceKey][subKey]; exists {
+		closeClientConnections(old.client)
+	}
+	if f.cache[instanceKey] == nil {
+		f.cache[instanceKey] = make(map[string]clientCacheEntry)
+	}
+	f.cache[instanceKey][subKey] = clientCacheEntry{
+		client:      newClient,
+		fingerprint: fingerprint,
+		createdAt:   time.Now(),
+	}
+	f.sweepExpiredLocked()
+	f.mtx.Unlock()
+
+	return newClient, nil
+}
+
+func (f *PersesClientFactoryWithConfig) CreateClientsForAllPods(ctx context.Context, k8sClient client.Reader, perses persesv1alpha2.Perses) ([]v1.ClientInterface, error) {
+	serverURLFlag := flag.Lookup(PersesServerURLFlag)
+	if (serverURLFlag != nil && serverURLFlag.Value.String() != "") || perses.Spec.Config.Database.SQL != nil {
+		c, err := f.CreateClient(ctx, k8sClient, perses)
+		if err != nil {
+			return nil, err
+		}
+		return []v1.ClientInterface{c}, nil
+	}
+
+	baseConfig, err := f.buildBaseConfig(ctx, k8sClient, &perses)
+	if err != nil {
+		return nil, err
+	}
+
+	// Preserve the original TLS settings for the token URL. Only API requests
+	// dial pods by IP while verifying the Service FQDN.
+	tokenTLSConfig := baseConfig.TLSConfig
+	if isTLSEnabled(&perses) {
+		apiTLSConfig := secret.TLSConfig{}
+		if baseConfig.TLSConfig != nil {
+			apiTLSConfig = *baseConfig.TLSConfig
+		}
+		apiTLSConfig.ServerName = fmt.Sprintf("%s.%s.svc.cluster.local", perses.Name, perses.Namespace)
+		baseConfig.TLSConfig = &apiTLSConfig
+	}
+
+	podList := &corev1.PodList{}
+	err = k8sClient.List(ctx, podList,
+		client.InNamespace(perses.Namespace),
+		client.MatchingLabels(SelectorLabelsForPerses(perses.Name, &perses)),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list pods for Perses instance %s/%s: %w", perses.Namespace, perses.Name, err)
+	}
+
+	httpProtocol, containerPort := f.getProtocolAndPort(&perses)
+
+	instanceKey := fmt.Sprintf("%s/%s", perses.Namespace, perses.Name)
+	fingerprint := configFingerprint(perses)
+
+	var clients []v1.ClientInterface
+	for i := range podList.Items {
+		pod := &podList.Items[i]
+		if !isPodReady(pod) {
+			continue
+		}
+		hostPort := net.JoinHostPort(pod.Status.PodIP, strconv.Itoa(int(containerPort)))
+		urlStr := fmt.Sprintf("%s://%s%s", httpProtocol, hostPort, perses.Spec.Config.APIPrefix)
+		c, err := f.getOrBuildCached(instanceKey, pod.Status.PodIP, fingerprint, func() (v1.ClientInterface, error) {
+			return f.createPodClientForURL(urlStr, baseConfig, tokenTLSConfig)
+		})
+		if err != nil {
+			return nil, err
+		}
+		clients = append(clients, c)
+	}
+
+	if len(clients) == 0 {
+		return nil, fmt.Errorf("%w %s/%s", ErrNoReadyPods, perses.Namespace, perses.Name)
+	}
+
+	return clients, nil
 }
 
 type PersesClientFactoryWithClient struct {
@@ -368,4 +541,8 @@ func NewWithClient(client v1.ClientInterface) PersesClientFactory {
 
 func (f *PersesClientFactoryWithClient) CreateClient(_ context.Context, _ client.Reader, _ persesv1alpha2.Perses) (v1.ClientInterface, error) {
 	return f.client, nil
+}
+
+func (f *PersesClientFactoryWithClient) CreateClientsForAllPods(_ context.Context, _ client.Reader, _ persesv1alpha2.Perses) ([]v1.ClientInterface, error) {
+	return []v1.ClientInterface{f.client}, nil
 }

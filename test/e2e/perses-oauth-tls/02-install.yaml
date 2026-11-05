@@ -1,0 +1,81 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |
+      set -eu
+      kubectl apply -n "$NAMESPACE" -f - <<EOF
+      apiVersion: perses.dev/v1alpha2
+      kind: Perses
+      metadata:
+        name: perses-oauth-tls
+        labels:
+          test.perses.dev/instance: oauth-tls
+      spec:
+        image: docker.io/persesdev/perses:v0.55.0
+        containerPort: 8443
+        storage:
+          emptyDir: {}
+        tls:
+          enable: true
+          userCert:
+            type: secret
+            name: perses-api-tls
+            namespace: $NAMESPACE
+            certPath: tls.crt
+            privateKeyPath: tls.key
+        client:
+          tls:
+            enable: true
+            insecureSkipVerify: false
+            caCert:
+              type: secret
+              name: oauth-ca
+              namespace: $NAMESPACE
+              certPath: tls.crt
+          oauth:
+            type: secret
+            name: oauth-credentials
+            namespace: $NAMESPACE
+            clientIDPath: client-id
+            clientSecretPath: client-secret
+            authStyle: 2
+            tokenURL: https://oauth-token-proxy.$NAMESPACE.svc.cluster.local:8443/api/auth/providers/oauth/fixture/token
+        config:
+          database:
+            file:
+              folder: /perses
+              extension: yaml
+          provisioning:
+            folders:
+              - /etc/perses/provisioning/secrets
+          security:
+            enable_auth: true
+            readonly: false
+            cookie:
+              secure: true
+            authentication:
+              disable_sign_up: true
+              providers:
+                enable_native: false
+                oauth:
+                  - slug_id: fixture
+                    name: Fixture
+                    client_id: fixture-client
+                    auth_url: http://oauth-token-proxy:8080/authorize
+                    token_url: http://oauth-token-proxy:8080/token
+                    user_infos_url: http://oauth-token-proxy:8080/userinfo
+                    device_auth_url: http://oauth-token-proxy:8080/device
+                    http:
+                      timeout: 5s
+            authorization:
+              provider:
+                native:
+                  enable: true
+                  guest_permissions: []
+        provisioning:
+          secretRefs:
+            - name: oauth-credentials
+              key: role.yaml
+            - name: oauth-credentials
+              key: binding.yaml
+      EOF

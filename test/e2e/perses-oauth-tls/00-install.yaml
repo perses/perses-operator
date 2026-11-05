@@ -1,0 +1,58 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+timeout: 180
+commands:
+  - script: |
+      set -eu
+      # The API and token endpoint deliberately have disjoint DNS SANs.
+      kubectl apply -n "$NAMESPACE" -f - <<EOF
+      apiVersion: cert-manager.io/v1
+      kind: Issuer
+      metadata:
+        name: oauth-selfsigned
+      spec:
+        selfSigned: {}
+      ---
+      apiVersion: cert-manager.io/v1
+      kind: Certificate
+      metadata:
+        name: oauth-ca
+      spec:
+        isCA: true
+        commonName: oauth-e2e-ca
+        secretName: oauth-ca
+        issuerRef:
+          name: oauth-selfsigned
+      ---
+      apiVersion: cert-manager.io/v1
+      kind: Issuer
+      metadata:
+        name: oauth-ca
+      spec:
+        ca:
+          secretName: oauth-ca
+      ---
+      apiVersion: cert-manager.io/v1
+      kind: Certificate
+      metadata:
+        name: perses-api-tls
+      spec:
+        secretName: perses-api-tls
+        dnsNames:
+          - perses-oauth-tls.$NAMESPACE.svc.cluster.local
+        issuerRef:
+          name: oauth-ca
+      ---
+      apiVersion: cert-manager.io/v1
+      kind: Certificate
+      metadata:
+        name: oauth-token-tls
+      spec:
+        secretName: oauth-token-tls
+        dnsNames:
+          - oauth-token-proxy.$NAMESPACE.svc.cluster.local
+        issuerRef:
+          name: oauth-ca
+      EOF
+      kubectl wait -n "$NAMESPACE" --for=condition=Ready --timeout=120s \
+        certificate/perses-api-tls certificate/oauth-token-tls

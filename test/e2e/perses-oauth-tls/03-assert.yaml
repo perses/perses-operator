@@ -1,0 +1,19 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verify-oauth-tls
+status:
+  succeeded: 1
+---
+apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  name: oauth-tls-dashboard
+status:
+  conditions:
+    - type: Available
+      status: "True"
+      reason: Reconciled
+    - type: Degraded
+      status: "False"
+      reason: Reconciled

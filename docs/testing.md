@@ -97,6 +97,7 @@ test/e2e/
 ├── namespace-isolation/    # Namespace-scoped resource isolation
 ├── perses-deployment/      # database.sql → Deployment
 ├── perses-emptydir/        # emptyDir storage
+├── perses-oauth-tls/       # Native OAuth with distinct API/token TLS hostnames
 ├── perses-statefulset/     # database.file → StatefulSet with PVC
 ├── perses-volumes/         # Custom volumes and volume mounts
 └── resource-update/        # Update existing resources and assert reconciliation
@@ -104,6 +105,20 @@ test/e2e/
 
 - To add a new test case, create a directory under `test/e2e/`.
 - To add steps to an existing test case, add numbered files (e.g. `05-install.yaml`, `05-assert.yaml`).
+
+### OAuth/TLS transport regression
+
+`perses-oauth-tls` runs HTTPS Perses with file storage and native OAuth authentication. A local nginx fixture supplies upstream OAuth responses and proxies Perses's own token endpoint through a second HTTPS hostname. Cert-manager issues separate API and token-proxy certificates with disjoint DNS SANs, signed by the same test CA. Certificate verification remains enabled for the operator, proxy, and verification Job.
+
+The case verifies dashboard reconciliation and authenticated API retrieval, and rejects unauthenticated requests and the fake upstream token. File storage exercises pod-direct API connections: the API transport must verify the Perses Service hostname, while OAuth token acquisition must verify the token URL's hostname independently. Reusing the API transport for OAuth requests fails this case with a certificate hostname mismatch.
+
+After `make e2e-setup`, run only this case with:
+
+```bash
+bin/kubectl-kuttl test --config test/e2e/kuttl-test.yaml --test perses-oauth-tls
+```
+
+The fixture is namespace-isolated and requires no external identity provider or ingress controller. It pulls `nginx:1.28-alpine` and `python:3.13-alpine` in addition to the Perses image.
 
 ### Debugging
 
