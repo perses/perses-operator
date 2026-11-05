@@ -49,7 +49,7 @@ The workflow:
   jsonnet files under `jsonnet/generated` and `jsonnet/examples`.
 - Runs `make build-installer` — regenerates the root `bundle.yaml` installer.
 - Opens a PR titled `[IGNORE] Prepare release <tag>` against `main` on branch
-  `release/v<tag>`.
+  `cut-v<tag>`.
 
 Re-running the workflow with the same `tag` updates the existing PR branch.
 
