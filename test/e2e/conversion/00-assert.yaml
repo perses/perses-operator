@@ -1,0 +1,98 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 60
+---
+# Perses: v1alpha1 storage.size is migrated to a v1alpha2 PVC template.
+apiVersion: perses.dev/v1alpha2
+kind: Perses
+metadata:
+  name: conversion-perses-v1alpha1
+spec:
+  containerPort: 8080
+  storage:
+    pvcTemplate:
+      resources:
+        requests:
+          storage: 1Gi
+---
+apiVersion: perses.dev/v1alpha1
+kind: Perses
+metadata:
+  name: conversion-perses-v1alpha1
+spec:
+  containerPort: 8080
+  storage:
+    size: 1Gi
+---
+# PersesDatasource: basicAuth password_path (v1alpha1) <-> passwordPath (v1alpha2).
+apiVersion: perses.dev/v1alpha2
+kind: PersesDatasource
+metadata:
+  name: conversion-datasource-v1alpha1
+spec:
+  config:
+    display:
+      name: "Conversion Datasource v1alpha1"
+  client:
+    basicAuth:
+      type: secret
+      name: conversion-basic-auth
+      username: admin
+      passwordPath: password
+---
+apiVersion: perses.dev/v1alpha1
+kind: PersesDatasource
+metadata:
+  name: conversion-datasource-v1alpha1
+spec:
+  config:
+    display:
+      name: "Conversion Datasource v1alpha1"
+  client:
+    basicAuth:
+      username: admin
+      password_path: password
+---
+apiVersion: perses.dev/v1alpha1
+kind: PersesDatasource
+metadata:
+  name: conversion-datasource-v1alpha2
+spec:
+  config:
+    display:
+      name: "Conversion Datasource v1alpha2"
+  client:
+    basicAuth:
+      type: secret
+      name: conversion-basic-auth
+      username: admin
+      password_path: password
+---
+# PersesDashboard: the dashboard spec is inlined in v1alpha1 and nested under spec.config in v1alpha2.
+apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  name: conversion-dashboard-v1alpha1
+spec:
+  config:
+    display:
+      name: "Conversion Dashboard v1alpha1"
+    duration: 1h
+---
+apiVersion: perses.dev/v1alpha1
+kind: PersesDashboard
+metadata:
+  name: conversion-dashboard-v1alpha1
+spec:
+  display:
+    name: "Conversion Dashboard v1alpha1"
+  duration: 1h
+---
+apiVersion: perses.dev/v1alpha1
+kind: PersesDashboard
+metadata:
+  name: conversion-dashboard-v1alpha2
+spec:
+  display:
+    name: "Conversion Dashboard v1alpha2"
+  duration: 30m

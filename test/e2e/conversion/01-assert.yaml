@@ -1,0 +1,9 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 120
+commands:
+  - command: kubectl wait --for=delete persesdatasource/conversion-datasource-v1alpha1 -n $NAMESPACE --timeout=60s
+  - command: kubectl wait --for=delete persesdatasource/conversion-datasource-v1alpha2 -n $NAMESPACE --timeout=60s
+  - command: kubectl wait --for=delete persesdashboard/conversion-dashboard-v1alpha1 -n $NAMESPACE --timeout=60s
+  - command: kubectl wait --for=delete persesdashboard/conversion-dashboard-v1alpha2 -n $NAMESPACE --timeout=60s
+  - command: kubectl wait --for=delete perses/conversion-perses-v1alpha1 -n $NAMESPACE --timeout=60s
