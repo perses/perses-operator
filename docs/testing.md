@@ -75,7 +75,7 @@ When iterating:
 The following Makefile variables can be overridden to customize the e2e environment:
 
 | Variable            | Default                                         | Description                   |
-| ------------------- | ----------------------------------------------- | ----------------------------- |
+|---------------------|-------------------------------------------------|-------------------------------|
 | `KIND_CLUSTER_NAME` | `kuttl-e2e`                                     | Name of the kind cluster      |
 | `E2E_TAG`           | Git short SHA                                   | Image tag for the operator    |
 | `E2E_IMG`           | `docker.io/persesdev/perses-operator:<E2E_TAG>` | Full operator image reference |
@@ -148,7 +148,7 @@ See [Developer Guide](dev.md#modifying-or-adding-alerting-rules) for the full wo
 ## Integration vs E2E Tests
 
 | Aspect      | Integration Tests                                          | E2E Tests                                                       |
-| ----------- | ---------------------------------------------------------- | --------------------------------------------------------------- |
+|-------------|------------------------------------------------------------|-----------------------------------------------------------------|
 | Environment | Lightweight API server via envtest (no real cluster)       | Real Kubernetes cluster via kind                                |
 | Scope       | Controller reconcile logic, CRD validation, status updates | Full operator lifecycle including pod scheduling and networking |
 | Speed       | Fast (seconds)                                             | Slower (minutes, includes cluster setup)                        |
