@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.6.0 / 2026-11-05
+
+- [FEATURE] upgrade to perses v0.55.1 (#519)
+- [FEATURE] upgrade to perses v0.55 (#510)
+- [FEATURE] auto provision and reconcile perses instances encryption key (#506)
+- [FEATURE] add PersesGlobalDatasource CRD and RBAC roles to libsonnet
+- [FEATURE] add a resource_namespace to managed resources metric
+- [FEATURE] add priorityClassName to Perses spec
+- [FEATURE] include a container security configuration in perses spec
+- [FEATURE] Support enabling OIDC authentication via Perses operator
+- [BUGFIX] Sync resources to all pods instead of service (#412)
+- [BUGFIX] read privatekey from path for tls config (#521)
+- [BUGFIX] Fix immutable selector labels (#495)
+- [BUGFIX] fix dashboard comparission for synchronization when using json (#509)
+- [BUGFIX] periodically re-sync resources to heal Perses API drift (#491)
+- [BUGFIX] detect untracked files in jsonnet-check
+- [BREAKINGCHANGE] Restrict operator secret file reads to allowed directories (#518)
+- [DOC] Add the navigation of the documentation for the website (#508)
+
 ## 0.5.0 / 2026-08-04
 
 - [FEATURE] Update perses dependency to v0.54.0 (#439)
