@@ -19,14 +19,6 @@
 - [BREAKINGCHANGE] Restrict operator secret file reads to allowed directories (#518)
 - [DOC] Add the navigation of the documentation for the website (#508)
 
-[//]: <UNKNOWN ENTRIES. Release shepherd, please review the following list and categorize them or remove them>
-
-- [UNKNOWN] build(deps): Bump github.com/sirupsen/logrus from 1.9.4 to 1.10.1
-- [UNKNOWN] build(deps): Bump the k8s-io group with 4 updates
-- [UNKNOWN] build(deps): Bump github.com/onsi/ginkgo/v2 from 2.32.0 to 2.32.1
-- [UNKNOWN] build(deps): Bump actions/setup-go from 5 to 7
-- [UNKNOWN] build(deps): Bump actions/checkout from 6 to 7
-
 ## 0.5.0 / 2026-08-04
 
 - [FEATURE] Update perses dependency to v0.54.0 (#439)
