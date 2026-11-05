@@ -2625,9 +2625,10 @@ spec:
     conversionCRDs:
     - perses.perses.dev
     - persesdashboards.perses.dev
+    - persesdatasources.perses.dev
     - persesglobaldatasources.perses.dev
     deploymentName: perses-operator-controller-manager
-    generateName: cpersespersesdashboardspersesglobaldatasources.kb.io
+    generateName: cpersespersesdashboardspersesdatasourcespersesglobaldatasources.kb.io
     sideEffects: None
     targetPort: 9443
     type: ConversionWebhook

@@ -1,0 +1,96 @@
+# Objects are created in both API versions. The storage version is v1alpha2, so
+# every write and read in v1alpha1 goes through the conversion webhook. With a
+# missing or misconfigured webhook the API server falls back to the "None"
+# strategy and fields whose shape differs between versions are silently lost,
+# which the assertions in 00-assert.yaml detect.
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  # v1alpha2 requires an explicit secret namespace, which is only known at runtime.
+  - script: |
+      cat <<EOF | kubectl apply -n $NAMESPACE -f -
+      apiVersion: perses.dev/v1alpha2
+      kind: PersesDatasource
+      metadata:
+        name: conversion-datasource-v1alpha2
+      spec:
+        config:
+          display:
+            name: "Conversion Datasource v1alpha2"
+          default: false
+          plugin:
+            kind: "PrometheusDatasource"
+            spec:
+              directUrl: "https://prometheus.demo.prometheus.io"
+        client:
+          basicAuth:
+            type: secret
+            name: conversion-basic-auth
+            namespace: $NAMESPACE
+            username: admin
+            passwordPath: password
+      EOF
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: conversion-basic-auth
+stringData:
+  password: e2e-password
+---
+apiVersion: perses.dev/v1alpha1
+kind: Perses
+metadata:
+  name: conversion-perses-v1alpha1
+spec:
+  config:
+    database:
+      file:
+        folder: "/perses"
+        extension: "yaml"
+  containerPort: 8080
+  storage:
+    size: 1Gi
+---
+apiVersion: perses.dev/v1alpha1
+kind: PersesDatasource
+metadata:
+  name: conversion-datasource-v1alpha1
+spec:
+  config:
+    display:
+      name: "Conversion Datasource v1alpha1"
+    default: false
+    plugin:
+      kind: "PrometheusDatasource"
+      spec:
+        directUrl: "https://prometheus.demo.prometheus.io"
+  client:
+    basicAuth:
+      type: secret
+      name: conversion-basic-auth
+      username: admin
+      password_path: password
+---
+apiVersion: perses.dev/v1alpha1
+kind: PersesDashboard
+metadata:
+  name: conversion-dashboard-v1alpha1
+spec:
+  display:
+    name: "Conversion Dashboard v1alpha1"
+  duration: 1h
+  panels: {}
+  layouts: []
+---
+apiVersion: perses.dev/v1alpha2
+kind: PersesDashboard
+metadata:
+  name: conversion-dashboard-v1alpha2
+spec:
+  config:
+    display:
+      name: "Conversion Dashboard v1alpha2"
+    duration: 30m
+    panels: {}
+    layouts: []

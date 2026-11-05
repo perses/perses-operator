@@ -1,0 +1,23 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+delete:
+  - apiVersion: perses.dev/v1alpha1
+    kind: PersesDatasource
+    metadata:
+      name: conversion-datasource-v1alpha1
+  - apiVersion: perses.dev/v1alpha2
+    kind: PersesDatasource
+    metadata:
+      name: conversion-datasource-v1alpha2
+  - apiVersion: perses.dev/v1alpha1
+    kind: PersesDashboard
+    metadata:
+      name: conversion-dashboard-v1alpha1
+  - apiVersion: perses.dev/v1alpha2
+    kind: PersesDashboard
+    metadata:
+      name: conversion-dashboard-v1alpha2
+  - apiVersion: perses.dev/v1alpha1
+    kind: Perses
+    metadata:
+      name: conversion-perses-v1alpha1
