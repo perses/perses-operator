@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.6.1 / 2026-11-06
+
+- [BUGFIX] fix conversion webhook for perses datasources (#525)
+
 ## 0.6.0 / 2026-11-05
 
 - [FEATURE] upgrade to perses v0.55.1 (#519)
