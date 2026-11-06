@@ -528,12 +528,16 @@ cross-build: generate-goreleaser manifests generate fmt vet ## Cross build binar
 	goreleaser release --snapshot --clean
 
 .PHONY: cross-release
-cross-release: generate-goreleaser manifests generate fmt vet
-	goreleaser release --clean
+cross-release: generate-goreleaser extract-changelog manifests generate fmt vet
+	goreleaser release --clean --release-notes EXTRACTED_CHANGELOG.md
 
 .PHONY: bin
 bin:
 	go build $(BUILD_OPTS) -mod=readonly -o bin/manager main.go
+
+.PHONY: extract-changelog
+extract-changelog:
+	$(GO) run ./scripts/extract-changelog/extract-changelog.go --version="${VERSION}"
 
 .PHONY: generate-changelog
 generate-changelog:
