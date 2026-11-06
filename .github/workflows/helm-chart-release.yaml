@@ -1,0 +1,408 @@
+name: Create helm chart pull request
+
+on:
+  workflow_call:
+    inputs:
+      release_ref:
+        type: string
+        required: true
+      helm_charts_org:
+        type: string
+        required: false
+        default: perses
+      helm_charts_repo:
+        type: string
+        required: false
+        default: helm-charts
+    secrets:
+      BOT_TOKEN:
+        required: true
+  workflow_dispatch:
+    inputs:
+      release_ref:
+        description: Release tag to publish from (for example v0.6.0)
+        required: true
+        type: string
+      helm_charts_org:
+        description: Organization owning the target helm-charts repository
+        required: false
+        type: string
+        default: perses
+      helm_charts_repo:
+        description: Target helm-charts repository name
+        required: false
+        type: string
+        default: helm-charts
+
+permissions:
+  contents: read
+
+env:
+  BOT_USER: persesbot
+  CHART_DIR: charts/perses-operator
+
+jobs:
+  create-helm-chart-pull-request:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate and prepare release values
+        id: prepare
+        env:
+          RELEASE_REF_INPUT: ${{ inputs.release_ref }}
+        run: |
+          # Trim leading/trailing whitespace
+          RELEASE_REF_INPUT="${RELEASE_REF_INPUT#"${RELEASE_REF_INPUT%%[![:space:]]*}"}"
+          RELEASE_REF_INPUT="${RELEASE_REF_INPUT%"${RELEASE_REF_INPUT##*[![:space:]]}"}"
+
+          if [ -z "${RELEASE_REF_INPUT}" ]; then
+            echo "A release tag is required. Pass release_ref (for example v0.6.0)." >&2
+            exit 1
+          fi
+
+          TAG="${RELEASE_REF_INPUT#refs/tags/}"
+          VERSION="${TAG#v}"
+
+          if [ -z "${TAG}" ]; then
+            echo "release_ref resolved to an empty tag after normalizing refs/tags/ prefix." >&2
+            exit 1
+          fi
+
+          remote_url="https://github.com/${GITHUB_REPOSITORY}.git"
+          if ! ls_remote_err=$(git ls-remote --exit-code --tags "${remote_url}" "refs/tags/${TAG}" 2>&1); then
+            echo "Could not confirm tag refs/tags/${TAG} in ${GITHUB_REPOSITORY}." >&2
+            echo "The tag may be missing, or git could not reach the repository (network, DNS, or transient error)." >&2
+            echo "git ls-remote: ${ls_remote_err}" >&2
+            exit 1
+          fi
+
+          echo "release_ref=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Sync fork
+        env:
+          GH_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: |
+          if ! gh repo view "${{ env.BOT_USER }}/${{ inputs.helm_charts_repo }}" >/dev/null 2>&1; then
+            echo "::error::Bot fork ${{ env.BOT_USER }}/${{ inputs.helm_charts_repo }} does not exist."
+            echo "Create a fork of ${{ inputs.helm_charts_org }}/${{ inputs.helm_charts_repo }} under ${{ env.BOT_USER }} before running this workflow."
+            exit 1
+          fi
+
+          gh repo sync ${{ env.BOT_USER }}/${{ inputs.helm_charts_repo }} \
+              --source ${{ inputs.helm_charts_org }}/${{ inputs.helm_charts_repo }} \
+              --force
+
+      - name: Checkout helm-charts fork
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ${{ env.BOT_USER }}/${{ inputs.helm_charts_repo }}
+          token: ${{ secrets.BOT_TOKEN }}
+
+      - name: Validate chart state
+        env:
+          VERSION: ${{ steps.prepare.outputs.version }}
+        run: |
+          CURRENT_APP_VERSION=$(grep ^appVersion "${CHART_DIR}/Chart.yaml" | sed 's/appVersion: //g' | tr -d '"')
+
+          if [ "${CURRENT_APP_VERSION}" = "${VERSION}" ]; then
+            echo "::error::Helm chart appVersion is already ${VERSION}. Nothing to update."
+            exit 1
+          fi
+
+          HIGHER=$(printf '%s\n%s' "${CURRENT_APP_VERSION}" "${VERSION}" | sort -V | tail -1)
+          if [ "${HIGHER}" != "${VERSION}" ]; then
+            echo "::error::Requested version ${VERSION} is not higher than current ${CURRENT_APP_VERSION}."
+            exit 1
+          fi
+
+      - name: Read previous chart state
+        id: prev
+        run: |
+          echo "app_version=$(grep ^appVersion "${CHART_DIR}/Chart.yaml" | sed 's/appVersion: //g' | tr -d '"')" >> "$GITHUB_OUTPUT"
+          echo "chart_version=$(grep ^version "${CHART_DIR}/Chart.yaml" | sed 's/version: //g' | tr -d '"')" >> "$GITHUB_OUTPUT"
+
+      - name: Detect kube-rbac-proxy changes since last chart release
+        id: krbp
+        env:
+          PREV_CHART_VERSION: ${{ steps.prev.outputs.chart_version }}
+        run: |
+          read_krbp_tag() {
+            awk '
+              $1 == "kubeRbacProxy:" { in_krbp=1; next }
+              in_krbp && /^[a-zA-Z]/ { exit }
+              in_krbp && $1 == "tag:" { gsub(/["'\'']/, "", $2); print $2; exit }
+            ' "$1"
+          }
+
+          CURRENT_TAG=$(read_krbp_tag "${CHART_DIR}/values.yaml")
+          if [ -z "${CURRENT_TAG}" ]; then
+            echo "::error::Could not read kubeRbacProxy.image.tag from ${CHART_DIR}/values.yaml"
+            exit 1
+          fi
+
+          PREV_TAG=""
+          PREV_REF="perses-operator-${PREV_CHART_VERSION}"
+          UPSTREAM_URL="https://github.com/${{ inputs.helm_charts_org }}/${{ inputs.helm_charts_repo }}.git"
+          # Forks may not have upstream release tags after gh repo sync; fetch the tag we compare against.
+          if ! git rev-parse -q --verify "refs/tags/${PREV_REF}" >/dev/null; then
+            git fetch --no-tags "${UPSTREAM_URL}" "refs/tags/${PREV_REF}:refs/tags/${PREV_REF}" || true
+          fi
+          if git rev-parse -q --verify "refs/tags/${PREV_REF}" >/dev/null; then
+            PREV_VALUES=$(git show "${PREV_REF}:${CHART_DIR}/values.yaml")
+            PREV_TAG=$(printf '%s\n' "${PREV_VALUES}" | awk '
+              $1 == "kubeRbacProxy:" { in_krbp=1; next }
+              in_krbp && /^[a-zA-Z]/ { exit }
+              in_krbp && $1 == "tag:" { gsub(/["'\'']/, "", $2); print $2; exit }
+            ')
+          else
+            echo "Previous chart tag ${PREV_REF} not found; skipping kube-rbac-proxy changelog comparison." >&2
+          fi
+
+          echo "tag=${CURRENT_TAG}" >> "$GITHUB_OUTPUT"
+          echo "prev_tag=${PREV_TAG}" >> "$GITHUB_OUTPUT"
+
+          if [ -n "${PREV_TAG}" ] && [ "${PREV_TAG}" != "${CURRENT_TAG}" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "kube-rbac-proxy changed since ${PREV_REF}: ${PREV_TAG} → ${CURRENT_TAG}"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "kube-rbac-proxy unchanged at ${CURRENT_TAG}"
+          fi
+
+      - name: Update Chart.yaml versions
+        env:
+          VERSION: ${{ steps.prepare.outputs.version }}
+        run: |
+          sed -i "s/^version: .*/version: ${VERSION}/" "${CHART_DIR}/Chart.yaml"
+          sed -i "s/^appVersion: .*/appVersion: \"${VERSION}\"/" "${CHART_DIR}/Chart.yaml"
+          sed -i "s|image: docker.io/persesdev/perses-operator:v.*|image: docker.io/persesdev/perses-operator:v${VERSION}|" "${CHART_DIR}/Chart.yaml"
+
+      - name: Update values.yaml
+        env:
+          VERSION: ${{ steps.prepare.outputs.version }}
+          PREV_APP_VERSION: ${{ steps.prev.outputs.app_version }}
+        run: |
+          sed -i "s|tag: v${PREV_APP_VERSION}|tag: v${VERSION}|" "${CHART_DIR}/values.yaml"
+
+      - name: Update unit test expectations
+        env:
+          VERSION: ${{ steps.prepare.outputs.version }}
+          PREV_APP_VERSION: ${{ steps.prev.outputs.app_version }}
+        run: |
+          DEPLOY_TEST="${CHART_DIR}/unittests/manager/deployment_test.yaml"
+          if [ -f "${DEPLOY_TEST}" ]; then
+            sed -i "s|docker.io/persesdev/perses-operator:v${PREV_APP_VERSION}|docker.io/persesdev/perses-operator:v${VERSION}|" "${DEPLOY_TEST}"
+          fi
+
+      - name: Sync CRDs
+        run: ./hack/sync-crds.sh
+
+      - name: Detect CRD changes
+        id: crds
+        run: |
+          if git diff --quiet -- "${CHART_DIR}/templates/crd/"; then
+            echo "updated=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "updated=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate CHANGELOG and artifacthub.io annotations
+        env:
+          VERSION: ${{ steps.prepare.outputs.version }}
+          CRDS_UPDATED: ${{ steps.crds.outputs.updated }}
+          KRBP_CHANGED: ${{ steps.krbp.outputs.changed }}
+          PREV_KRBP_TAG: ${{ steps.krbp.outputs.prev_tag }}
+          CURRENT_KRBP_TAG: ${{ steps.krbp.outputs.tag }}
+        run: |
+          # Build CHANGELOG section in Keep a Changelog format
+          {
+            echo "## [${VERSION}]"
+            echo ""
+            echo "### Changed"
+            echo ""
+            echo "- Bump appVersion to \`${VERSION}\` (perses-operator v${VERSION})."
+            if [ "${KRBP_CHANGED}" = "true" ]; then
+              echo "- Bump kube-rbac-proxy from \`${PREV_KRBP_TAG}\` to \`${CURRENT_KRBP_TAG}\`."
+            fi
+            if [ "${CRDS_UPDATED}" = "true" ]; then
+              echo "- Sync CRDs from perses-operator v${VERSION}."
+            fi
+          } > /tmp/changelog_section.txt
+
+          # Insert new section before the first existing version heading
+          awk '
+            /^## \[/ && !inserted {
+              while ((getline line < "/tmp/changelog_section.txt") > 0) print line
+              print ""
+              inserted=1
+            }
+            { print }
+          ' "${CHART_DIR}/CHANGELOG.md" > "${CHART_DIR}/CHANGELOG.md.tmp"
+          mv "${CHART_DIR}/CHANGELOG.md.tmp" "${CHART_DIR}/CHANGELOG.md"
+
+          # Build artifacthub.io/changes annotation content
+          {
+            echo "    - kind: changed"
+            echo "      description: Bump appVersion to ${VERSION} (perses-operator v${VERSION})"
+            if [ "${KRBP_CHANGED}" = "true" ]; then
+              echo "    - kind: changed"
+              echo "      description: Bump kube-rbac-proxy from ${PREV_KRBP_TAG} to ${CURRENT_KRBP_TAG}"
+            fi
+            if [ "${CRDS_UPDATED}" = "true" ]; then
+              echo "    - kind: changed"
+              echo "      description: Sync CRDs from perses-operator v${VERSION}"
+            fi
+          } > /tmp/ah_changes.txt
+
+          # Replace the artifacthub.io/changes block in Chart.yaml
+          awk '
+            /^  "artifacthub.io\/changes":/ {
+              print
+              while ((getline line < "/tmp/ah_changes.txt") > 0) print line
+              in_changes=1
+              next
+            }
+            in_changes && /^  "artifacthub.io\// {
+              in_changes=0
+            }
+            !in_changes { print }
+          ' "${CHART_DIR}/Chart.yaml" > "${CHART_DIR}/Chart.yaml.tmp"
+          mv "${CHART_DIR}/Chart.yaml.tmp" "${CHART_DIR}/Chart.yaml"
+
+          if [ "${KRBP_CHANGED}" = "true" ]; then
+            sed -i 's/"artifacthub.io\/containsSecurityUpdates": ".*"/"artifacthub.io\/containsSecurityUpdates": "true"/' "${CHART_DIR}/Chart.yaml"
+          else
+            sed -i 's/"artifacthub.io\/containsSecurityUpdates": ".*"/"artifacthub.io\/containsSecurityUpdates": "false"/' "${CHART_DIR}/Chart.yaml"
+          fi
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: stable
+          cache: false
+
+      - name: Set up Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+
+      - name: Regenerate README and format docs
+        run: |
+          docker run --rm \
+            --volume "$(pwd)/${CHART_DIR}:/helm-docs" \
+            -u "$(id -u)" \
+            jnorwood/helm-docs:latest
+
+          go install github.com/bwplotka/mdox@latest
+          mdox fmt --soft-wraps -l $(find . -name '*.md' -not -path './docs/*' -print) --links.validate.config-file=./.mdox.validate.yaml
+
+      - name: Validate chart
+        run: |
+          helm lint --strict "${CHART_DIR}"
+          helm template test-release "${CHART_DIR}" > /dev/null
+
+      - name: Create or update pull request
+        env:
+          GH_TOKEN: ${{ secrets.BOT_TOKEN }}
+          VERSION: ${{ steps.prepare.outputs.version }}
+          PREV_CHART_VERSION: ${{ steps.prev.outputs.chart_version }}
+          PREV_APP_VERSION: ${{ steps.prev.outputs.app_version }}
+          CRDS_UPDATED: ${{ steps.crds.outputs.updated }}
+          KRBP_CHANGED: ${{ steps.krbp.outputs.changed }}
+          PREV_KRBP_TAG: ${{ steps.krbp.outputs.prev_tag }}
+          CURRENT_KRBP_TAG: ${{ steps.krbp.outputs.tag }}
+        run: |
+          git config user.name ${{ env.BOT_USER }}
+          git config user.email ${{ env.BOT_USER }}@users.noreply.github.com
+
+          branch="chore/bump-${VERSION}"
+          title="[IGNORE] Release perses-operator v${VERSION} chart"
+          head_branch="${{ env.BOT_USER }}:${branch}"
+          target_repo="${{ inputs.helm_charts_org }}/${{ inputs.helm_charts_repo }}"
+
+          {
+            echo "- Bump appVersion to v${VERSION} (perses-operator v${VERSION})"
+            if [ "${KRBP_CHANGED}" = "true" ]; then
+              echo "- Bump kube-rbac-proxy from ${PREV_KRBP_TAG} to ${CURRENT_KRBP_TAG}"
+            fi
+            echo "- Update CHANGELOG and artifacthub.io/changes annotations"
+            if [ "${CRDS_UPDATED}" = "true" ]; then
+              echo "- Sync CRDs from perses-operator v${VERSION}"
+            fi
+            echo "- Regenerate README"
+            echo "- Update deployment unit test to expect v${VERSION} image"
+          } > /tmp/commit_summary.txt
+
+          {
+            echo "${title}"
+            echo ""
+            cat /tmp/commit_summary.txt
+          } > /tmp/commit_message.txt
+
+          git checkout -B "${branch}"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No chart changes to commit."
+          else
+            git commit -s -F /tmp/commit_message.txt
+          fi
+          git push -f --set-upstream origin "${branch}"
+
+          existing_pr="$(
+            gh pr list \
+              --repo "${target_repo}" \
+              --head "${branch}" \
+              --base main \
+              --state open \
+              --json url \
+              --jq '.[0].url // empty'
+          )"
+
+          if [ -n "${existing_pr}" ]; then
+            echo "Open pull request already exists; updated branch ${head_branch}."
+            echo "${existing_pr}"
+            exit 0
+          fi
+
+          {
+            echo "# Description"
+            echo ""
+            echo "Automated chart release for [perses-operator v${VERSION}](https://github.com/perses/perses-operator/releases/tag/v${VERSION})."
+            echo ""
+            echo "## Changes"
+            echo ""
+            cat /tmp/commit_summary.txt
+            echo ""
+            echo "Chart \`version\`/\`appVersion\`: \`${PREV_CHART_VERSION}\`/\`${PREV_APP_VERSION}\` → \`${VERSION}\`"
+            echo ""
+            echo "## Type of change"
+            echo ""
+            echo "- [ ] \`FEATURE\` (new functionality)"
+            echo "- [ ] \`ENHANCEMENT\` (improves existing functionality)"
+            echo "- [ ] \`BUGFIX\` (fixes an issue)"
+            echo "- [ ] \`BREAKINGCHANGE\` (existing functionality no longer works as expected)"
+            echo "- [ ] \`DOC\` (documentation only)"
+            echo "- [x] \`IGNORE\` (tooling, build system, CI, etc.)"
+            echo ""
+            echo "## Verification"
+            echo ""
+            echo "- [ ] \`make helm-validate\` passes"
+            echo "- [ ] \`make helm-unit-test\` passes"
+            echo "- [ ] \`make update-helm-readme\` passes"
+            echo "- [ ] Manual testing (e.g. \`make helm-test\`)"
+            echo ""
+            echo "## Checklist"
+            echo ""
+            echo "- [x] Descriptive title following \`[<catalog_entry>]\` convention"
+            echo "- [x] All commits have DCO signoffs"
+            echo "- [ ] Verify CHANGELOG.md — add any chart feature/fix entries beyond the auto-generated version bump"
+            echo "- [ ] Verify \`artifacthub.io/changes\` matches the final CHANGELOG"
+            echo "- [ ] Check for new CRD fields / values / template changes needed beyond CRD sync"
+          } > /tmp/pr_body.md
+
+          gh pr create \
+            --title "${title}" \
+            --body-file /tmp/pr_body.md \
+            --head "${head_branch}" \
+            --repo "${target_repo}" \
+            --base main
