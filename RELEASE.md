@@ -26,6 +26,9 @@ runs after the PR is merged and the new `v*` tag is pushed.
    ▼
 6. publish-operator-hub.yaml (on release: published)
                            →  PR against k8s-operatorhub/community-operators
+   │
+   └─ publish-helm-chart.yaml (on release: published)
+                           →  PR against perses/helm-charts
 ```
 
 ## 1. Trigger the release workflow
@@ -82,9 +85,13 @@ if needed and [configure Git to use it](https://docs.github.com/en/authenticatio
 DCO signoffs (`git commit -s`) and cryptographic signatures are separate:
 `git tag -s` signs the tag, while `git commit -S` signs a commit.
 
-Pull the merged `main`. The commands below use `upstream` for the remote pointing
-to `perses/perses-operator`. Replace it with your remote name in both the pull and
-push commands; use `origin` only if it points to that repository rather than your fork.
+Update local `main` from **`perses/perses-operator`** (the canonical repo), then
+tag and push the tag there. Do **not** rebase onto or push the release tag to
+your personal fork.
+
+The examples below use a remote named `upstream` that points at
+`perses/perses-operator`. If your remote has a different name, substitute it —
+but it must resolve to that repository, not your fork.
 
 ```bash
 git checkout main
@@ -135,15 +142,27 @@ Before the OperatorHub automation can run, the following must be configured once
 1. **Bot account**: the `persesbot` GitHub account must have a fork of
    [k8s-operatorhub/community-operators](https://github.com/k8s-operatorhub/community-operators).
 2. **GitHub secret**: a Personal Access Token (`repo` scope) for the bot account
-   must be added as `BOT_TOKEN` in the repository settings.
+   must be added as `BOT_TOKEN` in the repository settings. The same token is
+   used by the Helm chart publish workflow and needs **write** access to
+   [`perses/helm-charts`](https://github.com/perses/helm-charts).
 3. **CLA/DCO**: the bot account should sign the CNCF CLA or Linux Foundation DCO
    if required.
 
-## 5. Update the Helm chart
+## 5. Publish Helm chart update (automated)
 
-After the release is published, update the
-[Perses Operator Helm chart](https://github.com/perses/helm-charts/tree/main/charts/perses-operator)
-in the [`perses/helm-charts`](https://github.com/perses/helm-charts) repository.
-Follow the
-[Bumping perses-operator Version](https://github.com/perses/helm-charts/blob/main/DEVELOPER_GUIDE.md#bumping-perses-operator-version)
-guide.
+When a GitHub release is published, the **Publish helm chart update** workflow
+(`publish-helm-chart.yaml`) opens a PR on
+[`perses/helm-charts`](https://github.com/perses/helm-charts/pulls).
+
+You can also run it manually from **Actions → Create helm chart pull request → Run workflow**
+with **release_ref** (for example `v0.6.1`).
+
+The workflow bumps chart `version` / `appVersion` and the manager image, syncs
+CRDs, regenerates README and CHANGELOG / artifacthub annotations, and documents
+any `kube-rbac-proxy` tag change since the last chart release (it does not bump
+the sidecar). Re-running force-updates the existing branch — avoid that after
+manual CHANGELOG edits.
+
+Review the PR for CHANGELOG / artifacthub accuracy and any chart-only changes.
+See [Bumping perses-operator Version](https://github.com/perses/helm-charts/blob/main/DEVELOPER_GUIDE.md#bumping-perses-operator-version)
+for the historical checklist.
