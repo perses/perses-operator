@@ -16,6 +16,6 @@ jobs:
       release_ref: ${{ github.event.release.tag_name }}
     secrets:
       # NOTE: BOT_TOKEN is a PAT (repo scope) for the persesbot account.
-      # Required to sync and push to persesbot's fork of helm-charts
-      # and to create pull requests against the upstream repository.
+      # Required to push a branch to perses/helm-charts and open the chart
+      # update pull request.
       BOT_TOKEN: ${{ secrets.BOT_TOKEN }}

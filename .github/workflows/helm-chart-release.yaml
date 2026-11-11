@@ -80,24 +80,10 @@ jobs:
           echo "release_ref=${TAG}" >> "$GITHUB_OUTPUT"
           echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
 
-      - name: Sync fork
-        env:
-          GH_TOKEN: ${{ secrets.BOT_TOKEN }}
-        run: |
-          if ! gh repo view "${{ env.BOT_USER }}/${{ inputs.helm_charts_repo }}" >/dev/null 2>&1; then
-            echo "::error::Bot fork ${{ env.BOT_USER }}/${{ inputs.helm_charts_repo }} does not exist."
-            echo "Create a fork of ${{ inputs.helm_charts_org }}/${{ inputs.helm_charts_repo }} under ${{ env.BOT_USER }} before running this workflow."
-            exit 1
-          fi
-
-          gh repo sync ${{ env.BOT_USER }}/${{ inputs.helm_charts_repo }} \
-              --source ${{ inputs.helm_charts_org }}/${{ inputs.helm_charts_repo }} \
-              --force
-
-      - name: Checkout helm-charts fork
+      - name: Checkout helm-charts
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: ${{ env.BOT_USER }}/${{ inputs.helm_charts_repo }}
+          repository: ${{ inputs.helm_charts_org }}/${{ inputs.helm_charts_repo }}
           token: ${{ secrets.BOT_TOKEN }}
 
       - name: Validate chart state
@@ -144,18 +130,10 @@ jobs:
 
           PREV_TAG=""
           PREV_REF="perses-operator-${PREV_CHART_VERSION}"
-          UPSTREAM_URL="https://github.com/${{ inputs.helm_charts_org }}/${{ inputs.helm_charts_repo }}.git"
-          # Forks may not have upstream release tags after gh repo sync; fetch the tag we compare against.
-          if ! git rev-parse -q --verify "refs/tags/${PREV_REF}" >/dev/null; then
-            git fetch --no-tags "${UPSTREAM_URL}" "refs/tags/${PREV_REF}:refs/tags/${PREV_REF}" || true
-          fi
+          git fetch --no-tags origin "refs/tags/${PREV_REF}:refs/tags/${PREV_REF}" || true
           if git rev-parse -q --verify "refs/tags/${PREV_REF}" >/dev/null; then
-            PREV_VALUES=$(git show "${PREV_REF}:${CHART_DIR}/values.yaml")
-            PREV_TAG=$(printf '%s\n' "${PREV_VALUES}" | awk '
-              $1 == "kubeRbacProxy:" { in_krbp=1; next }
-              in_krbp && /^[a-zA-Z]/ { exit }
-              in_krbp && $1 == "tag:" { gsub(/["'\'']/, "", $2); print $2; exit }
-            ')
+            git show "${PREV_REF}:${CHART_DIR}/values.yaml" > /tmp/prev_values.yaml
+            PREV_TAG=$(read_krbp_tag /tmp/prev_values.yaml)
           else
             echo "Previous chart tag ${PREV_REF} not found; skipping kube-rbac-proxy changelog comparison." >&2
           fi
@@ -315,9 +293,8 @@ jobs:
           git config user.name ${{ env.BOT_USER }}
           git config user.email ${{ env.BOT_USER }}@users.noreply.github.com
 
-          branch="chore/bump-${VERSION}"
+          branch="cut-v${VERSION}"
           title="[IGNORE] Release perses-operator v${VERSION} chart"
-          head_branch="${{ env.BOT_USER }}:${branch}"
           target_repo="${{ inputs.helm_charts_org }}/${{ inputs.helm_charts_repo }}"
 
           {
@@ -359,7 +336,7 @@ jobs:
           )"
 
           if [ -n "${existing_pr}" ]; then
-            echo "Open pull request already exists; updated branch ${head_branch}."
+            echo "Open pull request already exists; updated branch ${branch}."
             echo "${existing_pr}"
             exit 0
           fi
@@ -403,6 +380,6 @@ jobs:
           gh pr create \
             --title "${title}" \
             --body-file /tmp/pr_body.md \
-            --head "${head_branch}" \
+            --head "${branch}" \
             --repo "${target_repo}" \
             --base main
