@@ -1,0 +1,17 @@
+# Verifies the conversion webhook stays available while an operator pod is
+# disrupted. The object is created in v1alpha1 while the storage version is
+# v1alpha2, so every v1alpha1 read and write in this test goes through the
+# conversion webhook served by the operator pods.
+apiVersion: perses.dev/v1alpha1
+kind: PersesDatasource
+metadata:
+  name: conversion-ha-datasource
+spec:
+  config:
+    display:
+      name: "Conversion HA Datasource"
+    default: false
+    plugin:
+      kind: "PrometheusDatasource"
+      spec:
+        directUrl: "https://prometheus.demo.prometheus.io"

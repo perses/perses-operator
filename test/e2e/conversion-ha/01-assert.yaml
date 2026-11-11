@@ -1,0 +1,24 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 180
+commands:
+  # Recovery: the replacement pod becomes ready and the PDB budget is restored,
+  # leaving the shared operator in steady state for later tests.
+  - script: |
+      set -eu
+      NS=perses-operator-system
+      kubectl rollout status deployment/perses-operator-controller-manager -n "$NS" --timeout=90s
+
+      for i in $(seq 1 30); do
+        READY=$(kubectl get deployment perses-operator-controller-manager -n "$NS" -o jsonpath='{.status.readyReplicas}')
+        ALLOWED=$(kubectl get pdb perses-operator-controller-manager -n "$NS" -o jsonpath='{.status.disruptionsAllowed}')
+        ENDPOINTS=$(kubectl get endpointslices -n "$NS" -l kubernetes.io/service-name=perses-operator-webhook-service \
+          -o jsonpath='{range .items[*].endpoints[*]}{.conditions.ready}{"\n"}{end}' | grep -c '^true$' || true)
+        if [ "$READY" = 2 ] && [ "$ALLOWED" = 1 ] && [ "$ENDPOINTS" = 2 ]; then
+          echo "Verified: operator recovered to 2 ready pods and the PDB allows 1 disruption again"
+          exit 0
+        fi
+        sleep 2
+      done
+      echo "FAIL: readyReplicas=$READY disruptionsAllowed=$ALLOWED readyWebhookEndpoints=$ENDPOINTS"
+      exit 1

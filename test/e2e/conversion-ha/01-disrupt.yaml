@@ -1,0 +1,78 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |
+      set -eu
+      NS=perses-operator-system
+      DS=persesdatasources.v1alpha1.perses.dev/conversion-ha-datasource
+
+      evict() {
+        printf '{"apiVersion":"policy/v1","kind":"Eviction","metadata":{"name":"%s","namespace":"%s"}}' "$1" "$NS" \
+          | kubectl create --raw "/api/v1/namespaces/$NS/pods/$1/eviction" -f - >/dev/null
+      }
+
+      # Skip pods still terminating from an earlier rollout.
+      PODS=$(kubectl get pods -n "$NS" -l control-plane=controller-manager --field-selector=status.phase=Running \
+        -o jsonpath='{range .items[*]}{.metadata.name} {.metadata.deletionTimestamp}{"\n"}{end}' | awk 'NF == 1 { print $1 }')
+      if [ "$(printf '%s\n' "$PODS" | grep -c .)" -ne 2 ]; then
+        echo "FAIL: expected 2 operator pods, got: $PODS"
+        exit 1
+      fi
+      FIRST=$(printf '%s\n' "$PODS" | sed -n 1p)
+      SECOND=$(printf '%s\n' "$PODS" | sed -n 2p)
+
+      evict "$FIRST"
+      echo "Evicted operator pod $FIRST"
+
+      # The eviction API consumes the PDB budget synchronously, so evicting the
+      # remaining pod must be refused until the replacement is ready.
+      if ERR=$(evict "$SECOND" 2>&1); then
+        echo "FAIL: evicting $SECOND succeeded; the PDB must keep one operator pod running"
+        exit 1
+      fi
+      if ! echo "$ERR" | grep -Eq 'TooManyRequests|disruption budget'; then
+        echo "FAIL: unexpected error evicting $SECOND: $ERR"
+        exit 1
+      fi
+      echo "Verified: PDB refused evicting the last available pod $SECOND"
+
+      # Wait until the evicted pod no longer serves webhook traffic.
+      for i in $(seq 1 30); do
+        STATE=$(kubectl get endpointslices -n "$NS" -l kubernetes.io/service-name=perses-operator-webhook-service \
+          -o jsonpath="{range .items[*].endpoints[?(@.targetRef.name==\"$FIRST\")]}{.conditions.ready}{end}")
+        [ "$STATE" != true ] && break
+        sleep 1
+      done
+      if [ "$STATE" = true ]; then
+        echo "FAIL: evicted pod $FIRST is still a ready webhook endpoint"
+        exit 1
+      fi
+
+      # A few retries absorb service routing lag after the endpoint change; a
+      # single-replica operator has no endpoint left at this point and fails.
+      retry() {
+        for i in 1 2 3 4 5; do
+          if "$@"; then
+            return 0
+          fi
+          sleep 1
+        done
+        return 1
+      }
+
+      if ! retry kubectl get "$DS" -n "$NAMESPACE" -o name; then
+        echo "FAIL: v1alpha1 read failed while operator pod $FIRST was evicted"
+        exit 1
+      fi
+      if ! retry kubectl annotate "$DS" -n "$NAMESPACE" --overwrite "conversion-ha.perses.dev/evicted-pod=$FIRST"; then
+        echo "FAIL: v1alpha1 write failed while operator pod $FIRST was evicted"
+        exit 1
+      fi
+
+      STORED=$(kubectl get persesdatasources.v1alpha2.perses.dev/conversion-ha-datasource -n "$NAMESPACE" \
+        -o jsonpath='{.metadata.annotations.conversion-ha\.perses\.dev/evicted-pod}')
+      if [ "$STORED" != "$FIRST" ]; then
+        echo "FAIL: v1alpha1 write was not persisted, got annotation '$STORED'"
+        exit 1
+      fi
+      echo "Verified: conversion webhook served v1alpha1 reads and writes with one operator pod evicted"

@@ -46,7 +46,7 @@ The workflow:
   release version.
 - Runs `make bundle VERSION_REPLACED=<version-replace>` — regenerates `bundle/manifests/*`
   (CSV `spec.version`, `spec.replaces: perses-operator.v<version-replace>`) and the
-  jsonnet files under `jsonnet/generated` and `jsonnet/examples`.
+  jsonnet files under `jsonnet/generated`, `jsonnet/examples` and `jsonnet/examples-ha`.
 - Runs `make build-installer` — regenerates the root `bundle.yaml` installer.
 - Opens a PR titled `[IGNORE] Prepare release <tag>` against `main` on branch
   `cut-v<tag>`.

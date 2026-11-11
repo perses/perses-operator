@@ -1,0 +1,19 @@
+# Name and namespace as rendered by config/default.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: perses-operator-controller-manager
+  namespace: perses-operator-system
+  labels:
+    control-plane: controller-manager
+    app.kubernetes.io/name: poddisruptionbudget
+    app.kubernetes.io/instance: controller-manager
+    app.kubernetes.io/component: manager
+    app.kubernetes.io/created-by: perses-operator
+    app.kubernetes.io/part-of: perses-operator
+spec:
+  # Unlike minAvailable, does not block drains if scaled down to 1 replica.
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      control-plane: controller-manager
