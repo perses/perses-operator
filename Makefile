@@ -191,6 +191,10 @@ jsonnet-resources: jsonnet gojsontoyaml
 	rm -f jsonnet/examples/*.yaml
 	$(JSONNET_BINARY) -m jsonnet/examples jsonnet/example.jsonnet | $(XARGS) -I{} sh -c 'cat {} | $(GOJSONTOYAML_BINARY) > {}.yaml' -- {}
 	find jsonnet/examples -type f -not -name "*.*" -delete
+	mkdir -p jsonnet/examples-ha
+	rm -f jsonnet/examples-ha/*.yaml
+	$(JSONNET_BINARY) -m jsonnet/examples-ha jsonnet/example-ha.jsonnet | $(XARGS) -I{} sh -c 'cat {} | $(GOJSONTOYAML_BINARY) > {}.yaml' -- {}
+	find jsonnet/examples-ha -type f -not -name "*.*" -delete
 	@echo "NOTE: If you modified alerting rules, update test/promtool/alerts_test.yaml and run 'make test-alerts'."
 
 JSONNET_SRC = $(shell find . -type f -not -path './*vendor_jsonnet/*' \( -name '*.libsonnet' -o -name '*.jsonnet' \))
@@ -474,10 +478,10 @@ bundle-check: bundle
 
 .PHONY: jsonnet-check
 jsonnet-check: manifests
-	git diff --exit-code jsonnet/generated jsonnet/examples
-	@if [ -n "$$(git ls-files --others --exclude-standard jsonnet/generated jsonnet/examples)" ]; then \
-		echo "ERROR: untracked files found in jsonnet/generated or jsonnet/examples:"; \
-		git ls-files --others --exclude-standard jsonnet/generated jsonnet/examples; \
+	git diff --exit-code jsonnet/generated jsonnet/examples jsonnet/examples-ha
+	@if [ -n "$$(git ls-files --others --exclude-standard jsonnet/generated jsonnet/examples jsonnet/examples-ha)" ]; then \
+		echo "ERROR: untracked files found in jsonnet/generated, jsonnet/examples or jsonnet/examples-ha:"; \
+		git ls-files --others --exclude-standard jsonnet/generated jsonnet/examples jsonnet/examples-ha; \
 		echo "Please commit the new generated files."; \
 		exit 1; \
 	fi

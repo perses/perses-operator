@@ -4,6 +4,8 @@ local defaults = {
   namespace: 'perses-dev',
   version: error 'must provide version',
   image: 'persesdev/perses-operator:' + defaults.version,
+  // 2 replicas spread across nodes, plus a PodDisruptionBudget.
+  highAvailability: false,
   resources: {
     limits: { cpu: '500m', memory: '128Mi' },
     requests: { cpu: '10m', memory: '64Mi' },
@@ -70,6 +72,42 @@ function(params) {
           serviceAccountName: po.config.name,
         },
       },
+    },
+  } + (if po.config.highAvailability then {
+         spec+: {
+           replicas: 2,
+           template+: {
+             spec+: {
+               affinity+: {
+                 // Preferred so both replicas still schedule on single-node clusters.
+                 podAntiAffinity: {
+                   preferredDuringSchedulingIgnoredDuringExecution: [{
+                     weight: 100,
+                     podAffinityTerm: {
+                       labelSelector: { matchLabels: po.config.selectorLabels },
+                       topologyKey: 'kubernetes.io/hostname',
+                     },
+                   }],
+                 },
+               },
+             },
+           },
+         },
+       } else {}),
+
+  // `po` is not in scope in field names.
+  [if (defaults + params).highAvailability then 'podDisruptionBudget']: {
+    apiVersion: 'policy/v1',
+    kind: 'PodDisruptionBudget',
+    metadata: {
+      name: po.config.name,
+      namespace: po.config.namespace,
+      labels: po.config.commonLabels,
+    },
+    spec: {
+      // Unlike minAvailable, does not block drains if scaled down to 1 replica.
+      maxUnavailable: 1,
+      selector: { matchLabels: po.config.selectorLabels },
     },
   },
 

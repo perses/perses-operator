@@ -1,0 +1,33 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+timeout: 180
+commands:
+  # Steady state: two ready operator pods behind the webhook service and a
+  # PodDisruptionBudget that allows exactly one voluntary disruption.
+  - script: |
+      set -eu
+      NS=perses-operator-system
+      kubectl rollout status deployment/perses-operator-controller-manager -n "$NS" --timeout=90s
+
+      for i in $(seq 1 30); do
+        READY=$(kubectl get deployment perses-operator-controller-manager -n "$NS" -o jsonpath='{.status.readyReplicas}')
+        ALLOWED=$(kubectl get pdb perses-operator-controller-manager -n "$NS" -o jsonpath='{.status.disruptionsAllowed}')
+        ENDPOINTS=$(kubectl get endpointslices -n "$NS" -l kubernetes.io/service-name=perses-operator-webhook-service \
+          -o jsonpath='{range .items[*].endpoints[*]}{.conditions.ready}{"\n"}{end}' | grep -c '^true$' || true)
+        if [ "$READY" = 2 ] && [ "$ALLOWED" = 1 ] && [ "$ENDPOINTS" = 2 ]; then
+          echo "Verified: 2 ready operator pods, 2 ready webhook endpoints, PDB allows 1 disruption"
+          exit 0
+        fi
+        sleep 2
+      done
+      echo "FAIL: readyReplicas=$READY disruptionsAllowed=$ALLOWED readyWebhookEndpoints=$ENDPOINTS"
+      exit 1
+---
+apiVersion: perses.dev/v1alpha1
+kind: PersesDatasource
+metadata:
+  name: conversion-ha-datasource
+spec:
+  config:
+    display:
+      name: "Conversion HA Datasource"
