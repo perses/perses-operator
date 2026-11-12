@@ -9,3 +9,4 @@ For project governance, see the [Perses Governance](https://github.com/perses/pe
 | Peter Yurkovich  | [@PeterYurkovich](https://github.com/PeterYurkovich) | Red Hat                   |
 | Douglass Kirkley | [@dougkirkley](https://github.com/dougkirkley)       | Enlighten, an HII Company |
 | Jeremy Rickards  | [@rickardsjp](https://github.com/rickardsjp)         | SAP                       |
+| Vibhu Prashar    | [@vprashar2929](https://github.com/vprashar2929)     | FPT Software              |
