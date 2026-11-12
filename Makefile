@@ -159,30 +159,10 @@ tidy: ## Verify that go.mod and go.sum are tidy (for CI)
 .PHONY: manifests
 manifests: controller-gen gojsontoyaml ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects. Also generates json, for jsonnet lib.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd:ignoreUnexportedFields=true webhook paths="./..." output:crd:artifacts:config=config/crd/bases
-	find config/crd/bases -name '*.yaml' ! -name 'kustomization.yaml' -exec sh -c '\
-	  for file do \
-	    filename=$$(basename "$$file" .yaml); \
-	    out_file="$$(pwd)/jsonnet/generated/$${filename}-crd.json"; \
-	    $(GOJSONTOYAML_BINARY) -yamltojson < "$$file" | jq > "$$out_file"; \
-	  done' sh {} +
-	find config/rbac -name '*.yaml' ! -name 'kustomization.yaml' -exec sh -c '\
-	  for file do \
-	    filename=$$(basename "$$file" .yaml); \
-	    out_file="$$(pwd)/jsonnet/generated/$${filename}.json"; \
-	    $(GOJSONTOYAML_BINARY) -yamltojson < "$$file" | jq > "$$out_file"; \
-	  done' sh {} +
-	find config/manager -name '*.yaml' ! -name 'kustomization.yaml' ! -name 'namespace.yaml' -exec sh -c '\
-	  for file do \
-	    filename=$$(basename "$$file" .yaml); \
-	    out_file="$$(pwd)/jsonnet/generated/$${filename}.json"; \
-	    $(GOJSONTOYAML_BINARY) -yamltojson < "$$file" | jq > "$$out_file"; \
-	  done' sh {} +
-	find config/prometheus -name '*.yaml' ! -name 'kustomization.yaml' -exec sh -c '\
-	  for file do \
-	    filename=$$(basename "$$file" .yaml); \
-	    out_file="$$(pwd)/jsonnet/generated/$${filename}.json"; \
-	    $(GOJSONTOYAML_BINARY) -yamltojson < "$$file" | jq > "$$out_file"; \
-	  done' sh {} +
+	GOJSONTOYAML_BINARY=$(GOJSONTOYAML_BINARY) ./scripts/yaml-to-jsonnet.sh config/crd/bases -crd
+	GOJSONTOYAML_BINARY=$(GOJSONTOYAML_BINARY) ./scripts/yaml-to-jsonnet.sh config/rbac
+	GOJSONTOYAML_BINARY=$(GOJSONTOYAML_BINARY) ./scripts/yaml-to-jsonnet.sh config/manager '' --exclude namespace.yaml
+	GOJSONTOYAML_BINARY=$(GOJSONTOYAML_BINARY) ./scripts/yaml-to-jsonnet.sh config/prometheus
 	$(MAKE) jsonnet-resources
 
 .PHONY: jsonnet-resources
