@@ -265,8 +265,8 @@ github.com/pandatix/go-abnf v0.5.3 h1:LA9AaxAqwzdxfDe7+HIGUB6tzx2N6wYVEAChmfsoPg
 github.com/pandatix/go-abnf v0.5.3/go.mod h1:AE0KD3/VNoCjGzc1gqetRKshbI4SYErXQ/8kPenR5mc=
 github.com/pb33f/ordered-map/v2 v2.3.1 h1:5319HDO0aw4DA4gzi+zv4FXU9UlSs3xGZ40wcP1nBjY=
 github.com/pb33f/ordered-map/v2 v2.3.1/go.mod h1:qxFQgd0PkVUtOMCkTapqotNgzRhMPL7VvaHKbd1HnmQ=
-github.com/perses/common v0.31.2 h1:klsl0KfWn6wVVG4rDJvsTvFO8Owf5ed4nj2VjbQST60=
-github.com/perses/common v0.31.2/go.mod h1:KgLB0ojBFzg93UwTNK8uAE1yuGexBiwqHiAvTFcHRDI=
+github.com/perses/common v0.33.0 h1:TXGYw84xn/ZeTUy6P4Gkd0iHSlb4rIO6tzcqD4pfrug=
+github.com/perses/common v0.33.0/go.mod h1:WOXuYHSGjcfk50Q8pFdYlEOObIjRbpVVxB+s3Gr6pcg=
 github.com/perses/perses v0.55.1 h1:FuXS5KB1gT4OGx/GJS7u/UVhZ1aGqVlDRSjIzEaYXcY=
 github.com/perses/perses v0.55.1/go.mod h1:/8Ow2NFrG3ViGK0KgTau6L9a1WVLpB293oQ5x5Bhe50=
 github.com/perses/spec v0.3.0 h1:pAkpwX32lQpdz1YLmGmmAMItdgtuVDVrkAQfWEqX6ZI=

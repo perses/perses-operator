@@ -9,7 +9,7 @@ require (
 	github.com/openshift/api v0.0.0-20261029222750-c757da50cb18
 	github.com/openshift/controller-runtime-common v0.0.0-20261026124434-bdfc411d93cd
 	github.com/openshift/library-go v0.0.0-20261028054900-dbcad7febe41
-	github.com/perses/common v0.31.2
+	github.com/perses/common v0.33.0
 	github.com/perses/perses v0.55.1
 	github.com/perses/spec v0.3.0
 	github.com/prometheus/client_golang v1.25.0
