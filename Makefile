@@ -319,7 +319,8 @@ endif
 	@echo ">> Installing CRDs and deploying operator..."
 	$(KUSTOMIZE) build config/e2e | kubectl apply --server-side -f -
 	kubectl set image -n perses-operator-system deployment/perses-operator-controller-manager manager=$(E2E_IMG)
-	kubectl wait --for=condition=Available --timeout=300s -n perses-operator-system deployment/perses-operator-controller-manager
+	kubectl rollout status --timeout=300s -n perses-operator-system deployment/perses-operator-controller-manager
+	./scripts/wait-for-webhook.sh
 
 .PHONY: e2e-setup
 e2e-setup: e2e-create-cluster e2e-deploy ## Create kind cluster and deploy operator (local development).
