@@ -14,7 +14,7 @@ set -euo pipefail
 TIMEOUT_SECONDS="${1:-120}"
 
 probe() {
-	kubectl apply --dry-run=server -n default -f - <<EOF
+	kubectl apply --request-timeout=10s --dry-run=server -n default -f - <<EOF
 apiVersion: perses.dev/v1alpha1
 kind: PersesDatasource
 metadata:
