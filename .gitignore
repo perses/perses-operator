@@ -30,6 +30,7 @@ Dockerfile.cross
 tmp/
 
 .goreleaser.yaml
+EXTRACTED_CHANGELOG.md
 
 /.github/perses-ci/
 
