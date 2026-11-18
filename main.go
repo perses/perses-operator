@@ -307,7 +307,8 @@ func main() {
 		os.Exit(1)
 	}
 
-	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+	webhooksEnabled := os.Getenv("ENABLE_WEBHOOKS") != "false"
+	if webhooksEnabled {
 		if err = (&persesv1alpha1.Perses{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Perses")
 			os.Exit(1)
@@ -332,6 +333,14 @@ func main() {
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up ready check")
 		os.Exit(1)
+	}
+	if webhooksEnabled {
+		// Mark the pod ready only once the webhook server accepts connections,
+		// so the webhook service never routes requests to a pod that cannot serve them yet.
+		if err := mgr.AddReadyzCheck("webhook", mgr.GetWebhookServer().StartedChecker()); err != nil {
+			setupLog.Error(err, "unable to set up webhook ready check")
+			os.Exit(1)
+		}
 	}
 
 	// Mark all controllers as ready
